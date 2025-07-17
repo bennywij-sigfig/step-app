@@ -677,8 +677,7 @@ app.get('/api/admin/export-csv', requireApiAdmin, (req, res) => {
       s.updated_at
     FROM users u
     LEFT JOIN steps s ON u.id = s.user_id
-    WHERE s.date IS NOT NULL
-    ORDER BY s.date DESC, u.name ASC
+    ORDER BY u.name ASC, s.date DESC
   `, (err, rows) => {
     if (err) {
       console.error('Error fetching export data:', err);
