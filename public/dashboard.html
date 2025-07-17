@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Step Challenge - Dashboard</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+        }
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 20px;
+                border-radius: 15px;
+            }
+            .card {
+                padding: 20px;
+                border-radius: 15px;
+            }
+        }
+        .nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav button {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            background: transparent;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav button.active {
+            background: white;
+            color: #333;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .nav {
+                gap: 6px;
+                padding: 4px;
+            }
+            .nav button {
+                padding: 14px 12px;
+                font-size: 13px;
+            }
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid rgba(102, 126, 234, 0.1);
+            border-radius: 12px;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.8);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group button, button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 16px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-height: 48px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .form-group button:hover, button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+        }
+        
+        .form-group button:active, button:active {
+            transform: translateY(0);
+        }
+        
+        @media (max-width: 768px) {
+            .form-group input {
+                padding: 16px;
+                font-size: 16px;
+                -webkit-appearance: none;
+                border-radius: 12px;
+            }
+            .form-group button, button {
+                padding: 16px 20px;
+                font-size: 16px;
+                -webkit-appearance: none;
+                border-radius: 12px;
+            }
+            
+            /* Prevent zoom on input focus */
+            .form-group input:focus {
+                font-size: 16px;
+            }
+        }
+        .steps-list {
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        
+        .step-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        .step-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateX(4px);
+        }
+        
+        .step-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+            min-height: 60px;
+        }
+        
+        .leaderboard-item:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateX(4px);
+        }
+        
+        .leaderboard-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .rank {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 16px;
+            min-width: 40px;
+        }
+        
+        @media (max-width: 768px) {
+            .step-item, .leaderboard-item {
+                padding: 16px;
+                min-height: 60px;
+            }
+            .leaderboard-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                min-height: 70px;
+            }
+            .leaderboard-item > div:first-child {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                width: 100%;
+            }
+            .leaderboard-item > div:last-child {
+                width: 100%;
+                text-align: right;
+            }
+        }
+        .message {
+            margin-top: 15px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+        }
+        
+        .success {
+            background: rgba(40, 167, 69, 0.1);
+            color: #155724;
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        
+        .error {
+            background: rgba(220, 53, 69, 0.1);
+            color: #721c24;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        h2 {
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        
+        h3 {
+            color: #555;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            margin-top: 25px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚶‍♂️ Step Challenge</h1>
+            <p>Welcome, <span id="userName"></span>!</p>
+        </div>
+
+    <div class="nav">
+        <button id="myStepsBtn" class="active">My Steps</button>
+        <button id="leaderboardBtn">Individual</button>
+        <button id="teamLeaderboardBtn">Teams</button>
+    </div>
+
+    <div id="myStepsView" class="card">
+        <h2>Log Your Steps</h2>
+        <form id="stepsForm">
+            <div class="form-group">
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date" required>
+            </div>
+            <div class="form-group">
+                <label for="steps">Steps:</label>
+                <input type="number" id="steps" name="steps" min="0" max="70000" required placeholder="e.g. 8500">
+            </div>
+            <button type="submit">Save Steps</button>
+        </form>
+        <div id="stepsMessage"></div>
+        
+        <h3>Your Recent Steps</h3>
+        <div id="stepsList" class="steps-list">
+            <p>Loading your steps...</p>
+        </div>
+    </div>
+
+    <div id="leaderboardView" class="card hidden">
+        <h2>Individual Leaderboard</h2>
+        <div id="leaderboard">
+            <p>Loading leaderboard...</p>
+        </div>
+    </div>
+
+    <div id="teamLeaderboardView" class="card hidden">
+        <h2>Team Leaderboard</h2>
+        <div id="teamLeaderboard">
+            <p>Loading team leaderboard...</p>
+        </div>
+    </div>
+
+    <script>
+        // Get user info from session
+        let currentUser = null;
+        
+        // Load current user from session
+        async function loadCurrentUser() {
+            try {
+                const response = await fetch('/api/user');
+                if (!response.ok) {
+                    window.location.href = '/';
+                    return;
+                }
+                currentUser = await response.json();
+                document.getElementById('userName').textContent = currentUser.email;
+            } catch (error) {
+                console.error('Error loading user:', error);
+                window.location.href = '/';
+            }
+        }
+        
+        // Set default date to today
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        
+        // Navigation
+        document.getElementById('myStepsBtn').addEventListener('click', () => {
+            document.getElementById('myStepsView').classList.remove('hidden');
+            document.getElementById('leaderboardView').classList.add('hidden');
+            document.getElementById('myStepsBtn').classList.add('active');
+            document.getElementById('leaderboardBtn').classList.remove('active');
+        });
+        
+        document.getElementById('leaderboardBtn').addEventListener('click', () => {
+            document.getElementById('myStepsView').classList.add('hidden');
+            document.getElementById('leaderboardView').classList.remove('hidden');
+            document.getElementById('teamLeaderboardView').classList.add('hidden');
+            document.getElementById('myStepsBtn').classList.remove('active');
+            document.getElementById('leaderboardBtn').classList.add('active');
+            document.getElementById('teamLeaderboardBtn').classList.remove('active');
+            loadLeaderboard();
+        });
+        
+        document.getElementById('teamLeaderboardBtn').addEventListener('click', () => {
+            document.getElementById('myStepsView').classList.add('hidden');
+            document.getElementById('leaderboardView').classList.add('hidden');
+            document.getElementById('teamLeaderboardView').classList.remove('hidden');
+            document.getElementById('myStepsBtn').classList.remove('active');
+            document.getElementById('leaderboardBtn').classList.remove('active');
+            document.getElementById('teamLeaderboardBtn').classList.add('active');
+            loadTeamLeaderboard();
+        });
+        
+        // Load user's steps
+        async function loadSteps() {
+            try {
+                const response = await fetch('/api/steps');
+                const steps = await response.json();
+                
+                const stepsList = document.getElementById('stepsList');
+                if (steps.length === 0) {
+                    stepsList.innerHTML = '<p>No steps logged yet. Start by adding your first day!</p>';
+                } else {
+                    stepsList.innerHTML = steps.map(step => 
+                        `<div class="step-item">
+                            <span>${step.date}</span>
+                            <span><strong>${step.count.toLocaleString()} steps</strong></span>
+                        </div>`
+                    ).join('');
+                }
+            } catch (error) {
+                document.getElementById('stepsList').innerHTML = '<p>Error loading steps</p>';
+            }
+        }
+        
+        // Load leaderboard
+        async function loadLeaderboard() {
+            try {
+                const response = await fetch('/api/leaderboard');
+                const leaderboard = await response.json();
+                
+                const leaderboardDiv = document.getElementById('leaderboard');
+                leaderboardDiv.innerHTML = leaderboard.map((user, index) => 
+                    `<div class="leaderboard-item">
+                        <div>
+                            <span class="rank">#${index + 1}</span>
+                            <strong>${user.name}</strong>
+                            ${user.team ? `<span style="color: #666;">(${user.team})</span>` : ''}
+                        </div>
+                        <div>
+                            <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
+                            <div style="font-size: 0.9em; color: #666;">
+                                ${user.total_steps.toLocaleString()} total • ${user.days_logged} days
+                            </div>
+                        </div>
+                    </div>`
+                ).join('');
+            } catch (error) {
+                document.getElementById('leaderboard').innerHTML = '<p>Error loading leaderboard</p>';
+            }
+        }
+        
+        // Handle form submission
+        document.getElementById('stepsForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const date = document.getElementById('date').value;
+            const steps = parseInt(document.getElementById('steps').value);
+            const messageDiv = document.getElementById('stepsMessage');
+            
+            try {
+                const response = await fetch('/api/steps', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: date,
+                        count: steps
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = '<div class="message success">✅ Steps saved successfully!</div>';
+                    document.getElementById('steps').value = '';
+                    loadSteps(); // Reload the steps list
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+            }
+        });
+        
+        // Load team leaderboard
+        async function loadTeamLeaderboard() {
+            try {
+                const response = await fetch('/api/team-leaderboard');
+                const teams = await response.json();
+                
+                const teamLeaderboard = document.getElementById('teamLeaderboard');
+                if (teams.length === 0) {
+                    teamLeaderboard.innerHTML = '<p>No teams with members yet.</p>';
+                } else {
+                    teamLeaderboard.innerHTML = teams.map((team, index) => 
+                        `<div class="leaderboard-item">
+                            <div>
+                                <span class="rank">#${index + 1}</span>
+                                <strong>${team.team}</strong>
+                                <span style="color: #666;">(${team.member_count} members)</span>
+                            </div>
+                            <div>
+                                <div><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
+                                <div style="font-size: 0.9em; color: #666;">
+                                    ${team.total_steps.toLocaleString()} total steps
+                                </div>
+                            </div>
+                        </div>`
+                    ).join('');
+                }
+            } catch (error) {
+                document.getElementById('teamLeaderboard').innerHTML = '<p>Error loading team leaderboard</p>';
+            }
+        }
+
+        // Load initial data
+        loadCurrentUser().then(() => {
+            loadSteps();
+        });
+    </script>
+    </div>
+</body>
+</html>
