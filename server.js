@@ -83,7 +83,9 @@ function isValidDate(dateString) {
 
 // Authentication middleware
 function requireAuth(req, res, next) {
+  console.log('requireAuth check - session userId:', req.session.userId);
   if (!req.session.userId) {
+    console.log('No session userId, redirecting to login');
     return res.redirect('/');
   }
   next();
@@ -276,7 +278,10 @@ End of Message`;
 app.get('/auth/login', (req, res) => {
   const { token } = req.query;
   
+  console.log('Login attempt with token:', token ? 'present' : 'missing');
+  
   if (!token) {
+    console.log('No token provided');
     return res.status(400).send('Invalid login link');
   }
 
@@ -291,9 +296,12 @@ app.get('/auth/login', (req, res) => {
       }
       
       if (!row) {
+        console.log('Token not found, used, or expired');
         return res.status(400).send('Invalid or expired login link');
       }
 
+      console.log('Valid token found for email:', row.email);
+      
       // Mark token as used
       db.run(`UPDATE auth_tokens SET used = 1 WHERE token = ?`, [token]);
 
@@ -305,6 +313,7 @@ app.get('/auth/login', (req, res) => {
         }
 
         if (!user) {
+          console.log('Creating new user for:', row.email);
           // Create new user
           db.run(
             `INSERT INTO users (email, name) VALUES (?, ?)`,
@@ -315,17 +324,36 @@ app.get('/auth/login', (req, res) => {
                 return res.status(500).send('Database error');
               }
               
+              console.log('New user created with ID:', this.lastID);
+              
               // Set session and redirect to dashboard
               req.session.userId = this.lastID;
               req.session.email = row.email;
-              res.redirect(`/dashboard`);
+              
+              req.session.save((err) => {
+                if (err) {
+                  console.error('Session save error:', err);
+                  return res.status(500).send('Session error');
+                }
+                console.log('Session saved for new user, redirecting to dashboard');
+                res.redirect(`/dashboard`);
+              });
             }
           );
         } else {
+          console.log('Existing user found:', user.id, user.email);
           // Set session and redirect to dashboard
           req.session.userId = user.id;
           req.session.email = user.email;
-          res.redirect(`/dashboard`);
+          
+          req.session.save((err) => {
+            if (err) {
+              console.error('Session save error:', err);
+              return res.status(500).send('Session error');
+            }
+            console.log('Session saved for existing user, redirecting to dashboard');
+            res.redirect(`/dashboard`);
+          });
         }
       });
     }
@@ -334,6 +362,7 @@ app.get('/auth/login', (req, res) => {
 
 // Dashboard (protected)
 app.get('/dashboard', requireAuth, (req, res) => {
+  console.log('Dashboard accessed by user:', req.session.userId);
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
