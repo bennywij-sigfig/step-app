@@ -629,6 +629,41 @@ app.delete('/api/admin/teams/:teamId', requireApiAdmin, (req, res) => {
   );
 });
 
+// Delete user (admin only)
+app.delete('/api/admin/users/:userId', requireApiAdmin, (req, res) => {
+  const { userId } = req.params;
+  
+  // First, delete all user's steps
+  db.run(
+    `DELETE FROM steps WHERE user_id = ?`,
+    [userId],
+    (err) => {
+      if (err) {
+        console.error('Error deleting user steps:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Then delete the user
+      db.run(
+        `DELETE FROM users WHERE id = ?`,
+        [userId],
+        function(err) {
+          if (err) {
+            console.error('Error deleting user:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          
+          if (this.changes === 0) {
+            return res.status(404).json({ error: 'User not found' });
+          }
+          
+          res.json({ message: 'User deleted successfully' });
+        }
+      );
+    }
+  );
+});
+
 // Team leaderboard
 app.get('/api/team-leaderboard', (req, res) => {
   db.all(`

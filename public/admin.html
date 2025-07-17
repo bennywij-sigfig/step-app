@@ -81,6 +81,19 @@
             background: #6c757d;
             cursor: not-allowed;
         }
+        .delete-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+        .delete-btn:hover {
+            background: #c82333;
+        }
         .message {
             margin-top: 10px;
             padding: 10px;
@@ -271,6 +284,9 @@
                                     <td>
                                         <button class="save-btn" id="save-${user.id}" onclick="saveTeam(${user.id})" disabled>
                                             Save
+                                        </button>
+                                        <button class="delete-btn" onclick="deleteUser(${user.id}, '${user.name}')">
+                                            Delete
                                         </button>
                                     </td>
                                 </tr>
@@ -534,6 +550,33 @@
                 if (response.ok) {
                     messageDiv.innerHTML = '<div class="message success">✅ Team deleted successfully!</div>';
                     loadManageTeams();
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+            }
+        }
+
+        // Delete user
+        async function deleteUser(userId, userName) {
+            if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone and will permanently remove their account and all step data.`)) {
+                return;
+            }
+            
+            const messageDiv = document.getElementById('usersMessage');
+            
+            try {
+                const response = await fetch(`/api/admin/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = '<div class="message success">✅ User deleted successfully!</div>';
+                    loadUsers(); // Reload the users table
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
                     messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
