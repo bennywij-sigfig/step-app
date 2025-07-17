@@ -9,6 +9,12 @@ const db = require('./database');
 // Load environment variables
 require('dotenv').config();
 
+// Debug environment variables
+console.log('Environment check:');
+console.log('SESSION_SECRET:', process.env.SESSION_SECRET ? 'SET' : 'NOT SET');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('MAILGUN_API_KEY:', process.env.MAILGUN_API_KEY ? 'SET' : 'NOT SET');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
