@@ -352,14 +352,15 @@
             display: flex;
             align-items: end;
             height: 100px;
-            gap: 3px;
-            padding: 0 8px;
+            gap: 4px;
+            padding: 0 8px 25px 8px;
             justify-content: center;
+            position: relative;
         }
         
         .step-bar {
             background: linear-gradient(to top, #667eea, #764ba2);
-            min-width: 16px;
+            min-width: 20px;
             border-radius: 3px 3px 0 0;
             transition: all 0.2s ease;
             position: relative;
@@ -378,10 +379,11 @@
             position: absolute;
             bottom: -20px;
             left: 50%;
-            transform: translateX(-50%);
-            font-size: 10px;
+            transform: translateX(-50%) rotate(-45deg);
+            font-size: 9px;
             color: #666;
             white-space: nowrap;
+            transform-origin: center;
         }
         
         .step-bar::after {
@@ -422,15 +424,17 @@
             .steps-chart {
                 height: 80px;
                 gap: 2px;
+                padding: 0 4px 22px 4px;
             }
             
             .step-bar {
-                min-width: 12px;
+                min-width: 16px;
             }
             
             .step-bar::before {
-                font-size: 9px;
+                font-size: 8px;
                 bottom: -18px;
+                transform: translateX(-50%) rotate(-45deg);
             }
             
             .step-bar::after {
@@ -527,7 +531,9 @@
                 <label for="steps">Steps:</label>
                 <input type="number" id="steps" name="steps" min="0" max="70000" required placeholder="e.g. 8500">
             </div>
-            <button type="submit">Save Steps</button>
+            <div class="form-group">
+                <button type="submit">Save Steps</button>
+            </div>
         </form>
         <div id="stepsMessage"></div>
         
@@ -652,10 +658,10 @@
                 stepsByDate[step.date] = step.count;
             });
             
-            // Generate last 14 days (or all available data if less)
+            // Generate last 10 days (or all available data if less)
             const today = new Date();
             const days = [];
-            const maxDays = Math.min(14, steps.length + 7); // Show some empty days too
+            const maxDays = Math.min(10, steps.length + 5); // Show some empty days too
             
             for (let i = maxDays - 1; i >= 0; i--) {
                 const date = new Date(today);
