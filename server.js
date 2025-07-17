@@ -19,6 +19,9 @@ console.log('MAILGUN_API_KEY:', process.env.MAILGUN_API_KEY ? 'SET' : 'NOT SET')
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust proxy for fly.io (enables secure cookies behind HTTPS proxy)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -36,7 +39,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: { 
-    secure: false, // Temporarily disable for debugging
+    secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     httpOnly: true,
     sameSite: 'lax'
