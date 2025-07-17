@@ -3,7 +3,7 @@ const path = require('path');
 
 // Use persistent volume in production, local file in development
 const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/app/data/steps.db' 
+  ? '/data/steps.db' 
   : path.join(__dirname, 'steps.db');
 
 const db = new sqlite3.Database(dbPath);
