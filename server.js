@@ -4,6 +4,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const session = require('express-session');
+const SQLiteStore = require('connect-sqlite3')(session);
 const db = require('./database');
 
 // Load environment variables
@@ -22,13 +23,23 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+// Configure session store
+const sessionStore = new SQLiteStore({
+  db: process.env.NODE_ENV === 'production' ? '/data/sessions.db' : 'sessions.db',
+  dir: process.env.NODE_ENV === 'production' ? '/data' : '.',
+  table: 'sessions'
+});
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'step-challenge-secret-key-change-in-production',
+  store: sessionStore,
   resave: false,
   saveUninitialized: false,
   cookie: { 
     secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true,
+    sameSite: 'lax'
   }
 }));
 app.use(express.static('public'));
