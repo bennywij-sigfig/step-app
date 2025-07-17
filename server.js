@@ -25,7 +25,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 // Configure session store
 const sessionStore = new SQLiteStore({
-  db: process.env.NODE_ENV === 'production' ? '/data/sessions.db' : 'sessions.db',
+  db: 'sessions.db',
   dir: process.env.NODE_ENV === 'production' ? '/data' : '.',
   table: 'sessions'
 });
