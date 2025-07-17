@@ -664,6 +664,62 @@ app.delete('/api/admin/users/:userId', requireApiAdmin, (req, res) => {
   );
 });
 
+// Export all step data as CSV (admin only)
+app.get('/api/admin/export-csv', requireApiAdmin, (req, res) => {
+  db.all(`
+    SELECT 
+      u.name as user_name,
+      u.email as user_email,
+      COALESCE(u.team, 'No Team') as team_name,
+      s.date,
+      s.count as step_count,
+      s.created_at,
+      s.updated_at
+    FROM users u
+    LEFT JOIN steps s ON u.id = s.user_id
+    WHERE s.date IS NOT NULL
+    ORDER BY s.date DESC, u.name ASC
+  `, (err, rows) => {
+    if (err) {
+      console.error('Error fetching export data:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Generate CSV content
+    const csvHeader = 'User Name,User Email,Team,Date,Steps,Created At,Updated At\n';
+    const csvRows = rows.map(row => {
+      // Escape any commas or quotes in the data
+      const escapeCsvField = (field) => {
+        if (field === null || field === undefined) return '';
+        const str = String(field);
+        if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+          return '"' + str.replace(/"/g, '""') + '"';
+        }
+        return str;
+      };
+      
+      return [
+        escapeCsvField(row.user_name),
+        escapeCsvField(row.user_email),
+        escapeCsvField(row.team_name),
+        escapeCsvField(row.date),
+        escapeCsvField(row.step_count),
+        escapeCsvField(row.created_at),
+        escapeCsvField(row.updated_at)
+      ].join(',');
+    }).join('\n');
+    
+    const csvContent = csvHeader + csvRows;
+    
+    // Set headers for CSV download
+    const timestamp = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="step-challenge-export-${timestamp}.csv"`);
+    
+    res.send(csvContent);
+  });
+});
+
 // Team leaderboard
 app.get('/api/team-leaderboard', (req, res) => {
   db.all(`

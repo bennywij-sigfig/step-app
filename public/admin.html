@@ -151,6 +151,7 @@
         <button id="teamsBtn">Team Leaderboard</button>
         <button id="manageTeamsBtn">Manage Teams</button>
         <button id="overviewBtn">Overview</button>
+        <button id="exportBtn" style="background: #28a745; color: white;">📊 Export CSV</button>
     </div>
 
     <div id="overviewView" class="card hidden">
@@ -230,6 +231,10 @@
         document.getElementById('overviewBtn').addEventListener('click', () => {
             showView('overview');
             loadOverview();
+        });
+        
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            exportCSV();
         });
         
         function showView(view) {
@@ -583,6 +588,58 @@
                 }
             } catch (error) {
                 messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+            }
+        }
+
+        // Export CSV function
+        async function exportCSV() {
+            try {
+                const response = await fetch('/api/admin/export-csv');
+                
+                if (response.ok) {
+                    // Create a blob from the response
+                    const blob = await response.blob();
+                    
+                    // Create a temporary URL for the blob
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    // Create a temporary download link
+                    const link = document.createElement('a');
+                    link.href = url;
+                    
+                    // Get filename from Content-Disposition header or use default
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'step-challenge-export.csv';
+                    if (contentDisposition) {
+                        const matches = contentDisposition.match(/filename="(.+)"/);
+                        if (matches) {
+                            filename = matches[1];
+                        }
+                    }
+                    
+                    link.download = filename;
+                    
+                    // Trigger download
+                    document.body.appendChild(link);
+                    link.click();
+                    
+                    // Clean up
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Show success message
+                    const messageDiv = document.getElementById('usersMessage');
+                    messageDiv.innerHTML = '<div class="message success">✅ CSV export downloaded successfully!</div>';
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                    
+                } else {
+                    throw new Error('Export failed');
+                }
+            } catch (error) {
+                console.error('Export error:', error);
+                const messageDiv = document.getElementById('usersMessage');
+                messageDiv.innerHTML = '<div class="message error">❌ Export failed. Please try again.</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 3000);
             }
         }
 
