@@ -1,7 +1,12 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const db = new sqlite3.Database(path.join(__dirname, 'steps.db'));
+// Use persistent volume in production, local file in development
+const dbPath = process.env.NODE_ENV === 'production' 
+  ? '/app/data/steps.db' 
+  : path.join(__dirname, 'steps.db');
+
+const db = new sqlite3.Database(dbPath);
 
 // Initialize database tables
 db.serialize(() => {
