@@ -338,6 +338,108 @@
             to { transform: translateY(0); opacity: 1; }
         }
         
+        /* Daily Steps Chart */
+        .steps-chart-container {
+            margin: 16px 0;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.4);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .steps-chart {
+            display: flex;
+            align-items: end;
+            height: 100px;
+            gap: 3px;
+            padding: 0 8px;
+            justify-content: center;
+        }
+        
+        .step-bar {
+            background: linear-gradient(to top, #667eea, #764ba2);
+            min-width: 16px;
+            border-radius: 3px 3px 0 0;
+            transition: all 0.2s ease;
+            position: relative;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        
+        .step-bar:hover {
+            opacity: 1;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .step-bar::before {
+            content: attr(data-date);
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #666;
+            white-space: nowrap;
+        }
+        
+        .step-bar::after {
+            content: attr(data-steps);
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 11px;
+            color: #333;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .step-bar:hover::after {
+            opacity: 1;
+        }
+        
+        .step-bar.no-data {
+            background: rgba(200, 200, 200, 0.3);
+            opacity: 0.5;
+        }
+        
+        .step-bar.no-data::after {
+            content: "No data";
+        }
+        
+        @media (max-width: 768px) {
+            .steps-chart-container {
+                padding: 12px;
+            }
+            
+            .steps-chart {
+                height: 80px;
+                gap: 2px;
+            }
+            
+            .step-bar {
+                min-width: 12px;
+            }
+            
+            .step-bar::before {
+                font-size: 9px;
+                bottom: -18px;
+            }
+            
+            .step-bar::after {
+                font-size: 10px;
+                top: -22px;
+                padding: 1px 4px;
+            }
+        }
+        
         @media (max-width: 768px) {
             .step-item, .leaderboard-item {
                 padding: 10px;
@@ -430,6 +532,14 @@
         <div id="stepsMessage"></div>
         
         <h3>Your Recent Steps</h3>
+        
+        <!-- Daily Steps Chart -->
+        <div class="steps-chart-container">
+            <div id="stepsChart" class="steps-chart">
+                <p>Loading chart...</p>
+            </div>
+        </div>
+        
         <div id="stepsList" class="steps-list">
             <p>Loading your steps...</p>
         </div>
@@ -517,9 +627,66 @@
                         </div>`
                     ).join('');
                 }
+                
+                // Update chart
+                renderStepsChart(steps);
+                
             } catch (error) {
                 document.getElementById('stepsList').innerHTML = '<p>Error loading steps</p>';
+                document.getElementById('stepsChart').innerHTML = '<p>Error loading chart</p>';
             }
+        }
+        
+        // Render steps chart
+        function renderStepsChart(steps) {
+            const chartContainer = document.getElementById('stepsChart');
+            
+            if (steps.length === 0) {
+                chartContainer.innerHTML = '<p style="text-align: center; color: #666; margin: 40px 0;">No step data to display</p>';
+                return;
+            }
+            
+            // Create a map of steps by date
+            const stepsByDate = {};
+            steps.forEach(step => {
+                stepsByDate[step.date] = step.count;
+            });
+            
+            // Generate last 14 days (or all available data if less)
+            const today = new Date();
+            const days = [];
+            const maxDays = Math.min(14, steps.length + 7); // Show some empty days too
+            
+            for (let i = maxDays - 1; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                days.push({
+                    date: dateStr,
+                    displayDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                    steps: stepsByDate[dateStr] || 0
+                });
+            }
+            
+            // Find max steps for scaling
+            const maxSteps = Math.max(...days.map(d => d.steps), 1);
+            
+            // Create bars
+            const bars = days.map(day => {
+                const heightPercent = day.steps > 0 ? (day.steps / maxSteps) * 90 + 10 : 5; // Min 5% height for empty days
+                const isToday = day.date === today.toISOString().split('T')[0];
+                const hasData = day.steps > 0;
+                
+                return `<div class="step-bar ${!hasData ? 'no-data' : ''}" 
+                             style="height: ${heightPercent}%${isToday ? '; border: 2px solid #667eea;' : ''}"
+                             data-date="${day.displayDate}" 
+                             data-steps="${hasData ? day.steps.toLocaleString() + ' steps' : 'No data'}"
+                             title="${day.displayDate}: ${hasData ? day.steps.toLocaleString() + ' steps' : 'No data'}">
+                        </div>`;
+            }).join('');
+            
+            chartContainer.innerHTML = bars;
         }
         
         // Load leaderboard
