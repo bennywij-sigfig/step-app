@@ -1,0 +1,65 @@
+name: Claude Code Assistant
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+  pull_request:
+    types: [opened, edited, synchronize]
+  pull_request_review_comment:
+    types: [created, edited]
+
+jobs:
+  claude-assist:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run Claude Code
+        uses: anthropics/claude-code-action@v1
+        with:
+          api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Optional: Use AWS Bedrock instead
+          # aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          # aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # aws_region: us-east-1
+          # model: claude-3-5-sonnet-20241022
+          
+          # Optional: Use Google Vertex AI instead
+          # vertex_project_id: ${{ secrets.VERTEX_PROJECT_ID }}
+          # vertex_location: us-central1
+          # google_application_credentials: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+          
+          # Workflow configuration
+          timeout: 600  # 10 minutes timeout
+          max_tokens: 8192
+          
+      - name: Run linting and tests after Claude changes
+        if: success()
+        run: |
+          if [ -f "package.json" ] && grep -q '"lint"' package.json; then
+            npm run lint || echo "Linting failed or not available"
+          fi
+          if [ -f "package.json" ] && grep -q '"test"' package.json; then
+            npm test || echo "Tests failed or not available"
+          fi
