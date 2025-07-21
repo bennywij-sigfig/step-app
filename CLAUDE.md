@@ -14,7 +14,7 @@ Web application for tracking daily steps in a company-wide challenge (~150 users
 ## Tech Stack
 - **Backend**: Node.js + Express + SQLite
 - **Frontend**: Vanilla HTML/CSS/JS
-- **Auth**: Magic links via Nodemailer
+- **Auth**: Magic links via Mailgun API
 - **Security**: Helmet, rate limiting, CSRF tokens
 - **Deployment**: Fly.io with Docker
 

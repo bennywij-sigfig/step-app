@@ -17,12 +17,20 @@ A simple web application for tracking daily steps in a team challenge.
    npm install
    ```
 
-2. **Configure email (optional for testing)**:
-   Set these environment variables or edit `server.js`:
+2. **Configure environment variables**:
+   For production, create a `.env` file or set these environment variables:
    ```bash
-   export EMAIL_USER=your-email@gmail.com
-   export EMAIL_PASS=your-app-password
+   # Required for production
+   SESSION_SECRET=your-secure-32-char-minimum-secret-key
+   NODE_ENV=production
+   
+   # Email configuration (Mailgun)
+   MAILGUN_API_KEY=your-mailgun-api-key
+   MAILGUN_DOMAIN=your-domain.com
+   FROM_EMAIL=your-sender@your-domain.com
    ```
+   
+   For local development, the app will work without email configuration (magic links appear in console).
 
 3. **Start the server**:
    ```bash
@@ -52,15 +60,25 @@ Uses SQLite with these tables:
 - **Backend**: Node.js + Express
 - **Database**: SQLite
 - **Frontend**: Vanilla HTML/CSS/JavaScript
-- **Email**: Nodemailer
+- **Email**: Mailgun API
 
-## Configuration
+## Environment Variables
 
-For production, configure proper email settings and consider:
-- Email domain restrictions
-- HTTPS setup
-- Database backups
-- User management features
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `SESSION_SECRET` | Production | auto-generated | Secure session key (32+ chars) |
+| `NODE_ENV` | No | development | Set to 'production' for production |
+| `MAILGUN_API_KEY` | For email | - | Mailgun API key for sending emails |
+| `MAILGUN_DOMAIN` | No | sigfig.com | Your verified Mailgun domain |
+| `FROM_EMAIL` | No | data@sigfig.com | Sender email address |
+
+## Production Considerations
+
+- Set `NODE_ENV=production` for security features
+- Use strong `SESSION_SECRET` (32+ characters)
+- Configure Mailgun for email delivery
+- Enable HTTPS for secure cookies
+- Consider database backups
 
 ## Testing
 
