@@ -23,10 +23,38 @@ if (process.env.NODE_ENV === 'production') {
     console.error(`❌ Data directory ${dataDir} is not writable:`, err.message);
     process.exit(1);
   }
+
+  // Test writing to the directory to ensure it actually works
+  const testFile = path.join(dataDir, 'test-write.tmp');
+  try {
+    fs.writeFileSync(testFile, 'test');
+    fs.unlinkSync(testFile);
+    console.log(`✅ Confirmed write access to ${dataDir}`);
+  } catch (err) {
+    console.error(`❌ Cannot write test file to ${dataDir}:`, err.message);
+    process.exit(1);
+  }
+
+  // If database file exists, ensure it's writable
+  if (fs.existsSync(dbPath)) {
+    try {
+      fs.accessSync(dbPath, fs.constants.W_OK);
+      console.log(`✅ Database file ${dbPath} is writable`);
+    } catch (err) {
+      console.log(`🔧 Setting database file permissions for ${dbPath}`);
+      try {
+        fs.chmodSync(dbPath, 0o664);
+        console.log(`✅ Fixed database file permissions`);
+      } catch (chmodErr) {
+        console.error(`❌ Cannot fix database file permissions:`, chmodErr.message);
+        process.exit(1);
+      }
+    }
+  }
 }
 
 console.log(`📁 Using database path: ${dbPath}`);
-const db = new sqlite3.Database(dbPath, (err) => {
+const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
   if (err) {
     console.error('❌ Database connection failed:', err.message);
     process.exit(1);
@@ -44,7 +72,13 @@ db.serialize(() => {
     team TEXT,
     is_admin BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+  )`, (err) => {
+    if (err) {
+      console.error('❌ Failed to create users table:', err.message);
+      process.exit(1);
+    }
+    console.log('✅ Users table ready');
+  });
 
   // Teams table
   db.run(`CREATE TABLE IF NOT EXISTS teams (
