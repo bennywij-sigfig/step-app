@@ -1,20 +1,66 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
+const rateLimit = require('express-rate-limit');
 const db = require('./database');
 
 // Load environment variables
 require('dotenv').config();
 
-// Debug environment variables
-console.log('Environment check:');
-console.log('SESSION_SECRET:', process.env.SESSION_SECRET ? 'SET' : 'NOT SET');
-console.log('NODE_ENV:', process.env.NODE_ENV);
-console.log('MAILGUN_API_KEY:', process.env.MAILGUN_API_KEY ? 'SET' : 'NOT SET');
+// Environment validation
+function validateEnvironment() {
+  const requiredVars = {
+    SESSION_SECRET: process.env.SESSION_SECRET,
+    NODE_ENV: process.env.NODE_ENV || 'development'
+  };
+  
+  const missing = [];
+  
+  // Check for production requirements
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32) {
+      missing.push('SESSION_SECRET (must be at least 32 characters for production)');
+    }
+    if (!process.env.MAILGUN_API_KEY) {
+      console.warn('⚠️  MAILGUN_API_KEY not set - email functionality will be disabled');
+    }
+  }
+  
+  // Check for development default secret
+  if (process.env.SESSION_SECRET === 'step-challenge-secret-key-change-in-production') {
+    console.warn('⚠️  Using default SESSION_SECRET - please change for production!');
+  }
+  
+  if (missing.length > 0) {
+    console.error('❌ Missing required environment variables:', missing.join(', '));
+    console.error('Please copy .env.example to .env and configure the required variables.');
+    process.exit(1);
+  }
+  
+  console.log('✅ Environment validation passed');
+}
+
+// Validate environment at startup
+validateEnvironment();
+
+// Environment info (production-safe)
+const isProduction = process.env.NODE_ENV === 'production';
+const isDevelopment = !isProduction;
+
+if (isDevelopment) {
+  console.log('🔧 Development mode - debug logging enabled');
+  console.log('Environment check:');
+  console.log('SESSION_SECRET:', process.env.SESSION_SECRET ? 'SET' : 'NOT SET');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('MAILGUN_API_KEY:', process.env.MAILGUN_API_KEY ? 'SET' : 'NOT SET');
+} else {
+  console.log('🚀 Production mode - starting Step Challenge App');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,10 +68,35 @@ const PORT = process.env.PORT || 3000;
 // Trust proxy for fly.io (enables secure cookies behind HTTPS proxy)
 app.set('trust proxy', 1);
 
-// Middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Allow inline styles for our CSS
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"], // Allow external images for charts/icons
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Disable for compatibility
+}));
+
+// CORS configuration
+const corsOptions = {
+  origin: isProduction ? false : true, // Restrict origins in production
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Configure session store
 const sessionStore = new SQLiteStore({
   db: 'sessions.db',
@@ -47,6 +118,64 @@ app.use(session({
 }));
 app.use(express.static('public'));
 
+// Rate limiting configuration
+const magicLinkLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: {
+    error: 'Too many login requests from this IP, please try again in an hour.',
+    retryAfter: 3600
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  // Use default IP key generator which handles IPv6 properly
+  handler: (req, res) => {
+    console.log(`Rate limit exceeded for magic link request from IP: ${req.ip}`);
+    res.status(429).json({
+      error: 'Too many login requests from this IP, please try again in an hour.',
+      retryAfter: 3600
+    });
+  }
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 100, // limit each session to 100 requests per windowMs
+  message: {
+    error: 'Too many API requests, please try again in an hour.',
+    retryAfter: 3600
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use default IP-based key generator
+  handler: (req, res) => {
+    console.log(`API rate limit exceeded for user: ${req.session?.userId || 'anonymous'} from IP: ${req.ip}`);
+    res.status(429).json({
+      error: 'Too many API requests, please try again in an hour.',
+      retryAfter: 3600
+    });
+  }
+});
+
+const adminApiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 50, // limit each session to 50 requests per windowMs for admin endpoints
+  message: {
+    error: 'Too many admin API requests, please try again in an hour.',
+    retryAfter: 3600
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use default IP-based key generator
+  handler: (req, res) => {
+    console.log(`Admin API rate limit exceeded for user: ${req.session?.userId || 'anonymous'} from IP: ${req.ip}`);
+    res.status(429).json({
+      error: 'Too many admin API requests, please try again in an hour.',
+      retryAfter: 3600
+    });
+  }
+});
+
 // Mailgun configuration
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
 const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || 'sigfig.com';
@@ -56,9 +185,9 @@ const MAILGUN_API_URL = `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`;
 // Email sending function using Mailgun
 async function sendEmail(to, subject, htmlBody, textBody) {
   if (!MAILGUN_API_KEY) {
-    console.log('MAILGUN_API_KEY not configured. Login URL would be sent to:', to);
-    console.log('Subject:', subject);
-    console.log('Body:', textBody);
+    devLog('MAILGUN_API_KEY not configured. Login URL would be sent to:', to);
+    devLog('Subject:', subject);
+    devLog('Body:', textBody);
     return { success: false, message: 'Email not configured' };
   }
 
@@ -101,11 +230,18 @@ function isValidDate(dateString) {
   return date instanceof Date && !isNaN(date);
 }
 
+// Utility function for development logging
+function devLog(...args) {
+  if (isDevelopment) {
+    console.log(...args);
+  }
+}
+
 // Authentication middleware
 function requireAuth(req, res, next) {
-  console.log('requireAuth check - session userId:', req.session.userId);
+  devLog('requireAuth check - session userId:', req.session.userId);
   if (!req.session.userId) {
-    console.log('No session userId, redirecting to login');
+    devLog('No session userId, redirecting to login');
     return res.redirect('/');
   }
   next();
@@ -129,7 +265,7 @@ function requireAdmin(req, res, next) {
   db.get(`SELECT is_admin FROM users WHERE id = ?`, [req.session.userId], (err, user) => {
     if (err) {
       console.error('Error checking admin status:', err);
-      return res.status(500).send('Database error');
+      return res.status(500).send('Internal server error');
     }
     
     if (!user || !user.is_admin) {
@@ -163,13 +299,35 @@ function requireApiAdmin(req, res, next) {
 
 // Routes
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+  // Simple health check - verify database connection
+  db.get('SELECT 1', (err) => {
+    if (err) {
+      console.error('Health check failed - database error:', err);
+      return res.status(503).json({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: 'Database connection failed'
+      });
+    }
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      version: require('./package.json').version,
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
+});
+
 // Home page
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Send magic link
-app.post('/auth/send-link', async (req, res) => {
+app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
   const { email } = req.body;
   
   if (!email || !isValidEmail(email)) {
@@ -205,8 +363,6 @@ app.post('/auth/send-link', async (req, res) => {
       "Trying is the first step towards failure.",
       "I'm not a bad guy! I work hard, and I love my kids. So why should I spend half my Sunday hearing about how I'm going to hell?",
       "Facts are meaningless. You could use facts to prove anything that's even remotely true.",
-      "I'm going to the back seat of my car, with the woman I love, and I won't be back for ten minutes!",
-      "Stupid Flanders."
     ];
     
     const xkcdLinks = [
@@ -256,7 +412,7 @@ app.post('/auth/send-link', async (req, res) => {
               <a href="${randomXkcd}" style="color: #667eea; text-decoration: none;">${randomXkcd}</a>
             </p>
             <p style="font-size: 12px; color: #888; margin: 10px 0 0 0;">
-              Step Challenge • Powered by Sigfig
+              Step Challenge • Made with LLMs and powered by fly.io
             </p>
           </div>
         </div>
@@ -298,10 +454,10 @@ End of Message`;
 app.get('/auth/login', (req, res) => {
   const { token } = req.query;
   
-  console.log('Login attempt with token:', token ? 'present' : 'missing');
+  devLog('Login attempt with token:', token ? 'present' : 'missing');
   
   if (!token) {
-    console.log('No token provided');
+    devLog('No token provided');
     return res.status(400).send('Invalid login link');
   }
 
@@ -316,11 +472,11 @@ app.get('/auth/login', (req, res) => {
       }
       
       if (!row) {
-        console.log('Token not found, used, or expired');
+        devLog('Token not found, used, or expired');
         return res.status(400).send('Invalid or expired login link');
       }
 
-      console.log('Valid token found for email:', row.email);
+      devLog('Valid token found for email:', row.email);
       
       // Mark token as used
       db.run(`UPDATE auth_tokens SET used = 1 WHERE token = ?`, [token]);
@@ -333,7 +489,7 @@ app.get('/auth/login', (req, res) => {
         }
 
         if (!user) {
-          console.log('Creating new user for:', row.email);
+          devLog('Creating new user for:', row.email);
           // Create new user
           db.run(
             `INSERT INTO users (email, name) VALUES (?, ?)`,
@@ -344,7 +500,7 @@ app.get('/auth/login', (req, res) => {
                 return res.status(500).send('Database error');
               }
               
-              console.log('New user created with ID:', this.lastID);
+              devLog('New user created with ID:', this.lastID);
               
               // Set session and redirect to dashboard
               req.session.userId = this.lastID;
@@ -355,13 +511,13 @@ app.get('/auth/login', (req, res) => {
                   console.error('Session save error:', err);
                   return res.status(500).send('Session error');
                 }
-                console.log('Session saved for new user, redirecting to dashboard');
+                devLog('Session saved for new user, redirecting to dashboard');
                 res.redirect(`/dashboard`);
               });
             }
           );
         } else {
-          console.log('Existing user found:', user.id, user.email);
+          devLog('Existing user found:', user.id, user.email);
           // Set session and redirect to dashboard
           req.session.userId = user.id;
           req.session.email = user.email;
@@ -371,7 +527,7 @@ app.get('/auth/login', (req, res) => {
               console.error('Session save error:', err);
               return res.status(500).send('Session error');
             }
-            console.log('Session saved for existing user, redirecting to dashboard');
+            devLog('Session saved for existing user, redirecting to dashboard');
             res.redirect(`/dashboard`);
           });
         }
@@ -382,12 +538,12 @@ app.get('/auth/login', (req, res) => {
 
 // Dashboard (protected)
 app.get('/dashboard', requireAuth, (req, res) => {
-  console.log('Dashboard accessed by user:', req.session.userId);
+  devLog('Dashboard accessed by user:', req.session.userId);
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
 // API to get current user info
-app.get('/api/user', requireApiAuth, (req, res) => {
+app.get('/api/user', apiLimiter, requireApiAuth, (req, res) => {
   db.get(`SELECT id, email, name, team, is_admin FROM users WHERE id = ?`, [req.session.userId], (err, user) => {
     if (err) {
       console.error('Error fetching user:', err);
@@ -396,12 +552,26 @@ app.get('/api/user', requireApiAuth, (req, res) => {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json(user);
+    
+    // Get current active challenge
+    db.get(`SELECT * FROM challenges WHERE is_active = 1`, (challengeErr, challenge) => {
+      if (challengeErr) {
+        console.error('Error fetching active challenge:', challengeErr);
+        // Return user info without challenge info if there's an error
+        return res.json(user);
+      }
+      
+      // Include challenge info with user data
+      res.json({
+        ...user,
+        current_challenge: challenge || null
+      });
+    });
   });
 });
 
 // Get user steps (protected - only own steps)
-app.get('/api/steps', requireApiAuth, (req, res) => {
+app.get('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
   const userId = req.session.userId;
   
   db.all(
@@ -418,7 +588,7 @@ app.get('/api/steps', requireApiAuth, (req, res) => {
 });
 
 // Add/update steps (protected - only own steps)
-app.post('/api/steps', requireApiAuth, (req, res) => {
+app.post('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
   const { date, count } = req.body;
   const userId = req.session.userId;
   
@@ -434,21 +604,61 @@ app.post('/api/steps', requireApiAuth, (req, res) => {
     return res.status(400).json({ error: 'Step count must be between 0 and 70,000' });
   }
 
-  db.run(
-    `INSERT OR REPLACE INTO steps (user_id, date, count, updated_at) VALUES (?, ?, ?, datetime('now'))`,
-    [userId, date, count],
-    function(err) {
-      if (err) {
-        console.error('Error saving steps:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      res.json({ message: 'Steps saved successfully' });
+  // Check if there's an active challenge and validate date
+  db.get(`SELECT * FROM challenges WHERE is_active = 1`, (err, challenge) => {
+    if (err) {
+      console.error('Error checking active challenge:', err);
+      return res.status(500).json({ error: 'Database error' });
     }
-  );
+    
+    if (challenge) {
+      // Parse dates for comparison (ignoring time)
+      const stepDate = new Date(date + 'T00:00:00');
+      const startDate = new Date(challenge.start_date + 'T00:00:00');
+      const endDate = new Date(challenge.end_date + 'T23:59:59');
+      
+      if (stepDate < startDate || stepDate > endDate) {
+        return res.status(400).json({ 
+          error: `Step logging is only allowed during the active challenge period (${challenge.start_date} to ${challenge.end_date})`,
+          challenge_period: {
+            start_date: challenge.start_date,
+            end_date: challenge.end_date,
+            name: challenge.name
+          }
+        });
+      }
+      
+      // Save steps with challenge_id
+      db.run(
+        `INSERT OR REPLACE INTO steps (user_id, date, count, challenge_id, updated_at) VALUES (?, ?, ?, ?, datetime('now'))`,
+        [userId, date, count, challenge.id],
+        function(err) {
+          if (err) {
+            console.error('Error saving steps:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          res.json({ message: 'Steps saved successfully' });
+        }
+      );
+    } else {
+      // No active challenge, save steps without challenge_id (for backward compatibility)
+      db.run(
+        `INSERT OR REPLACE INTO steps (user_id, date, count, updated_at) VALUES (?, ?, ?, datetime('now'))`,
+        [userId, date, count],
+        function(err) {
+          if (err) {
+            console.error('Error saving steps:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          res.json({ message: 'Steps saved successfully' });
+        }
+      );
+    }
+  });
 });
 
 // Leaderboard
-app.get('/api/leaderboard', (req, res) => {
+app.get('/api/leaderboard', apiLimiter, (req, res) => {
   db.all(`
     SELECT 
       u.name, 
@@ -477,7 +687,7 @@ app.get('/api/leaderboard', (req, res) => {
 // Admin routes
 
 // Get all users (admin only)
-app.get('/api/admin/users', requireApiAdmin, (req, res) => {
+app.get('/api/admin/users', adminApiLimiter, requireApiAdmin, (req, res) => {
   db.all(`
     SELECT 
       u.id,
@@ -501,7 +711,7 @@ app.get('/api/admin/users', requireApiAdmin, (req, res) => {
 });
 
 // Update user team (admin only)
-app.put('/api/admin/users/:userId/team', requireApiAdmin, (req, res) => {
+app.put('/api/admin/users/:userId/team', adminApiLimiter, requireApiAdmin, (req, res) => {
   const { userId } = req.params;
   const { team } = req.body;
   
@@ -519,7 +729,7 @@ app.put('/api/admin/users/:userId/team', requireApiAdmin, (req, res) => {
 });
 
 // Get teams list
-app.get('/api/teams', (req, res) => {
+app.get('/api/teams', apiLimiter, (req, res) => {
   db.all(`SELECT id, name FROM teams ORDER BY name`, (err, rows) => {
     if (err) {
       console.error('Error fetching teams:', err);
@@ -530,7 +740,7 @@ app.get('/api/teams', (req, res) => {
 });
 
 // Create new team
-app.post('/api/admin/teams', requireApiAdmin, (req, res) => {
+app.post('/api/admin/teams', adminApiLimiter, requireApiAdmin, (req, res) => {
   const { name } = req.body;
   
   if (!name || name.trim() === '') {
@@ -554,7 +764,7 @@ app.post('/api/admin/teams', requireApiAdmin, (req, res) => {
 });
 
 // Update team name
-app.put('/api/admin/teams/:teamId', requireApiAdmin, (req, res) => {
+app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, (req, res) => {
   const { teamId } = req.params;
   const { name } = req.body;
   
@@ -595,7 +805,7 @@ app.put('/api/admin/teams/:teamId', requireApiAdmin, (req, res) => {
 });
 
 // Delete team (soft delete by setting inactive)
-app.delete('/api/admin/teams/:teamId', requireApiAdmin, (req, res) => {
+app.delete('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, (req, res) => {
   const { teamId } = req.params;
   
   // First, remove team assignment from all users
@@ -630,7 +840,7 @@ app.delete('/api/admin/teams/:teamId', requireApiAdmin, (req, res) => {
 });
 
 // Delete user (admin only)
-app.delete('/api/admin/users/:userId', requireApiAdmin, (req, res) => {
+app.delete('/api/admin/users/:userId', adminApiLimiter, requireApiAdmin, (req, res) => {
   const { userId } = req.params;
   
   // First, delete all user's steps
@@ -665,7 +875,7 @@ app.delete('/api/admin/users/:userId', requireApiAdmin, (req, res) => {
 });
 
 // Export all step data as CSV (admin only)
-app.get('/api/admin/export-csv', requireApiAdmin, (req, res) => {
+app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) => {
   db.all(`
     SELECT 
       u.name as user_name,
@@ -720,7 +930,7 @@ app.get('/api/admin/export-csv', requireApiAdmin, (req, res) => {
 });
 
 // Team leaderboard
-app.get('/api/team-leaderboard', (req, res) => {
+app.get('/api/team-leaderboard', apiLimiter, (req, res) => {
   db.all(`
     SELECT 
       u.team,
@@ -750,12 +960,203 @@ app.get('/api/team-leaderboard', (req, res) => {
   });
 });
 
+// Get all challenges (admin only)
+app.get('/api/admin/challenges', requireApiAdmin, (req, res) => {
+  db.all(`SELECT * FROM challenges ORDER BY created_at DESC`, (err, rows) => {
+    if (err) {
+      console.error('Error fetching challenges:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(rows);
+  });
+});
+
+// Create new challenge (admin only)
+app.post('/api/admin/challenges', requireApiAdmin, (req, res) => {
+  const { name, start_date, end_date } = req.body;
+  
+  if (!name || !start_date || !end_date) {
+    return res.status(400).json({ error: 'Name, start date, and end date are required' });
+  }
+  
+  if (!isValidDate(start_date) || !isValidDate(end_date)) {
+    return res.status(400).json({ error: 'Invalid date format' });
+  }
+  
+  // Validate that start_date is before end_date
+  if (new Date(start_date) >= new Date(end_date)) {
+    return res.status(400).json({ error: 'Start date must be before end date' });
+  }
+  
+  db.run(
+    `INSERT INTO challenges (name, start_date, end_date) VALUES (?, ?, ?)`,
+    [name.trim(), start_date, end_date],
+    function(err) {
+      if (err) {
+        console.error('Error creating challenge:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json({ 
+        id: this.lastID, 
+        name: name.trim(),
+        start_date,
+        end_date,
+        is_active: 0,
+        message: 'Challenge created successfully' 
+      });
+    }
+  );
+});
+
+// Update challenge (admin only)
+app.put('/api/admin/challenges/:challengeId', requireApiAdmin, (req, res) => {
+  const { challengeId } = req.params;
+  const { name, start_date, end_date, is_active } = req.body;
+  
+  if (!name || !start_date || !end_date) {
+    return res.status(400).json({ error: 'Name, start date, and end date are required' });
+  }
+  
+  if (!isValidDate(start_date) || !isValidDate(end_date)) {
+    return res.status(400).json({ error: 'Invalid date format' });
+  }
+  
+  // Validate that start_date is before end_date
+  if (new Date(start_date) >= new Date(end_date)) {
+    return res.status(400).json({ error: 'Start date must be before end date' });
+  }
+  
+  // If setting this challenge as active, deactivate all others first
+  if (is_active) {
+    db.run(`UPDATE challenges SET is_active = 0`, (err) => {
+      if (err) {
+        console.error('Error deactivating challenges:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+    });
+  }
+  
+  db.run(
+    `UPDATE challenges SET name = ?, start_date = ?, end_date = ?, is_active = ? WHERE id = ?`,
+    [name.trim(), start_date, end_date, is_active ? 1 : 0, challengeId],
+    function(err) {
+      if (err) {
+        console.error('Error updating challenge:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Challenge not found' });
+      }
+      
+      res.json({ message: 'Challenge updated successfully' });
+    }
+  );
+});
+
+// Delete challenge (admin only)
+app.delete('/api/admin/challenges/:challengeId', requireApiAdmin, (req, res) => {
+  const { challengeId } = req.params;
+  
+  db.run(
+    `DELETE FROM challenges WHERE id = ?`,
+    [challengeId],
+    function(err) {
+      if (err) {
+        console.error('Error deleting challenge:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Challenge not found' });
+      }
+      
+      res.json({ message: 'Challenge deleted successfully' });
+    }
+  );
+});
+
 // Admin dashboard
 app.get('/admin', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+// Database cleanup job for expired tokens (runs every hour in production)
+function cleanupExpiredTokens() {
+  db.run(
+    `DELETE FROM auth_tokens WHERE expires_at < datetime('now') OR used = 1`,
+    (err) => {
+      if (err) {
+        console.error('Error cleaning up expired tokens:', err);
+      } else {
+        devLog('Cleaned up expired authentication tokens');
+      }
+    }
+  );
+}
+
+// Run cleanup on startup and then every hour
+cleanupExpiredTokens();
+if (isProduction) {
+  setInterval(cleanupExpiredTokens, 60 * 60 * 1000); // Every hour
+}
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  
+  // Don't leak error details in production
+  const message = isProduction ? 'Internal server error' : err.message;
+  const stack = isProduction ? undefined : err.stack;
+  
+  res.status(err.status || 500).json({
+    error: message,
+    ...(stack && { stack })
+  });
+});
+
+// Handle 404s
+app.use((req, res) => {
+  res.status(404).json({ error: 'Not found' });
+});
+
+// Graceful shutdown handling
+process.on('SIGTERM', () => {
+  console.log('SIGTERM signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    db.close((err) => {
+      if (err) {
+        console.error('Error closing database:', err);
+      } else {
+        console.log('Database connection closed');
+      }
+      process.exit(0);
+    });
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT signal received: closing HTTP server');
+  server.close(() => {
+    console.log('HTTP server closed');
+    db.close((err) => {
+      if (err) {
+        console.error('Error closing database:', err);
+      } else {
+        console.log('Database connection closed');
+      }
+      process.exit(0);
+    });
+  });
+});
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const server = app.listen(PORT, () => {
+  console.log(`🚀 Step Challenge App server running on http://localhost:${PORT}`);
+  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  if (isDevelopment) {
+    console.log(`🔧 Admin panel available at: http://localhost:${PORT}/admin`);
+    console.log(`❤️  Health check at: http://localhost:${PORT}/health`);
+  }
 });

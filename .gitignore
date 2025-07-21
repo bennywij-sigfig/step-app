@@ -1,5 +1,28 @@
 node_modules/
 .env
+.env.local
+.env.production
 steps.db
+sessions.db
 *.log
 .DS_Store
+
+# Production files
+/data/
+fly-*.log
+.flyctl/
+
+# Development files
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo

@@ -49,6 +49,32 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Challenges table
+  db.run(`CREATE TABLE IF NOT EXISTS challenges (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    end_date TEXT NOT NULL,
+    is_active BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  // Add challenge_id column to steps table if it doesn't exist
+  db.run(`PRAGMA table_info(steps)`, (err, rows) => {
+    if (err) {
+      console.error('Error checking steps table:', err);
+      return;
+    }
+  });
+  
+  // Try to add challenge_id column (will fail silently if column already exists)
+  db.run(`ALTER TABLE steps ADD COLUMN challenge_id INTEGER REFERENCES challenges(id)`, (err) => {
+    // This will fail if column already exists, which is expected
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding challenge_id column:', err);
+    }
+  });
+
   // Insert sample teams
   db.run(`INSERT OR IGNORE INTO teams (name) VALUES ('Team Alpha')`);
   db.run(`INSERT OR IGNORE INTO teams (name) VALUES ('Team Beta')`);

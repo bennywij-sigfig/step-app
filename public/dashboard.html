@@ -491,6 +491,43 @@
             display: none;
         }
         
+        .challenge-info {
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            background: rgba(52, 144, 220, 0.1);
+            border: 1px solid rgba(52, 144, 220, 0.2);
+            backdrop-filter: blur(10px);
+        }
+        
+        .challenge-info.active {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        
+        .challenge-info.inactive {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid rgba(255, 193, 7, 0.2);
+        }
+        
+        .challenge-info h3 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .challenge-info p {
+            margin: 0;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .form-disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        
         h2 {
             color: #333;
             font-size: 20px;
@@ -522,6 +559,10 @@
 
     <div id="myStepsView" class="card">
         <h2>Log Your Steps</h2>
+        
+        <!-- Challenge Period Info -->
+        <div id="challengeInfo" class="challenge-info hidden"></div>
+        
         <form id="stepsForm">
             <div class="form-group">
                 <label for="date">Date:</label>
@@ -532,7 +573,7 @@
                 <input type="number" id="steps" name="steps" min="0" max="70000" required placeholder="e.g. 8500">
             </div>
             <div class="form-group">
-                <button type="submit">Save Steps</button>
+                <button type="submit" id="submitStepsBtn">Save Steps</button>
             </div>
         </form>
         <div id="stepsMessage"></div>
@@ -579,10 +620,71 @@
                 }
                 currentUser = await response.json();
                 document.getElementById('userName').textContent = currentUser.email;
+                
+                // Update challenge info display
+                updateChallengeInfo(currentUser.current_challenge);
             } catch (error) {
                 console.error('Error loading user:', error);
                 window.location.href = '/';
             }
+        }
+        
+        // Update challenge information display
+        function updateChallengeInfo(challenge) {
+            const challengeInfo = document.getElementById('challengeInfo');
+            const form = document.getElementById('stepsForm');
+            const submitBtn = document.getElementById('submitStepsBtn');
+            const dateInput = document.getElementById('date');
+            
+            if (challenge) {
+                const today = new Date();
+                const startDate = new Date(challenge.start_date + 'T00:00:00');
+                const endDate = new Date(challenge.end_date + 'T23:59:59');
+                const isWithinPeriod = today >= startDate && today <= endDate;
+                
+                challengeInfo.innerHTML = `
+                    <h3>${challenge.name}</h3>
+                    <p><strong>Challenge Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
+                    ${!isWithinPeriod ? '<p style="color: #d63384; font-weight: 500;">⚠️ Step logging is only allowed during the challenge period.</p>' : ''}
+                `;
+                
+                challengeInfo.className = isWithinPeriod ? 'challenge-info active' : 'challenge-info inactive';
+                challengeInfo.classList.remove('hidden');
+                
+                // Disable form if outside challenge period
+                if (!isWithinPeriod) {
+                    form.classList.add('form-disabled');
+                    submitBtn.textContent = 'Challenge Period Inactive';
+                    submitBtn.disabled = true;
+                } else {
+                    form.classList.remove('form-disabled');
+                    submitBtn.textContent = 'Save Steps';
+                    submitBtn.disabled = false;
+                }
+                
+                // Set date input constraints
+                dateInput.min = challenge.start_date;
+                dateInput.max = challenge.end_date;
+            } else {
+                challengeInfo.classList.add('hidden');
+                form.classList.remove('form-disabled');
+                submitBtn.textContent = 'Save Steps';
+                submitBtn.disabled = false;
+                
+                // Remove date constraints
+                dateInput.removeAttribute('min');
+                dateInput.removeAttribute('max');
+            }
+        }
+        
+        // Format date for display
+        function formatDate(dateString) {
+            const date = new Date(dateString + 'T00:00:00');
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
         }
         
         // Set default date to today
@@ -620,6 +722,15 @@
         async function loadSteps() {
             try {
                 const response = await fetch('/api/steps');
+                
+                if (response.status === 429) {
+                    const data = await response.json();
+                    const retryAfter = Math.floor(data.retryAfter / 60) || 60;
+                    document.getElementById('stepsList').innerHTML = '<p>⏰ Too many requests. Please wait ' + retryAfter + ' minutes and refresh the page.</p>';
+                    document.getElementById('stepsChart').innerHTML = '<p>Rate limit exceeded</p>';
+                    return;
+                }
+                
                 const steps = await response.json();
                 
                 const stepsList = document.getElementById('stepsList');
@@ -751,6 +862,9 @@
                     messageDiv.innerHTML = '<div class="message success">✅ Steps saved successfully!</div>';
                     document.getElementById('steps').value = '';
                     loadSteps(); // Reload the steps list
+                } else if (response.status === 429) {
+                    const retryAfter = Math.floor(data.retryAfter / 60) || 60; // Convert to minutes
+                    messageDiv.innerHTML = '<div class="message error">⏰ Too many requests. Please wait ' + retryAfter + ' minutes before trying again.</div>';
                 } else {
                     messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
                 }

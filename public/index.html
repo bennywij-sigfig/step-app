@@ -210,6 +210,9 @@
                 if (response.ok) {
                     messageDiv.innerHTML = '<div class="message success">✅ ' + data.message + '</div>';
                     document.getElementById('email').value = '';
+                } else if (response.status === 429) {
+                    const retryAfter = Math.floor(data.retryAfter / 60) || 60; // Convert to minutes
+                    messageDiv.innerHTML = '<div class="message error">⏰ Too many requests. Please wait ' + retryAfter + ' minutes before trying again.</div>';
                 } else {
                     messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
                 }

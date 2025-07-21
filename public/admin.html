@@ -150,6 +150,7 @@
         <button id="usersBtn" class="active">Manage Users</button>
         <button id="teamsBtn">Team Leaderboard</button>
         <button id="manageTeamsBtn">Manage Teams</button>
+        <button id="challengesBtn">Manage Challenges</button>
         <button id="overviewBtn">Overview</button>
         <button id="exportBtn" style="background: #28a745; color: white;">📊 Export CSV</button>
     </div>
@@ -212,6 +213,39 @@
         </div>
     </div>
 
+    <div id="challengesView" class="card hidden">
+        <h2>Manage Challenges</h2>
+        <p>Create and manage step challenges with date constraints</p>
+        
+        <div style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <h3>Create New Challenge</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Challenge Name</label>
+                    <input type="text" id="newChallengeName" placeholder="Enter challenge name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Start Date</label>
+                    <input type="date" id="newChallengeStartDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">End Date</label>
+                    <input type="date" id="newChallengeEndDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <button onclick="createChallenge()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; height: fit-content;">Create Challenge</button>
+            </div>
+            <div style="background: #e3f2fd; padding: 10px; border-radius: 5px; font-size: 14px; color: #1976d2;">
+                <strong>Note:</strong> Only one challenge can be active at a time. Users can only log steps during active challenge periods.
+            </div>
+        </div>
+        
+        <div id="challengesMessage"></div>
+        
+        <div id="challengesTable">
+            <p>Loading challenges...</p>
+        </div>
+    </div>
+
     <script>
         // Navigation
         document.getElementById('usersBtn').addEventListener('click', () => {
@@ -226,6 +260,11 @@
         document.getElementById('manageTeamsBtn').addEventListener('click', () => {
             showView('manageTeams');
             loadManageTeams();
+        });
+
+        document.getElementById('challengesBtn').addEventListener('click', () => {
+            showView('challenges');
+            loadChallenges();
         });
         
         document.getElementById('overviewBtn').addEventListener('click', () => {
@@ -479,6 +518,9 @@
                     document.getElementById('newTeamName').value = '';
                     loadManageTeams();
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else if (response.status === 429) {
+                    const retryAfter = Math.floor(data.retryAfter / 60) || 60;
+                    messageDiv.innerHTML = '<div class="message error">⏰ Too many requests. Please wait ' + retryAfter + ' minutes before trying again.</div>';
                 } else {
                     messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
                 }
@@ -640,6 +682,213 @@
                 const messageDiv = document.getElementById('usersMessage');
                 messageDiv.innerHTML = '<div class="message error">❌ Export failed. Please try again.</div>';
                 setTimeout(() => messageDiv.innerHTML = '', 3000);
+            }
+        }
+
+        // Load challenges
+        async function loadChallenges() {
+            try {
+                const response = await fetch('/api/admin/challenges');
+                const challenges = await response.json();
+                
+                const challengesTable = document.getElementById('challengesTable');
+                if (challenges.length === 0) {
+                    challengesTable.innerHTML = '<p>No challenges created yet.</p>';
+                } else {
+                    challengesTable.innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Challenge Name</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${challenges.map(challenge => `
+                                    <tr>
+                                        <td>
+                                            <input type="text" id="challengeName-${challenge.id}" value="${challenge.name}" 
+                                                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
+                                                   onchange="enableChallengeSaveButton(${challenge.id})">
+                                        </td>
+                                        <td>
+                                            <input type="date" id="challengeStartDate-${challenge.id}" value="${challenge.start_date}" 
+                                                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
+                                                   onchange="enableChallengeSaveButton(${challenge.id})">
+                                        </td>
+                                        <td>
+                                            <input type="date" id="challengeEndDate-${challenge.id}" value="${challenge.end_date}" 
+                                                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
+                                                   onchange="enableChallengeSaveButton(${challenge.id})">
+                                        </td>
+                                        <td>
+                                            <label style="display: flex; align-items: center; gap: 5px;">
+                                                <input type="checkbox" id="challengeActive-${challenge.id}" ${challenge.is_active ? 'checked' : ''}
+                                                       onchange="enableChallengeSaveButton(${challenge.id})">
+                                                ${challenge.is_active ? '<span style="color: #28a745; font-weight: bold;">Active</span>' : 'Inactive'}
+                                            </label>
+                                        </td>
+                                        <td>
+                                            <button class="save-btn" id="saveChallenge-${challenge.id}" onclick="updateChallenge(${challenge.id})" disabled>
+                                                Save
+                                            </button>
+                                            <button onclick="deleteChallenge(${challenge.id}, '${challenge.name}')" 
+                                                    style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px;">
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('challengesTable').innerHTML = '<p>Error loading challenges</p>';
+            }
+        }
+
+        // Create new challenge
+        async function createChallenge() {
+            const name = document.getElementById('newChallengeName').value;
+            const startDate = document.getElementById('newChallengeStartDate').value;
+            const endDate = document.getElementById('newChallengeEndDate').value;
+            const messageDiv = document.getElementById('challengesMessage');
+            
+            if (!name.trim() || !startDate || !endDate) {
+                messageDiv.innerHTML = '<div class="message error">❌ Please fill in all fields</div>';
+                return;
+            }
+            
+            if (new Date(startDate) >= new Date(endDate)) {
+                messageDiv.innerHTML = '<div class="message error">❌ Start date must be before end date</div>';
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/admin/challenges', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        name: name,
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = '<div class="message success">✅ Challenge created successfully!</div>';
+                    document.getElementById('newChallengeName').value = '';
+                    document.getElementById('newChallengeStartDate').value = '';
+                    document.getElementById('newChallengeEndDate').value = '';
+                    loadChallenges();
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+            }
+        }
+
+        // Enable save button when challenge is changed
+        function enableChallengeSaveButton(challengeId) {
+            const saveBtn = document.getElementById(`saveChallenge-${challengeId}`);
+            saveBtn.disabled = false;
+            saveBtn.style.background = '#007bff';
+            saveBtn.textContent = 'Save';
+        }
+
+        // Update challenge
+        async function updateChallenge(challengeId) {
+            const name = document.getElementById(`challengeName-${challengeId}`).value;
+            const startDate = document.getElementById(`challengeStartDate-${challengeId}`).value;
+            const endDate = document.getElementById(`challengeEndDate-${challengeId}`).value;
+            const isActive = document.getElementById(`challengeActive-${challengeId}`).checked;
+            const saveBtn = document.getElementById(`saveChallenge-${challengeId}`);
+            const messageDiv = document.getElementById('challengesMessage');
+            
+            if (!name.trim() || !startDate || !endDate) {
+                messageDiv.innerHTML = '<div class="message error">❌ All fields are required</div>';
+                return;
+            }
+            
+            if (new Date(startDate) >= new Date(endDate)) {
+                messageDiv.innerHTML = '<div class="message error">❌ Start date must be before end date</div>';
+                return;
+            }
+            
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+            
+            try {
+                const response = await fetch(`/api/admin/challenges/${challengeId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        name: name,
+                        start_date: startDate,
+                        end_date: endDate,
+                        is_active: isActive
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = '<div class="message success">✅ Challenge updated successfully!</div>';
+                    saveBtn.style.background = '#28a745';
+                    saveBtn.textContent = 'Saved';
+                    if (isActive) {
+                        // Reload to update other challenges that may have been deactivated
+                        loadChallenges();
+                    }
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save';
+            }
+        }
+
+        // Delete challenge
+        async function deleteChallenge(challengeId, challengeName) {
+            if (!confirm(`Are you sure you want to delete the challenge "${challengeName}"? This action cannot be undone.`)) {
+                return;
+            }
+            
+            const messageDiv = document.getElementById('challengesMessage');
+            
+            try {
+                const response = await fetch(`/api/admin/challenges/${challengeId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = '<div class="message success">✅ Challenge deleted successfully!</div>';
+                    loadChallenges();
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
             }
         }
 
