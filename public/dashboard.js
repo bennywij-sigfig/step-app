@@ -52,6 +52,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 challengeInfo.innerHTML = `
                     <h3>${challenge.name}</h3>
                     <p><strong>Challenge Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
+                    <p style="color: #666; font-size: 14px; margin-top: 8px;">📅 You can only log steps for dates within this period</p>
                     ${!isWithinPeriod ? '<p style="color: #d63384; font-weight: 500;">⚠️ Step logging is only allowed during the challenge period.</p>' : ''}
                 `;
                 
@@ -69,9 +70,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     submitBtn.disabled = false;
                 }
                 
-                // Set date input constraints
+                // Set date input constraints (works in most browsers)
                 dateInput.min = challenge.start_date;
                 dateInput.max = challenge.end_date;
+                
+                // Add real-time validation for Safari and other browsers
+                dateInput.addEventListener('change', function() {
+                    validateDateInput(this, challenge);
+                });
+                dateInput.addEventListener('input', function() {
+                    validateDateInput(this, challenge);
+                });
             } else {
                 challengeInfo.classList.add('hidden');
                 form.classList.remove('form-disabled');
@@ -81,6 +90,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Remove date constraints
                 dateInput.removeAttribute('min');
                 dateInput.removeAttribute('max');
+            }
+        }
+        
+        // Real-time date validation for all browsers (including Safari)
+        function validateDateInput(dateInput, challenge) {
+            const messageDiv = document.getElementById('stepsMessage');
+            const date = dateInput.value;
+            
+            if (!date || !challenge) {
+                // Reset styling if no date or challenge
+                dateInput.style.borderColor = '';
+                dateInput.style.backgroundColor = '';
+                messageDiv.innerHTML = '';
+                return;
+            }
+            
+            // Use noon to avoid timezone edge cases (cross-browser compatibility)
+            const stepDate = new Date(date + 'T12:00:00');
+            const startDate = new Date(challenge.start_date + 'T12:00:00');
+            const endDate = new Date(challenge.end_date + 'T12:00:00');
+            
+            // Check if date parsing was successful
+            if (isNaN(stepDate.getTime())) {
+                dateInput.style.borderColor = '#dc3545';
+                dateInput.style.backgroundColor = '#fff5f5';
+                messageDiv.innerHTML = '<div class="message error">❌ Please enter a valid date</div>';
+                return;
+            }
+            
+            // Use getTime() for reliable cross-browser date comparison
+            if (stepDate.getTime() < startDate.getTime() || stepDate.getTime() > endDate.getTime()) {
+                dateInput.style.borderColor = '#dc3545';
+                dateInput.style.backgroundColor = '#fff5f5';
+                messageDiv.innerHTML = `<div class="message error">❌ Date must be between ${formatDate(challenge.start_date)} and ${formatDate(challenge.end_date)}</div>`;
+            } else {
+                dateInput.style.borderColor = '#667eea';
+                dateInput.style.backgroundColor = '#f8fff8';
+                messageDiv.innerHTML = '<div class="message success">✅ Date is valid</div>';
             }
         }
         
@@ -250,6 +297,45 @@ document.addEventListener('DOMContentLoaded', function() {
             const date = document.getElementById('date').value;
             const steps = parseInt(document.getElementById('steps').value);
             const messageDiv = document.getElementById('stepsMessage');
+            
+            // Comprehensive client-side date validation for all browsers (including Safari)
+            if (currentUser && currentUser.current_challenge) {
+                const challenge = currentUser.current_challenge;
+                
+                // Validate date format first
+                if (!date || date.trim() === '') {
+                    messageDiv.innerHTML = '<div class="message error">❌ Please select a date.</div>';
+                    return;
+                }
+                
+                // Parse dates carefully to avoid timezone issues
+                const stepDate = new Date(date + 'T12:00:00'); // Use noon to avoid timezone edge cases
+                const startDate = new Date(challenge.start_date + 'T12:00:00');
+                const endDate = new Date(challenge.end_date + 'T12:00:00');
+                
+                // Check if date parsing was successful
+                if (isNaN(stepDate.getTime())) {
+                    messageDiv.innerHTML = '<div class="message error">❌ Please enter a valid date.</div>';
+                    return;
+                }
+                
+                // Compare dates using getTime() for cross-browser compatibility
+                if (stepDate.getTime() < startDate.getTime() || stepDate.getTime() > endDate.getTime()) {
+                    messageDiv.innerHTML = `<div class="message error">❌ Step logging is only allowed during the active challenge period (${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}).</div>`;
+                    return;
+                }
+            }
+            
+            // Additional validation for steps input
+            if (!steps || steps <= 0) {
+                messageDiv.innerHTML = '<div class="message error">❌ Please enter a valid number of steps.</div>';
+                return;
+            }
+            
+            if (steps > 100000) {
+                messageDiv.innerHTML = '<div class="message error">❌ Maximum 100,000 steps per day allowed.</div>';
+                return;
+            }
             
             try {
                 const token = await getCSRFToken();
