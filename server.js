@@ -1152,8 +1152,9 @@ process.on('SIGINT', () => {
 });
 
 // Start server
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Step Challenge App server running on http://localhost:${PORT}`);
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+const server = app.listen(PORT, HOST, () => {
+  console.log(`🚀 Step Challenge App server running on http://${HOST}:${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   if (isDevelopment) {
     console.log(`🔧 Admin panel available at: http://localhost:${PORT}/admin`);
