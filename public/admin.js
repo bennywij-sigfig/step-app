@@ -1,254 +1,60 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Step Challenge - Admin Dashboard</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background: #f5f5f5;
+document.addEventListener('DOMContentLoaded', function() {
+    // CSRF token management
+    let csrfToken = null;
+    
+    async function getCSRFToken() {
+        if (!csrfToken) {
+            try {
+                console.log('Fetching CSRF token...');
+                const response = await fetch('/api/csrf-token');
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                const data = await response.json();
+                csrfToken = data.csrfToken;
+                console.log('CSRF token fetched successfully');
+            } catch (error) {
+                console.error('Error fetching CSRF token:', error);
+                throw error;
+            }
         }
-        .header {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .nav {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .nav button {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            background: #e9ecef;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        .nav button.active {
-            background: #007bff;
-            color: white;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-        th, td {
-            text-align: left;
-            padding: 12px;
-            border-bottom: 1px solid #ddd;
-        }
-        th {
-            background: #f8f9fa;
-            font-weight: 600;
-        }
-        select {
-            padding: 6px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            background: white;
-        }
-        .save-btn {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-        }
-        .save-btn:hover {
-            background: #218838;
-        }
-        .save-btn:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-        }
-        .delete-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            margin-left: 5px;
-        }
-        .delete-btn:hover {
-            background: #c82333;
-        }
-        .message {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 5px;
-            text-align: center;
-        }
-        .success {
-            background: #d4edda;
-            color: #155724;
-        }
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-        .hidden {
-            display: none;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .stat-card {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .stat-number {
-            font-size: 24px;
-            font-weight: bold;
-            color: #007bff;
-        }
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-        .team-rank {
-            font-weight: bold;
-            color: #007bff;
-            margin-right: 10px;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🏆 Step Challenge - Admin Dashboard</h1>
-        <p>Manage users, teams, and view all challenge data</p>
-    </div>
+        return csrfToken;
+    }
 
-    <div class="nav">
-        <button id="usersBtn" class="active">Manage Users</button>
-        <button id="teamsBtn">Team Leaderboard</button>
-        <button id="manageTeamsBtn">Manage Teams</button>
-        <button id="challengesBtn">Manage Challenges</button>
-        <button id="overviewBtn">Overview</button>
-        <button id="exportBtn" style="background: #28a745; color: white;">📊 Export CSV</button>
-    </div>
+    // Helper function for authenticated POST/PUT/DELETE requests
+    async function authenticatedFetch(url, options = {}) {
+        try {
+            if (options.method && options.method !== 'GET') {
+                console.log(`Making ${options.method} request to ${url}`);
+                const token = await getCSRFToken();
+                if (token) {
+                    if (options.body && typeof options.body === 'string') {
+                        // Parse existing body and add CSRF token
+                        const bodyData = JSON.parse(options.body);
+                        bodyData.csrfToken = token;
+                        options.body = JSON.stringify(bodyData);
+                    } else if (options.method === 'DELETE') {
+                        // For DELETE requests without body, create one with just the CSRF token
+                        options.body = JSON.stringify({ csrfToken: token });
+                        options.headers = options.headers || {};
+                        options.headers['Content-Type'] = 'application/json';
+                    }
+                    console.log('CSRF token added to request');
+                } else {
+                    console.error('No CSRF token available');
+                }
+            }
+            const response = await fetch(url, options);
+            console.log(`Response status: ${response.status}`);
+            return response;
+        } catch (error) {
+            console.error('authenticatedFetch error:', error);
+            throw error;
+        }
+    }
 
-    <div id="overviewView" class="card hidden">
-        <h2>Challenge Overview</h2>
-        <div class="stats" id="stats">
-            <div class="stat-card">
-                <div class="stat-number" id="totalUsers">-</div>
-                <div class="stat-label">Total Users</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="totalSteps">-</div>
-                <div class="stat-label">Total Steps</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="avgSteps">-</div>
-                <div class="stat-label">Avg Steps/User</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="activeUsers">-</div>
-                <div class="stat-label">Active Users</div>
-            </div>
-        </div>
-    </div>
-
-    <div id="usersView" class="card">
-        <h2>User Management</h2>
-        <p>Assign users to teams and view their progress</p>
-        <div id="usersMessage"></div>
-        <div id="usersTable">
-            <p>Loading users...</p>
-        </div>
-    </div>
-
-    <div id="teamsView" class="card hidden">
-        <h2>Team Leaderboard</h2>
-        <p>Team rankings based on average steps per member</p>
-        <div id="teamLeaderboard">
-            <p>Loading team data...</p>
-        </div>
-    </div>
-
-    <div id="manageTeamsView" class="card hidden">
-        <h2>Manage Teams</h2>
-        <p>Create, edit, and delete team names</p>
-        
-        <div style="margin-bottom: 30px;">
-            <h3>Create New Team</h3>
-            <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="text" id="newTeamName" placeholder="Enter team name" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                <button onclick="createTeam()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Create Team</button>
-            </div>
-        </div>
-        
-        <div id="teamsMessage"></div>
-        
-        <div id="manageTeamsTable">
-            <p>Loading teams...</p>
-        </div>
-    </div>
-
-    <div id="challengesView" class="card hidden">
-        <h2>Manage Challenges</h2>
-        <p>Create and manage step challenges with date constraints</p>
-        
-        <div style="margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-            <h3>Create New Challenge</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 15px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Challenge Name</label>
-                    <input type="text" id="newChallengeName" placeholder="Enter challenge name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Start Date</label>
-                    <input type="date" id="newChallengeStartDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">End Date</label>
-                    <input type="date" id="newChallengeEndDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-                <button onclick="createChallenge()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; height: fit-content;">Create Challenge</button>
-            </div>
-            <div style="background: #e3f2fd; padding: 10px; border-radius: 5px; font-size: 14px; color: #1976d2;">
-                <strong>Note:</strong> Only one challenge can be active at a time. Users can only log steps during active challenge periods.
-            </div>
-        </div>
-        
-        <div id="challengesMessage"></div>
-        
-        <div id="challengesTable">
-            <p>Loading challenges...</p>
-        </div>
-    </div>
-
-    <script>
-        // Navigation
-        document.getElementById('usersBtn').addEventListener('click', () => {
+    // Navigation
+    document.getElementById('usersBtn').addEventListener('click', () => {
             showView('users');
         });
         
@@ -315,7 +121,7 @@
                                     <td>${user.name}</td>
                                     <td>${user.email}</td>
                                     <td>
-                                        <select id="team-${user.id}" onchange="updateUserTeam(${user.id})">
+                                        <select id="team-${user.id}" class="team-select" data-user-id="${user.id}">
                                             <option value="">No Team</option>
                                             ${teams.map(team => 
                                                 `<option value="${team.name}" ${user.team === team.name ? 'selected' : ''}>${team.name}</option>`
@@ -326,10 +132,10 @@
                                     <td>${user.days_logged}</td>
                                     <td>${user.is_admin ? '✅' : '❌'}</td>
                                     <td>
-                                        <button class="save-btn" id="save-${user.id}" onclick="saveTeam(${user.id})" disabled>
+                                        <button class="save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled>
                                             Save
                                         </button>
-                                        <button class="delete-btn" onclick="deleteUser(${user.id}, '${user.name}')">
+                                        <button class="delete-btn delete-user-btn" data-user-id="${user.id}" data-user-name="${user.name}">
                                             Delete
                                         </button>
                                     </td>
@@ -353,15 +159,21 @@
 
         // Save team assignment
         async function saveTeam(userId) {
+            console.log('saveTeam called with userId:', userId);
             const teamSelect = document.getElementById(`team-${userId}`);
             const saveBtn = document.getElementById(`save-${userId}`);
             const messageDiv = document.getElementById('usersMessage');
+            
+            if (!teamSelect || !saveBtn) {
+                console.error('Required elements not found');
+                return;
+            }
             
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             
             try {
-                const response = await fetch(`/api/admin/users/${userId}/team`, {
+                const response = await authenticatedFetch(`/api/admin/users/${userId}/team`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -471,13 +283,13 @@
                                     <td>
                                         <input type="text" id="teamName-${team.id}" value="${team.name}" 
                                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
-                                               onchange="enableSaveButton(${team.id})">
+                                               class="team-name-input" data-team-id="${team.id}">
                                     </td>
                                     <td>
-                                        <button class="save-btn" id="saveTeam-${team.id}" onclick="updateTeam(${team.id})" disabled>
+                                        <button class="save-btn save-team-name-btn" id="saveTeam-${team.id}" data-team-id="${team.id}" disabled>
                                             Save
                                         </button>
-                                        <button onclick="deleteTeam(${team.id})" 
+                                        <button class="delete-team-btn" data-team-id="${team.id}" 
                                                 style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px;">
                                             Delete
                                         </button>
@@ -503,7 +315,7 @@
             }
             
             try {
-                const response = await fetch('/api/admin/teams', {
+                const response = await authenticatedFetch('/api/admin/teams', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -552,7 +364,7 @@
             saveBtn.textContent = 'Saving...';
             
             try {
-                const response = await fetch(`/api/admin/teams/${teamId}`, {
+                const response = await authenticatedFetch(`/api/admin/teams/${teamId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -588,7 +400,7 @@
             const messageDiv = document.getElementById('teamsMessage');
             
             try {
-                const response = await fetch(`/api/admin/teams/${teamId}`, {
+                const response = await authenticatedFetch(`/api/admin/teams/${teamId}`, {
                     method: 'DELETE'
                 });
                 
@@ -615,7 +427,7 @@
             const messageDiv = document.getElementById('usersMessage');
             
             try {
-                const response = await fetch(`/api/admin/users/${userId}`, {
+                const response = await authenticatedFetch(`/api/admin/users/${userId}`, {
                     method: 'DELETE'
                 });
                 
@@ -712,30 +524,30 @@
                                         <td>
                                             <input type="text" id="challengeName-${challenge.id}" value="${challenge.name}" 
                                                    style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
-                                                   onchange="enableChallengeSaveButton(${challenge.id})">
+                                                   class="challenge-name-input" data-challenge-id="${challenge.id}">
                                         </td>
                                         <td>
                                             <input type="date" id="challengeStartDate-${challenge.id}" value="${challenge.start_date}" 
                                                    style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
-                                                   onchange="enableChallengeSaveButton(${challenge.id})">
+                                                   class="challenge-date-input" data-challenge-id="${challenge.id}">
                                         </td>
                                         <td>
                                             <input type="date" id="challengeEndDate-${challenge.id}" value="${challenge.end_date}" 
                                                    style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
-                                                   onchange="enableChallengeSaveButton(${challenge.id})">
+                                                   class="challenge-date-input" data-challenge-id="${challenge.id}">
                                         </td>
                                         <td>
                                             <label style="display: flex; align-items: center; gap: 5px;">
                                                 <input type="checkbox" id="challengeActive-${challenge.id}" ${challenge.is_active ? 'checked' : ''}
-                                                       onchange="enableChallengeSaveButton(${challenge.id})">
+                                                       class="challenge-active-input" data-challenge-id="${challenge.id}">
                                                 ${challenge.is_active ? '<span style="color: #28a745; font-weight: bold;">Active</span>' : 'Inactive'}
                                             </label>
                                         </td>
                                         <td>
-                                            <button class="save-btn" id="saveChallenge-${challenge.id}" onclick="updateChallenge(${challenge.id})" disabled>
+                                            <button class="save-btn save-challenge-btn" id="saveChallenge-${challenge.id}" data-challenge-id="${challenge.id}" disabled>
                                                 Save
                                             </button>
-                                            <button onclick="deleteChallenge(${challenge.id}, '${challenge.name}')" 
+                                            <button class="delete-challenge-btn" data-challenge-id="${challenge.id}" data-challenge-name="${challenge.name}" 
                                                     style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px;">
                                                 Delete
                                             </button>
@@ -769,7 +581,7 @@
             }
             
             try {
-                const response = await fetch('/api/admin/challenges', {
+                const response = await authenticatedFetch('/api/admin/challenges', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -829,7 +641,7 @@
             saveBtn.textContent = 'Saving...';
             
             try {
-                const response = await fetch(`/api/admin/challenges/${challengeId}`, {
+                const response = await authenticatedFetch(`/api/admin/challenges/${challengeId}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -874,7 +686,7 @@
             const messageDiv = document.getElementById('challengesMessage');
             
             try {
-                const response = await fetch(`/api/admin/challenges/${challengeId}`, {
+                const response = await authenticatedFetch(`/api/admin/challenges/${challengeId}`, {
                     method: 'DELETE'
                 });
                 
@@ -894,6 +706,85 @@
 
         // Load initial data
         loadUsers();
-    </script>
-</body>
-</html>
+        
+        // Add event listeners for static elements
+        document.getElementById('createTeamBtn').addEventListener('click', createTeam);
+        document.getElementById('createChallengeBtn').addEventListener('click', createChallenge);
+        
+        // Add delegated event listeners for dynamically generated elements
+        document.addEventListener('change', function(e) {
+            // Team select changes
+            if (e.target.classList.contains('team-select')) {
+                const userId = e.target.dataset.userId;
+                updateUserTeam(parseInt(userId));
+            }
+            
+            // Team name input changes
+            if (e.target.classList.contains('team-name-input')) {
+                const teamId = e.target.dataset.teamId;
+                enableSaveButton(parseInt(teamId));
+            }
+            
+            // Challenge input changes
+            if (e.target.classList.contains('challenge-name-input') || 
+                e.target.classList.contains('challenge-date-input') || 
+                e.target.classList.contains('challenge-active-input')) {
+                const challengeId = e.target.dataset.challengeId;
+                enableChallengeSaveButton(parseInt(challengeId));
+            }
+        });
+        
+        // Add delegated event listeners for button clicks
+        document.addEventListener('click', function(e) {
+            // Save team assignment buttons
+            if (e.target.classList.contains('save-team-btn')) {
+                const userId = e.target.dataset.userId;
+                saveTeam(parseInt(userId));
+            }
+            
+            // Delete user buttons
+            if (e.target.classList.contains('delete-user-btn')) {
+                const userId = e.target.dataset.userId;
+                const userName = e.target.dataset.userName;
+                deleteUser(parseInt(userId), userName);
+            }
+            
+            // Save team name buttons
+            if (e.target.classList.contains('save-team-name-btn')) {
+                const teamId = e.target.dataset.teamId;
+                updateTeam(parseInt(teamId));
+            }
+            
+            // Delete team buttons
+            if (e.target.classList.contains('delete-team-btn')) {
+                const teamId = e.target.dataset.teamId;
+                deleteTeam(parseInt(teamId));
+            }
+            
+            // Save challenge buttons
+            if (e.target.classList.contains('save-challenge-btn')) {
+                const challengeId = e.target.dataset.challengeId;
+                updateChallenge(parseInt(challengeId));
+            }
+            
+            // Delete challenge buttons
+            if (e.target.classList.contains('delete-challenge-btn')) {
+                const challengeId = e.target.dataset.challengeId;
+                const challengeName = e.target.dataset.challengeName;
+                deleteChallenge(parseInt(challengeId), challengeName);
+            }
+        });
+    
+        // Keep functions globally accessible for backward compatibility
+        window.updateUserTeam = updateUserTeam;
+        window.saveTeam = saveTeam;
+        window.deleteUser = deleteUser;
+        window.createTeam = createTeam;
+        window.enableSaveButton = enableSaveButton;
+        window.updateTeam = updateTeam;
+        window.deleteTeam = deleteTeam;
+        window.createChallenge = createChallenge;
+        window.enableChallengeSaveButton = enableChallengeSaveButton;
+        window.updateChallenge = updateChallenge;
+        window.deleteChallenge = deleteChallenge;
+});

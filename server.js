@@ -88,7 +88,9 @@ app.use(helmet({
 
 // CORS configuration
 const corsOptions = {
-  origin: isProduction ? false : true, // Restrict origins in production
+  origin: isProduction 
+    ? process.env.ALLOWED_ORIGIN || 'https://step-app-4x-yhw.fly.dev'
+    : ['http://localhost:3000', 'http://127.0.0.1:3000'],
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -297,7 +299,54 @@ function requireApiAdmin(req, res, next) {
   });
 }
 
+// CSRF Protection
+function generateCSRFToken() {
+  return uuidv4();
+}
+
+function validateCSRFToken(req, res, next) {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next();
+  }
+  
+  const token = req.body.csrfToken || req.headers['x-csrf-token'];
+  const sessionToken = req.session.csrfToken;
+  
+  if (!token || !sessionToken || token !== sessionToken) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
+  }
+  
+  next();
+}
+
+// Input sanitization to prevent XSS
+function sanitizeInput(input) {
+  if (typeof input !== 'string') return input;
+  return input
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+function sanitizeUserInput(req, res, next) {
+  // Sanitize common user input fields
+  if (req.body.name) req.body.name = sanitizeInput(req.body.name);
+  if (req.body.email) req.body.email = sanitizeInput(req.body.email);
+  if (req.body.team) req.body.team = sanitizeInput(req.body.team);
+  next();
+}
+
 // Routes
+
+// CSRF token endpoint
+app.get('/api/csrf-token', requireApiAuth, (req, res) => {
+  if (!req.session.csrfToken) {
+    req.session.csrfToken = generateCSRFToken();
+  }
+  res.json({ csrfToken: req.session.csrfToken });
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -491,9 +540,10 @@ app.get('/auth/login', (req, res) => {
         if (!user) {
           devLog('Creating new user for:', row.email);
           // Create new user
+          const sanitizedName = sanitizeInput(row.email.split('@')[0]);
           db.run(
             `INSERT INTO users (email, name) VALUES (?, ?)`,
-            [row.email, row.email.split('@')[0]],
+            [row.email, sanitizedName],
             function(err) {
               if (err) {
                 console.error('User creation error:', err);
@@ -502,33 +552,45 @@ app.get('/auth/login', (req, res) => {
               
               devLog('New user created with ID:', this.lastID);
               
-              // Set session and redirect to dashboard
-              req.session.userId = this.lastID;
-              req.session.email = row.email;
+              // Regenerate session for security and set user data
+              req.session.regenerate((err) => {
+                if (err) {
+                  console.error('Session regeneration error:', err);
+                  return res.status(500).send('Session error');
+                }
+                req.session.userId = this.lastID;
+                req.session.email = row.email;
               
-              req.session.save((err) => {
+                req.session.save((err) => {
                 if (err) {
                   console.error('Session save error:', err);
                   return res.status(500).send('Session error');
                 }
                 devLog('Session saved for new user, redirecting to dashboard');
                 res.redirect(`/dashboard`);
+                });
               });
             }
           );
         } else {
           devLog('Existing user found:', user.id, user.email);
-          // Set session and redirect to dashboard
-          req.session.userId = user.id;
-          req.session.email = user.email;
+          // Regenerate session for security and set user data
+          req.session.regenerate((err) => {
+            if (err) {
+              console.error('Session regeneration error:', err);
+              return res.status(500).send('Session error');
+            }
+            req.session.userId = user.id;
+            req.session.email = user.email;
           
-          req.session.save((err) => {
+            req.session.save((err) => {
             if (err) {
               console.error('Session save error:', err);
               return res.status(500).send('Session error');
             }
             devLog('Session saved for existing user, redirecting to dashboard');
             res.redirect(`/dashboard`);
+            });
           });
         }
       });
@@ -539,7 +601,12 @@ app.get('/auth/login', (req, res) => {
 // Dashboard (protected)
 app.get('/dashboard', requireAuth, (req, res) => {
   devLog('Dashboard accessed by user:', req.session.userId);
-  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+  res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
+});
+
+// Redirect dashboard.html to protected route
+app.get('/dashboard.html', requireAuth, (req, res) => {
+  res.redirect('/dashboard');
 });
 
 // API to get current user info
@@ -588,7 +655,7 @@ app.get('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
 });
 
 // Add/update steps (protected - only own steps)
-app.post('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
+app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { date, count } = req.body;
   const userId = req.session.userId;
   
@@ -658,11 +725,10 @@ app.post('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
 });
 
 // Leaderboard
-app.get('/api/leaderboard', apiLimiter, (req, res) => {
+app.get('/api/leaderboard', apiLimiter, requireApiAuth, (req, res) => {
   db.all(`
     SELECT 
       u.name, 
-      u.email, 
       u.team,
       COALESCE(SUM(s.count), 0) as total_steps,
       COALESCE(AVG(s.count), 0) as avg_steps_per_day,
@@ -711,7 +777,7 @@ app.get('/api/admin/users', adminApiLimiter, requireApiAdmin, (req, res) => {
 });
 
 // Update user team (admin only)
-app.put('/api/admin/users/:userId/team', adminApiLimiter, requireApiAdmin, (req, res) => {
+app.put('/api/admin/users/:userId/team', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { userId } = req.params;
   const { team } = req.body;
   
@@ -729,7 +795,7 @@ app.put('/api/admin/users/:userId/team', adminApiLimiter, requireApiAdmin, (req,
 });
 
 // Get teams list
-app.get('/api/teams', apiLimiter, (req, res) => {
+app.get('/api/teams', apiLimiter, requireApiAuth, (req, res) => {
   db.all(`SELECT id, name FROM teams ORDER BY name`, (err, rows) => {
     if (err) {
       console.error('Error fetching teams:', err);
@@ -740,7 +806,7 @@ app.get('/api/teams', apiLimiter, (req, res) => {
 });
 
 // Create new team
-app.post('/api/admin/teams', adminApiLimiter, requireApiAdmin, (req, res) => {
+app.post('/api/admin/teams', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { name } = req.body;
   
   if (!name || name.trim() === '') {
@@ -764,7 +830,7 @@ app.post('/api/admin/teams', adminApiLimiter, requireApiAdmin, (req, res) => {
 });
 
 // Update team name
-app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, (req, res) => {
+app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { teamId } = req.params;
   const { name } = req.body;
   
@@ -805,7 +871,7 @@ app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, (req, res)
 });
 
 // Delete team (soft delete by setting inactive)
-app.delete('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, (req, res) => {
+app.delete('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
   const { teamId } = req.params;
   
   // First, remove team assignment from all users
@@ -840,7 +906,7 @@ app.delete('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, (req, r
 });
 
 // Delete user (admin only)
-app.delete('/api/admin/users/:userId', adminApiLimiter, requireApiAdmin, (req, res) => {
+app.delete('/api/admin/users/:userId', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
   const { userId } = req.params;
   
   // First, delete all user's steps
@@ -930,7 +996,7 @@ app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) =>
 });
 
 // Team leaderboard
-app.get('/api/team-leaderboard', apiLimiter, (req, res) => {
+app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, (req, res) => {
   db.all(`
     SELECT 
       u.team,
@@ -972,7 +1038,7 @@ app.get('/api/admin/challenges', requireApiAdmin, (req, res) => {
 });
 
 // Create new challenge (admin only)
-app.post('/api/admin/challenges', requireApiAdmin, (req, res) => {
+app.post('/api/admin/challenges', requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { name, start_date, end_date } = req.body;
   
   if (!name || !start_date || !end_date) {
@@ -1009,7 +1075,7 @@ app.post('/api/admin/challenges', requireApiAdmin, (req, res) => {
 });
 
 // Update challenge (admin only)
-app.put('/api/admin/challenges/:challengeId', requireApiAdmin, (req, res) => {
+app.put('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { challengeId } = req.params;
   const { name, start_date, end_date, is_active } = req.body;
   
@@ -1055,7 +1121,7 @@ app.put('/api/admin/challenges/:challengeId', requireApiAdmin, (req, res) => {
 });
 
 // Delete challenge (admin only)
-app.delete('/api/admin/challenges/:challengeId', requireApiAdmin, (req, res) => {
+app.delete('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFToken, (req, res) => {
   const { challengeId } = req.params;
   
   db.run(
@@ -1078,7 +1144,12 @@ app.delete('/api/admin/challenges/:challengeId', requireApiAdmin, (req, res) => 
 
 // Admin dashboard
 app.get('/admin', requireAdmin, (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+  res.sendFile(path.join(__dirname, 'views', 'admin.html'));
+});
+
+// Redirect admin.html to protected route
+app.get('/admin.html', requireAdmin, (req, res) => {
+  res.redirect('/admin');
 });
 
 // Database cleanup job for expired tokens (runs every hour in production)

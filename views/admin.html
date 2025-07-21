@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Step Challenge - Admin Dashboard</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 8px;
+            }
+        }
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 18px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 18px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+        }
+        .nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .nav button {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 12px;
+            background: transparent;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 44px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .nav button:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav button.active {
+            background: white;
+            color: #333;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(5px);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        th {
+            background: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+            color: #333;
+            backdrop-filter: blur(10px);
+        }
+        
+        tbody tr {
+            transition: background-color 0.2s ease;
+        }
+        
+        tbody tr:hover {
+            background: rgba(255, 255, 255, 0.8);
+        }
+        select, input[type="text"], input[type="date"] {
+            padding: 10px;
+            border: 2px solid rgba(102, 126, 234, 0.1);
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        select:focus, input[type="text"]:focus, input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            transform: translateY(-1px);
+        }
+        .save-btn, .delete-btn, button {
+            border: none;
+            padding: 10px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-height: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .save-btn, button:not(.delete-btn):not(.nav button) {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+        
+        .delete-btn {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: white;
+            margin-left: 8px;
+        }
+        
+        .save-btn:hover, button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+        
+        .save-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .save-btn:active, button:active {
+            transform: translateY(0);
+        }
+        .message {
+            margin-top: 15px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .success {
+            background: rgba(40, 167, 69, 0.1);
+            color: #155724;
+            border: 1px solid rgba(40, 167, 69, 0.2);
+        }
+        
+        .error {
+            background: rgba(220, 53, 69, 0.1);
+            color: #721c24;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .hidden {
+            display: none;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 18px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .stat-card:hover {
+            background: rgba(255, 255, 255, 0.8);
+            transform: translateY(-2px);
+        }
+        
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 6px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .team-rank {
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-right: 12px;
+            font-size: 16px;
+        }
+        
+        h2 {
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        h3 {
+            color: #555;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            margin-top: 25px;
+        }
+        
+        @media (max-width: 768px) {
+            .header, .card {
+                padding: 14px;
+                border-radius: 12px;
+            }
+            
+            .nav {
+                gap: 6px;
+                padding: 4px;
+            }
+            
+            .nav button {
+                padding: 12px 8px;
+                font-size: 13px;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+                gap: 12px;
+            }
+            
+            table {
+                font-size: 14px;
+            }
+            
+            th, td {
+                padding: 10px;
+            }
+            
+            .save-btn, .delete-btn, button {
+                padding: 8px 12px;
+                font-size: 13px;
+                min-height: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+        <h1>🏆 Step Challenge - Admin Dashboard</h1>
+        <p>Manage users, teams, and view all challenge data</p>
+    </div>
+
+    <div class="nav">
+        <button id="usersBtn" class="active">Manage Users</button>
+        <button id="teamsBtn">Team Leaderboard</button>
+        <button id="manageTeamsBtn">Manage Teams</button>
+        <button id="challengesBtn">Manage Challenges</button>
+        <button id="overviewBtn">Overview</button>
+        <button id="exportBtn" style="background: #28a745; color: white;">📊 Export CSV</button>
+    </div>
+
+    <div id="overviewView" class="card hidden">
+        <h2>Challenge Overview</h2>
+        <div class="stats" id="stats">
+            <div class="stat-card">
+                <div class="stat-number" id="totalUsers">-</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalSteps">-</div>
+                <div class="stat-label">Total Steps</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="avgSteps">-</div>
+                <div class="stat-label">Avg Steps/User</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeUsers">-</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="usersView" class="card">
+        <h2>User Management</h2>
+        <p>Assign users to teams and view their progress</p>
+        <div id="usersMessage"></div>
+        <div id="usersTable">
+            <p>Loading users...</p>
+        </div>
+    </div>
+
+    <div id="teamsView" class="card hidden">
+        <h2>Team Leaderboard</h2>
+        <p>Team rankings based on average steps per member</p>
+        <div id="teamLeaderboard">
+            <p>Loading team data...</p>
+        </div>
+    </div>
+
+    <div id="manageTeamsView" class="card hidden">
+        <h2>Manage Teams</h2>
+        <p>Create, edit, and delete team names</p>
+        
+        <div style="margin-bottom: 30px;">
+            <h3>Create New Team</h3>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="newTeamName" placeholder="Enter team name" style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                <button id="createTeamBtn" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Create Team</button>
+            </div>
+        </div>
+        
+        <div id="teamsMessage"></div>
+        
+        <div id="manageTeamsTable">
+            <p>Loading teams...</p>
+        </div>
+    </div>
+
+    <div id="challengesView" class="card hidden">
+        <h2>Manage Challenges</h2>
+        <p>Create and manage step challenges with date constraints</p>
+        
+        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
+            <h3>Create New Challenge</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Challenge Name</label>
+                    <input type="text" id="newChallengeName" placeholder="Enter challenge name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Start Date</label>
+                    <input type="date" id="newChallengeStartDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">End Date</label>
+                    <input type="date" id="newChallengeEndDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <button id="createChallengeBtn" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; height: fit-content;">Create Challenge</button>
+            </div>
+            <div style="background: rgba(52, 144, 220, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; font-size: 14px; color: #1976d2; border: 1px solid rgba(52, 144, 220, 0.2);">
+                <strong>Note:</strong> Only one challenge can be active at a time. Users can only log steps during active challenge periods.
+            </div>
+        </div>
+        
+        <div id="challengesMessage"></div>
+        
+        <div id="challengesTable">
+            <p>Loading challenges...</p>
+        </div>
+    </div>
+    
+    </div>
+
+    <script src="/admin.js"></script>
+</body>
+</html>
