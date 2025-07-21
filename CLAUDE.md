@@ -42,3 +42,6 @@ npm run dev        # Development mode
 - **Ranking**: Steps per day average (fair for all participation levels)
 - **UI**: Mobile-first, glass-morphism design
 - **Security**: CSRF tokens, rate limiting, secure headers
+
+## Testing
+The app runs on `localhost:3000` and creates a SQLite database file automatically. For testing without email, you can check the server console for magic link URLs.
