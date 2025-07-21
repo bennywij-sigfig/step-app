@@ -36,23 +36,21 @@ jobs:
         run: npm ci
       
       - name: Run Claude Code
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@beta
         with:
-          api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           # Optional: Use AWS Bedrock instead
-          # aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          # aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # use_bedrock: "true"
+          # model: "us.anthropic.claude-3-5-sonnet-20241022-v1:0"
           # aws_region: us-east-1
-          # model: claude-3-5-sonnet-20241022
           
           # Optional: Use Google Vertex AI instead
+          # use_vertex: "true"
           # vertex_project_id: ${{ secrets.VERTEX_PROJECT_ID }}
           # vertex_location: us-central1
-          # google_application_credentials: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           
           # Workflow configuration
-          timeout: 600  # 10 minutes timeout
-          max_tokens: 8192
+          timeout_minutes: "10"
           
       - name: Run linting and tests after Claude changes
         if: success()
