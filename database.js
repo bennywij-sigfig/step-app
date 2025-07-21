@@ -35,18 +35,25 @@ if (process.env.NODE_ENV === 'production') {
     process.exit(1);
   }
 
-  // If database file exists, ensure it's writable
+  // If database file exists but is readonly, move it and create fresh
   if (fs.existsSync(dbPath)) {
     try {
       fs.accessSync(dbPath, fs.constants.W_OK);
       console.log(`✅ Database file ${dbPath} is writable`);
     } catch (err) {
-      console.log(`🔧 Setting database file permissions for ${dbPath}`);
+      console.log(`🔧 Database file is readonly, creating backup and fresh database`);
+      const backupPath = `${dbPath}.readonly.backup`;
       try {
-        fs.chmodSync(dbPath, 0o664);
-        console.log(`✅ Fixed database file permissions`);
-      } catch (chmodErr) {
-        console.error(`❌ Cannot fix database file permissions:`, chmodErr.message);
+        // Create backup of readonly database
+        if (!fs.existsSync(backupPath)) {
+          fs.copyFileSync(dbPath, backupPath);
+          console.log(`📦 Backed up readonly database to ${backupPath}`);
+        }
+        // Remove readonly database
+        fs.unlinkSync(dbPath);
+        console.log(`🗑️  Removed readonly database file`);
+      } catch (removeErr) {
+        console.error(`❌ Cannot backup/remove readonly database:`, removeErr.message);
         process.exit(1);
       }
     }
