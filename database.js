@@ -1,12 +1,38 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 // Use persistent volume in production, local file in development
 const dbPath = process.env.NODE_ENV === 'production' 
   ? '/data/steps.db' 
   : path.join(__dirname, 'steps.db');
 
-const db = new sqlite3.Database(dbPath);
+// Ensure data directory exists and is writable in production
+if (process.env.NODE_ENV === 'production') {
+  const dataDir = path.dirname(dbPath);
+  if (!fs.existsSync(dataDir)) {
+    console.log(`Creating data directory: ${dataDir}`);
+    fs.mkdirSync(dataDir, { recursive: true, mode: 0o755 });
+  }
+  
+  // Check if we can write to the directory
+  try {
+    fs.accessSync(dataDir, fs.constants.W_OK);
+    console.log(`✅ Data directory ${dataDir} is writable`);
+  } catch (err) {
+    console.error(`❌ Data directory ${dataDir} is not writable:`, err.message);
+    process.exit(1);
+  }
+}
+
+console.log(`📁 Using database path: ${dbPath}`);
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('❌ Database connection failed:', err.message);
+    process.exit(1);
+  }
+  console.log('✅ Connected to SQLite database');
+});
 
 // Initialize database tables
 db.serialize(() => {
