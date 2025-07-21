@@ -397,20 +397,28 @@
         
         <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
             <h3>Create New Challenge</h3>
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; margin-bottom: 15px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Challenge Name</label>
-                    <input type="text" id="newChallengeName" placeholder="Enter challenge name" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">Challenge Name</label>
+                        <input type="text" id="newChallengeName" placeholder="Enter challenge name" 
+                               style="width: 100%; padding: 12px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;">
+                    </div>
+                    <div style="flex: 0 0 160px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">Start Date</label>
+                        <input type="date" id="newChallengeStartDate" 
+                               style="width: 100%; padding: 12px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;">
+                    </div>
+                    <div style="flex: 0 0 160px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">End Date</label>
+                        <input type="date" id="newChallengeEndDate" 
+                               style="width: 100%; padding: 12px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;">
+                    </div>
+                    <button id="createChallengeBtn" 
+                            style="padding: 12px 24px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease; min-height: 48px; align-self: flex-end;">
+                        Create Challenge
+                    </button>
                 </div>
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">Start Date</label>
-                    <input type="date" id="newChallengeStartDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: 500;">End Date</label>
-                    <input type="date" id="newChallengeEndDate" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
-                </div>
-                <button id="createChallengeBtn" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; height: fit-content;">Create Challenge</button>
             </div>
             <div style="background: rgba(52, 144, 220, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; font-size: 14px; color: #1976d2; border: 1px solid rgba(52, 144, 220, 0.2);">
                 <strong>Note:</strong> Only one challenge can be active at a time. Users can only log steps during active challenge periods.

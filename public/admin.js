@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <tr>
                                     <td>
                                         <input type="text" id="teamName-${team.id}" value="${team.name}" 
-                                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                                               style="width: 100%; padding: 10px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;"
                                                class="team-name-input" data-team-id="${team.id}">
                                     </td>
                                     <td>
@@ -523,17 +523,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <tr>
                                         <td>
                                             <input type="text" id="challengeName-${challenge.id}" value="${challenge.name}" 
-                                                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
+                                                   style="width: 100%; padding: 10px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;"
                                                    class="challenge-name-input" data-challenge-id="${challenge.id}">
                                         </td>
                                         <td>
                                             <input type="date" id="challengeStartDate-${challenge.id}" value="${challenge.start_date}" 
-                                                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
+                                                   style="width: 100%; padding: 10px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;"
                                                    class="challenge-date-input" data-challenge-id="${challenge.id}">
                                         </td>
                                         <td>
                                             <input type="date" id="challengeEndDate-${challenge.id}" value="${challenge.end_date}" 
-                                                   style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px;"
+                                                   style="width: 100%; padding: 10px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;"
                                                    class="challenge-date-input" data-challenge-id="${challenge.id}">
                                         </td>
                                         <td>
