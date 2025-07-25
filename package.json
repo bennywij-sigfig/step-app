@@ -5,7 +5,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "backup": "node scripts/backup.js",
+    "backup:volume": "node scripts/backup.js --volume-snapshot",
+    "backup:cleanup": "node scripts/backup.js --cleanup",
+    "pre-deploy": "node scripts/pre-deploy.js",
+    "deploy": "npm run pre-deploy && fly deploy",
+    "deploy:skip-backup": "fly deploy"
   },
   "keywords": [],
   "author": "",

@@ -69,6 +69,12 @@ const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CR
   console.log('✅ Connected to SQLite database');
 });
 
+// Configure SQLite for better reliability
+db.configure('busyTimeout', 30000); // 30 second timeout for busy database
+db.run('PRAGMA journal_mode = WAL'); // Write-Ahead Logging for better concurrency
+db.run('PRAGMA synchronous = NORMAL'); // Balance between safety and performance
+db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
+
 // Initialize database tables
 db.serialize(() => {
   // Users table
@@ -151,5 +157,251 @@ db.serialize(() => {
   db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('benny@sigfig.com', 'Benny', 1)`);
   db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('benazir.qureshi@sigfig.com', 'Benazir', 1)`);
 });
+
+// Database utility functions for reliability
+const dbUtils = {
+  // Execute database operation with retry logic for SQLITE_BUSY errors
+  executeWithRetry: function(operation, maxRetries = 3) {
+    return new Promise((resolve, reject) => {
+      let attempts = 0;
+      
+      function attempt() {
+        attempts++;
+        operation((err, result) => {
+          if (err) {
+            // Retry on SQLITE_BUSY or SQLITE_LOCKED errors
+            if ((err.code === 'SQLITE_BUSY' || err.code === 'SQLITE_LOCKED') && attempts < maxRetries) {
+              const delay = Math.pow(2, attempts) * 100; // Exponential backoff: 200ms, 400ms, 800ms
+              console.warn(`Database busy, retrying in ${delay}ms... (${attempts}/${maxRetries})`);
+              setTimeout(attempt, delay);
+              return;
+            }
+            reject(err);
+          } else {
+            resolve(result);
+          }
+        });
+      }
+      
+      attempt();
+    });
+  },
+
+  // Check database health and integrity
+  checkHealth: function() {
+    return new Promise((resolve) => {
+      const health = {
+        accessible: false,
+        integrity: false,
+        diskSpace: false,
+        error: null
+      };
+
+      // Test basic database access with timeout
+      const timeout = setTimeout(() => {
+        resolve({ ...health, error: 'Database query timeout' });
+      }, 5000);
+
+      db.get('SELECT 1 as test', (err, result) => {
+        if (err) {
+          clearTimeout(timeout);
+          resolve({ ...health, error: err.message });
+          return;
+        }
+
+        health.accessible = true;
+
+        // Check database integrity
+        db.get('PRAGMA integrity_check', (err, integrityResult) => {
+          if (!err && integrityResult && integrityResult.integrity_check === 'ok') {
+            health.integrity = true;
+          }
+
+          // Check disk space
+          try {
+            const stats = fs.statSync(path.dirname(dbPath));
+            health.diskSpace = true; // If we can stat, assume space is available
+          } catch (diskErr) {
+            // Can't check disk space, but don't fail health check
+          }
+
+          clearTimeout(timeout);
+          resolve(health);
+        });
+      });
+    });
+  },
+
+  // Get database statistics
+  getStats: function() {
+    return new Promise((resolve, reject) => {
+      const stats = {};
+      
+      db.get('SELECT COUNT(*) as users FROM users', (err, result) => {
+        if (err) return reject(err);
+        stats.users = result.users;
+        
+        db.get('SELECT COUNT(*) as steps FROM steps', (err, result) => {
+          if (err) return reject(err);
+          stats.steps = result.steps;
+          
+          db.get('SELECT COUNT(*) as teams FROM teams', (err, result) => {
+            if (err) return reject(err);
+            stats.teams = result.teams;
+            resolve(stats);
+          });
+        });
+      });
+    });
+  },
+
+  // Create database backup using SQLite .backup() API (WAL-compatible)
+  createBackup: function(backupPath = null) {
+    return new Promise((resolve, reject) => {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const backupDir = process.env.NODE_ENV === 'production' ? '/data/backups' : './backups';
+      const defaultPath = `${backupDir}/steps-${timestamp}.db`;
+      const targetPath = backupPath || defaultPath;
+      
+      // Ensure backup directory exists
+      const targetDir = path.dirname(targetPath);
+      if (!fs.existsSync(targetDir)) {
+        try {
+          fs.mkdirSync(targetDir, { recursive: true });
+          console.log(`📁 Created backup directory: ${targetDir}`);
+        } catch (err) {
+          return reject(new Error(`Cannot create backup directory: ${err.message}`));
+        }
+      }
+
+      // Use SQLite backup API (compatible with WAL mode)
+      const backup = db.backup(targetPath);
+      
+      backup.step(-1, (err) => {
+        if (err) {
+          backup.finish();
+          console.error('❌ Backup step failed:', err);
+          reject(err);
+        } else {
+          backup.finish((finishErr) => {
+            if (finishErr) {
+              console.error('❌ Backup finish failed:', finishErr);
+              reject(finishErr);
+            } else {
+              const stats = fs.statSync(targetPath);
+              console.log(`✅ Database backed up to: ${targetPath} (${stats.size} bytes)`);
+              resolve({ 
+                success: true, 
+                path: targetPath,
+                size: stats.size,
+                timestamp: new Date().toISOString()
+              });
+            }
+          });
+        }
+      });
+    });
+  },
+
+  // Clean up old backup files
+  cleanupOldBackups: function(maxBackups = 10) {
+    return new Promise((resolve, reject) => {
+      const backupDir = process.env.NODE_ENV === 'production' ? '/data/backups' : './backups';
+      
+      if (!fs.existsSync(backupDir)) {
+        return resolve({ cleaned: 0, kept: 0 });
+      }
+
+      try {
+        const files = fs.readdirSync(backupDir)
+          .filter(f => f.startsWith('steps-') && f.endsWith('.db'))
+          .map(f => ({
+            name: f,
+            path: path.join(backupDir, f),
+            mtime: fs.statSync(path.join(backupDir, f)).mtime
+          }))
+          .sort((a, b) => b.mtime - a.mtime); // Newest first
+
+        const toKeep = files.slice(0, maxBackups);
+        const toDelete = files.slice(maxBackups);
+
+        let deleted = 0;
+        toDelete.forEach(file => {
+          try {
+            fs.unlinkSync(file.path);
+            console.log(`🗑️ Deleted old backup: ${file.name}`);
+            deleted++;
+          } catch (e) {
+            console.warn(`Could not delete ${file.name}:`, e.message);
+          }
+        });
+
+        resolve({ 
+          cleaned: deleted, 
+          kept: toKeep.length,
+          backups: toKeep.map(f => ({ name: f.name, date: f.mtime }))
+        });
+      } catch (err) {
+        reject(err);
+      }
+    });
+  },
+
+  // Get backup status for health monitoring
+  getBackupStatus: function() {
+    return new Promise((resolve) => {
+      const backupDir = process.env.NODE_ENV === 'production' ? '/data/backups' : './backups';
+      
+      if (!fs.existsSync(backupDir)) {
+        return resolve({ 
+          hasBackups: false, 
+          count: 0,
+          latest: null,
+          error: 'Backup directory does not exist'
+        });
+      }
+
+      try {
+        const files = fs.readdirSync(backupDir)
+          .filter(f => f.startsWith('steps-') && f.endsWith('.db'))
+          .map(f => {
+            const stats = fs.statSync(path.join(backupDir, f));
+            return {
+              name: f,
+              size: stats.size,
+              created: stats.mtime
+            };
+          })
+          .sort((a, b) => b.created - a.created);
+
+        if (files.length === 0) {
+          resolve({ hasBackups: false, count: 0, latest: null });
+        } else {
+          const latest = files[0];
+          resolve({
+            hasBackups: true,
+            count: files.length,
+            latest: {
+              name: latest.name,
+              size: latest.size,
+              created: latest.created,
+              age: Date.now() - latest.created.getTime()
+            }
+          });
+        }
+      } catch (err) {
+        resolve({ 
+          hasBackups: false, 
+          count: 0, 
+          latest: null, 
+          error: err.message 
+        });
+      }
+    });
+  }
+};
+
+// Attach utilities to the database object
+db.utils = dbUtils;
 
 module.exports = db;

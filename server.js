@@ -348,26 +348,71 @@ app.get('/api/csrf-token', requireApiAuth, (req, res) => {
   res.json({ csrfToken: req.session.csrfToken });
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  // Simple health check - verify database connection
-  db.get('SELECT 1', (err) => {
-    if (err) {
-      console.error('Health check failed - database error:', err);
-      return res.status(503).json({
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        error: 'Database connection failed'
-      });
-    }
-    
-    res.json({
+// Health check endpoint with comprehensive database monitoring
+app.get('/health', async (req, res) => {
+  try {
+    const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       version: require('./package.json').version,
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || 'development',
+      database: {
+        status: 'unknown',
+        accessible: false,
+        integrity: false,
+        diskSpace: false
+      },
+      stats: null
+    };
+
+    // Check database health
+    const dbHealth = await db.utils.checkHealth();
+    health.database = {
+      status: dbHealth.accessible && dbHealth.integrity ? 'healthy' : 'degraded',
+      accessible: dbHealth.accessible,
+      integrity: dbHealth.integrity,
+      diskSpace: dbHealth.diskSpace,
+      error: dbHealth.error
+    };
+
+    // Get database statistics if accessible
+    if (dbHealth.accessible) {
+      try {
+        health.stats = await db.utils.getStats();
+      } catch (statsErr) {
+        console.warn('Could not get database stats:', statsErr.message);
+      }
+
+      // Get backup status
+      try {
+        health.backup = await db.utils.getBackupStatus();
+      } catch (backupErr) {
+        console.warn('Could not get backup status:', backupErr.message);
+        health.backup = { hasBackups: false, error: backupErr.message };
+      }
+    }
+
+    // Determine overall status
+    if (!dbHealth.accessible) {
+      health.status = 'unhealthy';
+      console.error('Health check failed - database not accessible:', dbHealth.error);
+      return res.status(503).json(health);
+    } else if (!dbHealth.integrity) {
+      health.status = 'degraded';
+      console.warn('Health check warning - database integrity issue');
+      return res.status(200).json(health);
+    }
+
+    res.json(health);
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed',
+      message: error.message
     });
-  });
+  }
 });
 
 // Home page
@@ -1189,6 +1234,52 @@ app.use((err, req, res, next) => {
 // Handle 404s
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
+});
+
+// Global error handlers for process stability
+process.on('uncaughtException', (error) => {
+  console.error('🚨 Uncaught Exception:', {
+    message: error.message,
+    stack: error.stack,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Log to external service if available (placeholder for future enhancement)
+  // logToExternalService('uncaughtException', error);
+  
+  // Attempt graceful shutdown
+  console.log('Attempting graceful shutdown due to uncaught exception...');
+  
+  if (server) {
+    server.close(() => {
+      console.log('HTTP server closed due to uncaught exception');
+      if (db) {
+        db.close(() => {
+          console.log('Database closed due to uncaught exception');
+          process.exit(1);
+        });
+      } else {
+        process.exit(1);
+      }
+    });
+  } else {
+    process.exit(1);
+  }
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 Unhandled Rejection:', {
+    reason: reason,
+    promise: promise,
+    timestamp: new Date().toISOString()
+  });
+  
+  // For unhandled rejections, log but don't exit immediately
+  // This allows the application to continue running for other requests
+  console.warn('Application continuing after unhandled rejection - monitor for stability');
+  
+  // Log to external service if available (placeholder for future enhancement)  
+  // logToExternalService('unhandledRejection', { reason, promise });
 });
 
 // Graceful shutdown handling

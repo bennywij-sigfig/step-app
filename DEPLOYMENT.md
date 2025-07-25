@@ -3,6 +3,8 @@
 ## Overview
 This document provides comprehensive instructions for deploying the Step Challenge App to Fly.io, including setup, configuration, and operational procedures.
 
+> **📍 Current Status:** This app is **already deployed and running** at https://step-app-4x-yhw.fly.dev/ with all environment variables configured as Fly.io secrets (SESSION_SECRET, NODE_ENV, Mailgun credentials). This guide is for reference and future deployments.
+
 ## Prerequisites
 
 ### 1. Install Fly CLI
