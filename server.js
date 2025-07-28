@@ -1535,25 +1535,38 @@ app.post('/api/admin/challenges', requireApiAdmin, validateCSRFToken, sanitizeUs
     return res.status(400).json({ error: 'Start date must be before end date' });
   }
   
-  db.run(
-    `INSERT INTO challenges (name, start_date, end_date, reporting_threshold) VALUES (?, ?, ?, ?)`,
-    [name.trim(), start_date, end_date, reporting_threshold],
-    function(err) {
-      if (err) {
-        console.error('Error creating challenge:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      res.json({ 
-        id: this.lastID, 
-        name: name.trim(),
-        start_date,
-        end_date,
-        reporting_threshold,
-        is_active: 0,
-        message: 'Challenge created successfully' 
-      });
+  // Check for existing challenge with same name
+  db.get(`SELECT id FROM challenges WHERE name = ?`, [name.trim()], (checkErr, existingChallenge) => {
+    if (checkErr) {
+      console.error('Error checking existing challenge:', checkErr);
+      return res.status(500).json({ error: 'Database error' });
     }
-  );
+    
+    if (existingChallenge) {
+      return res.status(400).json({ error: 'A challenge with this name already exists' });
+    }
+    
+    db.run(
+      `INSERT INTO challenges (name, start_date, end_date, reporting_threshold, is_active) VALUES (?, ?, ?, ?, 0)`,
+      [name.trim(), start_date, end_date, reporting_threshold],
+      function(err) {
+        if (err) {
+          console.error('Error creating challenge:', err);
+          console.error('SQL Error details:', err.message);
+          return res.status(500).json({ error: 'Database error: ' + err.message });
+        }
+        res.json({ 
+          id: this.lastID, 
+          name: name.trim(),
+          start_date,
+          end_date,
+          reporting_threshold,
+          is_active: 0,
+          message: 'Challenge created successfully' 
+        });
+      }
+    );
+  });
 });
 
 // Update challenge (admin only)
