@@ -229,12 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.type === 'all_time') {
                     challengeInfo = '<h3 style="color: #555; margin: 0 0 20px 0;">All-Time Team Rankings</h3>';
                 } else if (data.type === 'challenge') {
-                    challengeInfo = `<div style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(102, 126, 234, 0.2);">
-                        <h3 style="color: #495057; margin: 0 0 8px 0;">${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>
-                        <p style="font-size: 0.9em; color: #6c757d; margin: 0;">
-                            Challenge Progress • Threshold: ${data.meta.personal_threshold}% reporting required for ranking
-                        </p>
-                    </div>`;
+                    challengeInfo = `<h3 style="color: #555; margin: 0 0 20px 0;">${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>`;
                 }
                 
                 let html = challengeInfo;
