@@ -897,6 +897,58 @@ document.addEventListener('DOMContentLoaded', function() {
         // Keep functions globally accessible for backward compatibility
         window.updateUserTeam = updateUserTeam;
         window.saveTeam = saveTeam;
+        // Theme management functionality
+        function initializeThemes() {
+            const themeSelector = document.getElementById('themeSelector');
+            
+            // Load saved theme
+            const savedTheme = localStorage.getItem('adminTheme') || 'default';
+            applyTheme(savedTheme);
+            themeSelector.value = savedTheme;
+            
+            // Theme change handler
+            themeSelector.addEventListener('change', function() {
+                const selectedTheme = this.value;
+                applyTheme(selectedTheme);
+                localStorage.setItem('adminTheme', selectedTheme);
+                
+                // Also update the main app theme
+                updateMainAppTheme(selectedTheme);
+            });
+        }
+        
+        function applyTheme(themeName) {
+            // Apply to current page
+            document.documentElement.setAttribute('data-theme', themeName === 'default' ? '' : themeName);
+        }
+        
+        async function updateMainAppTheme(themeName) {
+            try {
+                const token = await getCSRFToken();
+                const response = await authenticatedFetch('/api/admin/theme', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        theme: themeName,
+                        csrfToken: token
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('Theme updated successfully');
+                } else {
+                    console.error('Failed to update theme');
+                }
+            } catch (error) {
+                console.error('Error updating theme:', error);
+            }
+        }
+        
+        // Initialize themes
+        initializeThemes();
+        
         window.deleteUser = deleteUser;
         window.createTeam = createTeam;
         window.enableSaveButton = enableSaveButton;

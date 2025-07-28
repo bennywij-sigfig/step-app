@@ -5,6 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Step Challenge - Dashboard</title>
     <style>
+        :root {
+            /* Default theme - Ocean Blue */
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --accent-color: #48bb78;
+            --text-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        [data-theme="sunset"] {
+            --primary-gradient: linear-gradient(135deg, #ff7b7b 0%, #ff8c42 100%);
+            --primary-color: #ff7b7b;
+            --secondary-color: #ff8c42;
+            --accent-color: #ff6b6b;
+            --text-gradient: linear-gradient(135deg, #ff7b7b 0%, #ff8c42 100%);
+        }
+
+        [data-theme="forest"] {
+            --primary-gradient: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            --primary-color: #56ab2f;
+            --secondary-color: #a8e6cf;
+            --accent-color: #4caf50;
+            --text-gradient: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        }
+
+        [data-theme="lavender"] {
+            --primary-gradient: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            --primary-color: #a18cd1;
+            --secondary-color: #fbc2eb;
+            --accent-color: #9c88ff;
+            --text-gradient: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+        }
+
+        [data-theme="monochrome"] {
+            --primary-gradient: linear-gradient(135deg, #434343 0%, #000000 100%);
+            --primary-color: #434343;
+            --secondary-color: #000000;
+            --accent-color: #666666;
+            --text-gradient: linear-gradient(135deg, #434343 0%, #000000 100%);
+        }
+
         * {
             box-sizing: border-box;
         }
@@ -13,9 +54,10 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
             padding: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             min-height: 100vh;
             color: #333;
+            transition: background 0.3s ease;
         }
         
         .container {
@@ -44,7 +86,7 @@
             margin: 0 0 10px 0;
             font-size: 24px;
             font-weight: 600;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--text-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -147,7 +189,7 @@
         
         .form-group input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--primary-color);
             background: rgba(255, 255, 255, 0.95);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
             transform: translateY(-1px);
@@ -159,7 +201,7 @@
         }
         
         .form-group button, button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             color: white;
             border: none;
             padding: 12px 20px;
@@ -543,16 +585,6 @@
             position: relative;
         }
         
-        h2::after {
-            content: '';
-            position: absolute;
-            bottom: -8px;
-            left: 0;
-            width: 40px;
-            height: 3px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 2px;
-        }
         
         h3 {
             color: #444;
@@ -561,6 +593,89 @@
             margin-bottom: 18px;
             margin-top: 28px;
             letter-spacing: -0.3px;
+        }
+        
+        /* Team disclosure triangle */
+        .team-disclosure {
+            cursor: pointer;
+            font-size: 12px;
+            color: #667eea;
+            margin-right: 8px;
+            transition: transform 0.2s ease;
+            user-select: none;
+            font-family: monospace;
+            display: inline-block;
+            width: 16px;
+        }
+
+        .team-disclosure:hover {
+            color: #5a67d8;
+            transform: scale(1.1);
+        }
+
+        /* Team members list */
+        .team-members-list {
+            background: rgba(102, 126, 234, 0.05);
+            border-left: 3px solid rgba(102, 126, 234, 0.3);
+            margin: 0 0 6px 0;
+            border-radius: 0 8px 8px 0;
+            overflow: hidden;
+        }
+
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px 8px 24px;
+            background: rgba(255, 255, 255, 0.4);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 0.9em;
+            transition: background-color 0.2s ease;
+        }
+
+        .member-item:hover {
+            background: rgba(255, 255, 255, 0.6);
+        }
+
+        .member-item:last-child {
+            border-bottom: none;
+        }
+
+        .member-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .member-name {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .member-reporting {
+            font-size: 0.75em;
+            color: #28a745;
+            background: rgba(40, 167, 69, 0.1);
+            padding: 1px 4px;
+            border-radius: 4px;
+        }
+
+        .member-stats {
+            text-align: right;
+        }
+
+        @media (max-width: 768px) {
+            .member-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+                padding: 8px 12px 8px 20px;
+            }
+            
+            .member-stats {
+                text-align: left;
+                width: 100%;
+            }
         }
     </style>
 </head>

@@ -1,4 +1,21 @@
+// Team disclosure functionality - must be global
+let expandedTeams = new Set(); // Track expanded state
+
+// Theme functionality
+function initializeTheme() {
+    // Load theme from localStorage
+    const savedTheme = localStorage.getItem('adminTheme') || 'default';
+    applyTheme(savedTheme);
+}
+
+function applyTheme(themeName) {
+    document.documentElement.setAttribute('data-theme', themeName === 'default' ? '' : themeName);
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize theme
+    initializeTheme();
+    
     // Get user info from session
     let currentUser = null;
     let csrfToken = null;
@@ -289,20 +306,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const response = await fetch('/api/leaderboard');
                 const data = await response.json();
                 
+                console.log('Leaderboard API response:', data);
+                
                 const leaderboardDiv = document.getElementById('leaderboard');
                 
-                // Handle different response types
-                if (data.type === 'insufficient_data') {
-                    leaderboardDiv.innerHTML = `<div class="info-message">
-                        <h3>${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>
-                        <p>${data.message}</p>
-                        <p style="font-size: 0.9em; color: #666;">
-                            ${data.meta.actual_entries}/${data.meta.expected_entries} expected entries 
-                            (${data.meta.reporting_percentage >= 1 ? Math.round(data.meta.reporting_percentage) : data.meta.reporting_percentage}% participation)
-                        </p>
-                    </div>`;
-                    return;
-                }
                 
                 // Handle legacy all-time format or new challenge format
                 let leaderboard = [];
@@ -491,6 +498,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Load team leaderboard
         async function loadTeamLeaderboard() {
+            // Clear expanded state when reloading
+            expandedTeams.clear();
+            
             try {
                 const response = await fetch('/api/team-leaderboard');
                 const data = await response.json();
@@ -530,6 +540,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         return `<div class="leaderboard-item${highlightClass}">
                             <div>
+                                <span class="team-disclosure" data-team="${team.team}">▶</span>
                                 <span class="rank">#${index + 1}</span>
                                 <strong>${team.team}</strong>
                                 <span style="color: #666;">(${team.member_count} members)</span>
@@ -558,6 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         return `<div class="leaderboard-item${highlightClass}" style="opacity: 0.8;">
                             <div>
+                                <span class="team-disclosure" data-team="${team.team}">▶</span>
                                 <span class="rank">-</span>
                                 <strong>${team.team}</strong>
                                 <span style="color: #666;">(${team.member_count} members)</span>
@@ -587,6 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             return `<div class="leaderboard-item${highlightClass}">
                                 <div>
+                                    <span class="team-disclosure" data-team="${team.team}">▶</span>
                                     <span class="rank">#${index + 1}</span>
                                     <strong>${team.team}</strong>
                                     <span style="color: #666;">(${team.member_count} members)</span>
@@ -603,10 +616,103 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 teamLeaderboard.innerHTML = html;
+                attachDisclosureListeners();
             } catch (error) {
                 console.error('Team leaderboard error:', error);
                 document.getElementById('teamLeaderboard').innerHTML = '<p>Error loading team leaderboard</p>';
             }
+        }
+
+        // Attach event listeners to disclosure triangles
+        function attachDisclosureListeners() {
+            const disclosureTriangles = document.querySelectorAll('.team-disclosure');
+            disclosureTriangles.forEach(triangle => {
+                triangle.addEventListener('click', function() {
+                    const teamName = this.getAttribute('data-team');
+                    toggleTeamDisclosure(teamName, this);
+                });
+            });
+        }
+
+        // Team member disclosure functionality
+        async function toggleTeamDisclosure(teamName, disclosureElement) {
+            console.log('toggleTeamDisclosure called with:', teamName, disclosureElement);
+            const isExpanded = expandedTeams.has(teamName);
+            
+            if (isExpanded) {
+                // Collapse
+                const membersList = document.getElementById(`members-${teamName.replace(/[^a-zA-Z0-9]/g, '_')}`);
+                if (membersList) {
+                    membersList.style.maxHeight = membersList.scrollHeight + 'px';
+                    membersList.style.overflow = 'hidden';
+                    requestAnimationFrame(() => {
+                        membersList.style.maxHeight = '0px';
+                        setTimeout(() => {
+                            membersList.remove();
+                        }, 300);
+                    });
+                }
+                
+                disclosureElement.innerHTML = '▶';
+                expandedTeams.delete(teamName);
+            } else {
+                // Expand
+                try {
+                    const response = await fetch(`/api/teams/${encodeURIComponent(teamName)}/members`);
+                    const members = await response.json();
+                    
+                    if (response.ok) {
+                        const membersList = createMembersList(teamName, members);
+                        const teamItem = disclosureElement.closest('.leaderboard-item');
+                        teamItem.insertAdjacentElement('afterend', membersList);
+                        
+                        // Animate expansion
+                        membersList.style.maxHeight = '0px';
+                        membersList.style.overflow = 'hidden';
+                        requestAnimationFrame(() => {
+                            membersList.style.maxHeight = membersList.scrollHeight + 'px';
+                            setTimeout(() => {
+                                membersList.style.maxHeight = 'none';
+                                membersList.style.overflow = 'visible';
+                            }, 300);
+                        });
+                        
+                        disclosureElement.innerHTML = '▼';
+                        expandedTeams.add(teamName);
+                    } else {
+                        console.error('Error loading team members:', members.error);
+                    }
+                } catch (error) {
+                    console.error('Error fetching team members:', error);
+                }
+            }
+        }
+
+        function createMembersList(teamName, members) {
+            const membersList = document.createElement('div');
+            membersList.id = `members-${teamName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+            membersList.className = 'team-members-list';
+            membersList.style.transition = 'max-height 0.3s ease-out';
+            
+            const membersHtml = members.map(member => `
+                <div class="member-item">
+                    <div class="member-info">
+                        <span class="member-name">${member.name}</span>
+                        ${member.personal_reporting_rate !== undefined ? 
+                            `<span class="member-reporting">${member.personal_reporting_rate >= 1 ? Math.round(member.personal_reporting_rate) : member.personal_reporting_rate}% reporting</span>` 
+                            : ''}
+                    </div>
+                    <div class="member-stats">
+                        <div><strong>${Math.round(member.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
+                        <div style="font-size: 0.8em; color: #666;">
+                            ${member.total_steps.toLocaleString()} total • ${member.days_logged} days
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            membersList.innerHTML = membersHtml;
+            return membersList;
         }
 
         // Load initial data

@@ -1049,32 +1049,9 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
       return;
     }
 
-    // Challenge is active - check individual reporting percentage
+    // Challenge is active - return challenge rankings with personal filtering
     const currentDay = getCurrentChallengeDay(activeChallenge);
-    const reportingData = await calculateIndividualReportingPercentage(activeChallenge.id, currentDay);
     const participantCount = await getChallengeParticipantCount(activeChallenge.id);
-
-    if (reportingData.percentage < activeChallenge.reporting_threshold) {
-      // Insufficient individual reporting - return message
-      return res.json({
-        type: 'insufficient_data',
-        challenge_active: true,
-        data: [],
-        meta: {
-          challenge_name: activeChallenge.name,
-          challenge_day: currentDay,
-          total_days: getTotalChallengeDays(activeChallenge),
-          reporting_percentage: reportingData.percentage,
-          threshold: activeChallenge.reporting_threshold,
-          participant_count: participantCount,
-          expected_entries: reportingData.expected,
-          actual_entries: reportingData.actual
-        },
-        message: `Waiting for more individual participation (${reportingData.percentage}% of ${activeChallenge.reporting_threshold}% needed)`
-      });
-    }
-
-    // Sufficient overall reporting - return challenge rankings with personal filtering
     try {
       const leaderboardData = await getIndividualLeaderboardWithRates(
         activeChallenge.id, 
@@ -1093,7 +1070,6 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
           challenge_name: activeChallenge.name,
           challenge_day: currentDay,
           total_days: getTotalChallengeDays(activeChallenge),
-          overall_reporting_percentage: reportingData.percentage,
           participant_count: participantCount,
           ranked_count: leaderboardData.ranked.length,
           unranked_count: leaderboardData.unranked.length,
@@ -1433,6 +1409,97 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
   } catch (error) {
     console.error('Team leaderboard error:', error);
     res.status(500).json({ error: 'Failed to load team leaderboard' });
+  }
+});
+
+// Theme management endpoints (admin only)
+app.post('/api/admin/theme', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
+  const { theme } = req.body;
+  
+  if (!theme) {
+    return res.status(400).json({ error: 'Theme is required' });
+  }
+  
+  const validThemes = ['default', 'sunset', 'forest', 'lavender', 'monochrome'];
+  if (!validThemes.includes(theme)) {
+    return res.status(400).json({ error: 'Invalid theme' });
+  }
+  
+  // Store theme in database or file system
+  // For now, we'll just return success - the theme is managed client-side
+  res.json({ message: 'Theme updated successfully', theme: theme });
+});
+
+app.get('/api/admin/theme', adminApiLimiter, requireApiAdmin, (req, res) => {
+  // For now, return default theme - in production this would be stored
+  res.json({ theme: 'default' });
+});
+
+// Get team members for disclosure (new endpoint)
+app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, res) => {
+  try {
+    const { teamName } = req.params;
+    const activeChallenge = await getActiveChallenge();
+    
+    if (!activeChallenge) {
+      // All-time team members
+      db.all(`
+        SELECT 
+          u.name,
+          COALESCE(SUM(s.count), 0) as total_steps,
+          COALESCE(AVG(s.count), 0) as avg_steps_per_day,
+          COUNT(s.id) as days_logged,
+          CASE 
+            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+            ELSE 0 
+          END as steps_per_day_reported
+        FROM users u
+        LEFT JOIN steps s ON u.id = s.user_id
+        WHERE u.team = ?
+        GROUP BY u.id
+        ORDER BY steps_per_day_reported DESC, u.name ASC
+      `, [teamName], (err, rows) => {
+        if (err) {
+          console.error('Error fetching team members:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json(rows);
+      });
+      return;
+    }
+
+    // Challenge-specific team members
+    const currentDay = getCurrentChallengeDay(activeChallenge);
+    
+    db.all(`
+      SELECT 
+        u.name,
+        COALESCE(SUM(s.count), 0) as total_steps,
+        COUNT(s.id) as days_logged,
+        CASE 
+          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+          ELSE 0 
+        END as steps_per_day_reported,
+        CASE 
+          WHEN ? > 0 THEN ROUND((COUNT(s.id) * 100.0) / ?, 2)
+          ELSE 0
+        END as personal_reporting_rate
+      FROM users u
+      LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
+      WHERE u.team = ?
+      GROUP BY u.id
+      ORDER BY steps_per_day_reported DESC, u.name ASC
+    `, [currentDay, currentDay, activeChallenge.id, teamName], (err, rows) => {
+      if (err) {
+        console.error('Error fetching team members:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      res.json(rows);
+    });
+
+  } catch (error) {
+    console.error('Team members API error:', error);
+    res.status(500).json({ error: 'Failed to load team members' });
   }
 });
 
