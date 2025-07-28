@@ -1277,6 +1277,44 @@ app.delete('/api/admin/users/:userId', adminApiLimiter, requireApiAdmin, validat
   );
 });
 
+// Clear user steps (admin only) - removes all step data for a user without deleting the user account
+app.delete('/api/admin/users/:userId/steps', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
+  const { userId } = req.params;
+  
+  // First verify the user exists
+  db.get(
+    `SELECT name FROM users WHERE id = ?`,
+    [userId],
+    (err, user) => {
+      if (err) {
+        console.error('Error checking user existence:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Delete all user's steps but keep the user account
+      db.run(
+        `DELETE FROM steps WHERE user_id = ?`,
+        [userId],
+        function(err) {
+          if (err) {
+            console.error('Error clearing user steps:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          
+          res.json({ 
+            message: `All step data cleared for user "${user.name}"`,
+            stepsCleared: this.changes
+          });
+        }
+      );
+    }
+  );
+});
+
 // Export all step data as CSV (admin only)
 app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) => {
   db.all(`

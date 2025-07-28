@@ -135,6 +135,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <button class="save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled>
                                             Save
                                         </button>
+                                        <button class="delete-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${user.name}" style="background: linear-gradient(135deg, #fd7e14 0%, #e9630b 100%); margin-left: 4px;">
+                                            Clear Steps
+                                        </button>
                                         <button class="delete-btn delete-user-btn" data-user-id="${user.id}" data-user-name="${user.name}">
                                             Delete
                                         </button>
@@ -536,6 +539,40 @@ document.addEventListener('DOMContentLoaded', function() {
                 messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
             }
         }
+        
+        // Clear user steps function
+        async function clearUserSteps(userId, userName) {
+            if (!confirm(`⚠️ DESTRUCTIVE ACTION WARNING ⚠️\n\nAre you sure you want to clear ALL step data for user "${userName}"?\n\nThis will:\n• Delete all their recorded steps permanently\n• Keep their user account and team assignment\n• Cannot be undone\n\nType "CLEAR" to confirm this destructive action.`)) {
+                return;
+            }
+            
+            // Second confirmation with text input
+            const confirmText = prompt(`Please type "CLEAR" to confirm clearing all steps for "${userName}":`);
+            if (confirmText !== 'CLEAR') {
+                alert('Action cancelled. You must type "CLEAR" exactly to confirm.');
+                return;
+            }
+            
+            const messageDiv = document.getElementById('usersMessage');
+            
+            try {
+                const response = await authenticatedFetch(`/api/admin/users/${userId}/steps`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `<div class="message success">${data.message} (${data.stepsCleared} records removed)</div>`;
+                    loadUsers(); // Reload the users table to show updated step counts
+                    setTimeout(() => messageDiv.innerHTML = '', 5000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+            }
+        }
 
         // Export CSV function
         async function exportCSV() {
@@ -854,6 +891,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target.classList.contains('save-team-btn')) {
                 const userId = e.target.dataset.userId;
                 saveTeam(parseInt(userId));
+            }
+            
+            // Clear user steps buttons
+            if (e.target.classList.contains('clear-steps-btn')) {
+                const userId = e.target.dataset.userId;
+                const userName = e.target.dataset.userName;
+                clearUserSteps(parseInt(userId), userName);
             }
             
             // Delete user buttons
