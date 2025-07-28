@@ -158,6 +158,36 @@ db.serialize(() => {
     }
   });
 
+  // Try to add reporting_threshold column to challenges table for production compatibility
+  db.run(`ALTER TABLE challenges ADD COLUMN reporting_threshold INTEGER DEFAULT 70 CHECK (reporting_threshold >= 0 AND reporting_threshold <= 100)`, (err) => {
+    // This will fail if column already exists, which is expected
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding reporting_threshold column:', err);
+    } else {
+      console.log('✅ Added reporting_threshold column to challenges table');
+    }
+  });
+
+  // Try to add timezone column to challenges table for production compatibility  
+  db.run(`ALTER TABLE challenges ADD COLUMN timezone TEXT DEFAULT 'America/Los_Angeles'`, (err) => {
+    // This will fail if column already exists, which is expected
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding timezone column:', err);
+    } else {
+      console.log('✅ Added timezone column to challenges table');
+    }
+  });
+
+  // Try to add created_at column to challenges table for production compatibility
+  db.run(`ALTER TABLE challenges ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP`, (err) => {
+    // This will fail if column already exists, which is expected
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding created_at column:', err);
+    } else {
+      console.log('✅ Added created_at column to challenges table');
+    }
+  });
+
   // Add critical performance indexes
   db.run(`CREATE INDEX IF NOT EXISTS idx_steps_challenge_date_user ON steps(challenge_id, date, user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_steps_user_challenge ON steps(user_id, challenge_id)`);
