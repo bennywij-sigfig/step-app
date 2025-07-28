@@ -129,6 +129,8 @@ db.serialize(() => {
     start_date TEXT NOT NULL,
     end_date TEXT NOT NULL,
     is_active BOOLEAN DEFAULT 0,
+    timezone TEXT DEFAULT 'America/Los_Angeles',
+    reporting_threshold INTEGER DEFAULT 90 CHECK (reporting_threshold >= 0 AND reporting_threshold <= 100),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
@@ -147,6 +149,22 @@ db.serialize(() => {
       console.error('Error adding challenge_id column:', err);
     }
   });
+
+  // Try to add challenge_day column for consistency tracking
+  db.run(`ALTER TABLE steps ADD COLUMN challenge_day INTEGER`, (err) => {
+    // This will fail if column already exists, which is expected
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding challenge_day column:', err);
+    }
+  });
+
+  // Add critical performance indexes
+  db.run(`CREATE INDEX IF NOT EXISTS idx_steps_challenge_date_user ON steps(challenge_id, date, user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_steps_user_challenge ON steps(user_id, challenge_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_challenges_active ON challenges(is_active) WHERE is_active = 1`);
+  
+  // Add constraint to prevent multiple active challenges (SQLite doesn't support partial unique indexes easily)
+  // We'll handle this in application logic for now
 
   // Insert sample teams
   db.run(`INSERT OR IGNORE INTO teams (name) VALUES ('Team Alpha')`);

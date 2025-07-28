@@ -239,6 +239,244 @@ function devLog(...args) {
   }
 }
 
+// Challenge timezone utilities using date-fns-tz for DST-safe calculations
+const { fromZonedTime, toZonedTime, format } = require('date-fns-tz');
+
+const PACIFIC_TIMEZONE = 'America/Los_Angeles';
+
+// Get current Pacific Time (DST-aware)
+function getCurrentPacificTime() {
+  const nowUTC = new Date();
+  return toZonedTime(nowUTC, PACIFIC_TIMEZONE);
+}
+
+// Calculate current challenge day using Pacific Time
+function getCurrentChallengeDay(challenge) {
+  try {
+    const nowPacific = getCurrentPacificTime();
+    
+    // Parse challenge dates in Pacific time
+    const startPacific = new Date(challenge.start_date + 'T00:00:00');
+    const endPacific = new Date(challenge.end_date + 'T23:59:59');
+    
+    // Before challenge starts
+    if (nowPacific < startPacific) {
+      return 0;
+    }
+    
+    // After challenge ends - return final day number
+    if (nowPacific > endPacific) {
+      return Math.floor((endPacific - startPacific) / (1000 * 60 * 60 * 24)) + 1;
+    }
+    
+    // During challenge - calculate current day
+    return Math.floor((nowPacific - startPacific) / (1000 * 60 * 60 * 24)) + 1;
+  } catch (error) {
+    console.error('Error calculating challenge day:', error);
+    return 0;
+  }
+}
+
+// Get total days in challenge
+function getTotalChallengeDays(challenge) {
+  try {
+    const startPacific = new Date(challenge.start_date + 'T00:00:00');
+    const endPacific = new Date(challenge.end_date + 'T23:59:59');
+    return Math.floor((endPacific - startPacific) / (1000 * 60 * 60 * 24)) + 1;
+  } catch (error) {
+    console.error('Error calculating total challenge days:', error);
+    return 0;
+  }
+}
+
+// Check if a date is within challenge period (Pacific Time)
+function isDateInChallengePeriod(date, challenge) {
+  try {
+    const checkDate = new Date(date + 'T12:00:00'); // Use noon to avoid timezone edge cases
+    const startPacific = new Date(challenge.start_date + 'T00:00:00');
+    const endPacific = new Date(challenge.end_date + 'T23:59:59');
+    
+    return checkDate >= startPacific && checkDate <= endPacific;
+  } catch (error) {
+    console.error('Error checking date in challenge period:', error);
+    return false;
+  }
+}
+
+// Calculate individual reporting percentage for challenge
+async function calculateIndividualReportingPercentage(challengeId, currentDay) {
+  return new Promise((resolve, reject) => {
+    if (currentDay <= 0) {
+      return resolve({ percentage: 0, expected: 0, actual: 0 });
+    }
+
+    const query = `
+      WITH challenge_participants AS (
+        SELECT DISTINCT s.user_id 
+        FROM steps s 
+        WHERE s.challenge_id = ?
+      ),
+      expected_entries AS (
+        SELECT COUNT(*) * ? as expected_total
+        FROM challenge_participants
+      ),
+      actual_entries AS (
+        SELECT COUNT(*) as actual_total
+        FROM steps s
+        JOIN challenges c ON s.challenge_id = c.id
+        WHERE s.challenge_id = ? 
+        AND s.date >= c.start_date 
+        AND s.date <= date(c.start_date, '+' || (? - 1) || ' days')
+      )
+      SELECT 
+        COALESCE(expected_entries.expected_total, 0) as expected_total,
+        COALESCE(actual_entries.actual_total, 0) as actual_total,
+        CASE 
+          WHEN expected_entries.expected_total = 0 THEN 0
+          ELSE ROUND((actual_entries.actual_total * 100.0) / expected_entries.expected_total, 2)
+        END as reporting_percentage
+      FROM expected_entries, actual_entries
+    `;
+    
+    db.get(query, [challengeId, currentDay, challengeId, currentDay], (err, result) => {
+      if (err) {
+        console.error('Error calculating individual reporting percentage:', err);
+        return reject(err);
+      }
+      
+      resolve({
+        percentage: result ? result.reporting_percentage : 0,
+        expected: result ? result.expected_total : 0,
+        actual: result ? result.actual_total : 0
+      });
+    });
+  });
+}
+
+
+// Get active challenge with error handling
+async function getActiveChallenge() {
+  return new Promise((resolve, reject) => {
+    db.get(`SELECT * FROM challenges WHERE is_active = 1 LIMIT 1`, (err, challenge) => {
+      if (err) {
+        console.error('Error fetching active challenge:', err);
+        return reject(err);
+      }
+      resolve(challenge || null);
+    });
+  });
+}
+
+// Get participant count for a challenge
+async function getChallengeParticipantCount(challengeId) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      `SELECT COUNT(DISTINCT user_id) as count FROM steps WHERE challenge_id = ?`,
+      [challengeId],
+      (err, result) => {
+        if (err) {
+          console.error('Error getting participant count:', err);
+          return reject(err);
+        }
+        resolve(result ? result.count : 0);
+      }
+    );
+  });
+}
+
+// Get individual leaderboard with personal reporting rates
+async function getIndividualLeaderboardWithRates(challengeId, currentDay, threshold) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT 
+        u.name, 
+        u.team,
+        COALESCE(SUM(s.count), 0) as total_steps,
+        COALESCE(AVG(s.count), 0) as avg_steps_per_day,
+        COUNT(s.id) as days_logged,
+        CASE 
+          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+          ELSE 0 
+        END as steps_per_day_reported,
+        CASE 
+          WHEN ? > 0 THEN ROUND((COUNT(s.id) * 100.0) / ?, 2)
+          ELSE 0
+        END as personal_reporting_rate,
+        CASE 
+          WHEN ? > 0 AND ROUND((COUNT(s.id) * 100.0) / ?, 2) >= ? THEN 1
+          ELSE 0
+        END as meets_threshold
+      FROM users u
+      LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
+      WHERE u.id IN (SELECT DISTINCT user_id FROM steps WHERE challenge_id = ?)
+      GROUP BY u.id
+      ORDER BY meets_threshold DESC, steps_per_day_reported DESC, u.name ASC
+    `;
+    
+    db.all(query, [currentDay, currentDay, currentDay, currentDay, threshold, challengeId, challengeId], (err, rows) => {
+      if (err) {
+        console.error('Error getting individual leaderboard with rates:', err);
+        return reject(err);
+      }
+      
+      const ranked = rows.filter(row => row.meets_threshold === 1);
+      const unranked = rows.filter(row => row.meets_threshold === 0);
+      
+      resolve({ ranked, unranked });
+    });
+  });
+}
+
+// Get team leaderboard with team reporting rates
+async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold) {
+  return new Promise((resolve, reject) => {
+    const query = `
+      SELECT 
+        u.team,
+        COUNT(DISTINCT u.id) as member_count,
+        COALESCE(SUM(s.count), 0) as total_steps,
+        COALESCE(AVG(s.count), 0) as avg_steps_per_entry,
+        CASE 
+          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+          ELSE 0 
+        END as avg_steps_per_day_reported,
+        CASE 
+          WHEN COUNT(DISTINCT u.id) > 0 AND COUNT(s.id) > 0 THEN 
+            COALESCE(SUM(s.count), 0) / COUNT(s.id)
+          ELSE 0 
+        END as team_steps_per_day_reported,
+        COUNT(s.id) as team_entries,
+        CASE 
+          WHEN COUNT(DISTINCT u.id) > 0 AND ? > 0 THEN 
+            ROUND((COUNT(s.id) * 100.0) / (COUNT(DISTINCT u.id) * ?), 2)
+          ELSE 0
+        END as team_reporting_rate,
+        CASE 
+          WHEN COUNT(DISTINCT u.id) > 0 AND ? > 0 AND 
+               ROUND((COUNT(s.id) * 100.0) / (COUNT(DISTINCT u.id) * ?), 2) >= ? THEN 1
+          ELSE 0
+        END as meets_threshold
+      FROM users u
+      LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
+      WHERE u.team IS NOT NULL AND u.team != ''
+      GROUP BY u.team
+      ORDER BY meets_threshold DESC, team_steps_per_day_reported DESC, u.team ASC
+    `;
+    
+    db.all(query, [currentDay, currentDay, currentDay, currentDay, threshold, challengeId], (err, rows) => {
+      if (err) {
+        console.error('Error getting team leaderboard with rates:', err);
+        return reject(err);
+      }
+      
+      const ranked = rows.filter(row => row.meets_threshold === 1);
+      const unranked = rows.filter(row => row.meets_threshold === 0);
+      
+      resolve({ ranked, unranked });
+    });
+  });
+}
+
 // Authentication middleware
 function requireAuth(req, res, next) {
   devLog('requireAuth check - session userId:', req.session.userId);
@@ -712,6 +950,16 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
     return res.status(400).json({ error: 'Invalid date format' });
   }
   
+  // Prevent future date entries (allow up to +1 day for timezone flexibility)
+  const stepDate = new Date(date + 'T00:00:00');
+  const nowPacific = getPacificTime();
+  const maxAllowedDate = new Date(nowPacific);
+  maxAllowedDate.setDate(maxAllowedDate.getDate() + 1); // Allow +1 day for timezone flexibility
+  
+  if (stepDate > maxAllowedDate) {
+    return res.status(400).json({ error: 'Cannot enter steps for future dates' });
+  }
+  
   if (count < 0 || count > 70000) {
     return res.status(400).json({ error: 'Step count must be between 0 and 70,000' });
   }
@@ -769,30 +1017,103 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
   });
 });
 
-// Leaderboard
-app.get('/api/leaderboard', apiLimiter, requireApiAuth, (req, res) => {
-  db.all(`
-    SELECT 
-      u.name, 
-      u.team,
-      COALESCE(SUM(s.count), 0) as total_steps,
-      COALESCE(AVG(s.count), 0) as avg_steps_per_day,
-      COUNT(s.id) as days_logged,
-      CASE 
-        WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
-        ELSE 0 
-      END as steps_per_day_reported
-    FROM users u
-    LEFT JOIN steps s ON u.id = s.user_id
-    GROUP BY u.id
-    ORDER BY steps_per_day_reported DESC
-  `, (err, rows) => {
-    if (err) {
-      console.error('Error fetching leaderboard:', err);
+// Challenge-aware individual leaderboard
+app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
+  try {
+    const activeChallenge = await getActiveChallenge();
+    
+    // If no active challenge, return all-time rankings
+    if (!activeChallenge) {
+      db.all(`
+        SELECT 
+          u.name, 
+          u.team,
+          COALESCE(SUM(s.count), 0) as total_steps,
+          COALESCE(AVG(s.count), 0) as avg_steps_per_day,
+          COUNT(s.id) as days_logged,
+          CASE 
+            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+            ELSE 0 
+          END as steps_per_day_reported
+        FROM users u
+        LEFT JOIN steps s ON u.id = s.user_id
+        GROUP BY u.id
+        ORDER BY steps_per_day_reported DESC
+      `, (err, rows) => {
+        if (err) {
+          console.error('Error fetching all-time leaderboard:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({
+          type: 'all_time',
+          challenge_active: false,
+          data: rows,
+          message: 'All-time rankings (no active challenge)'
+        });
+      });
+      return;
+    }
+
+    // Challenge is active - check individual reporting percentage
+    const currentDay = getCurrentChallengeDay(activeChallenge);
+    const reportingData = await calculateIndividualReportingPercentage(activeChallenge.id, currentDay);
+    const participantCount = await getChallengeParticipantCount(activeChallenge.id);
+
+    if (reportingData.percentage < activeChallenge.reporting_threshold) {
+      // Insufficient individual reporting - return message
+      return res.json({
+        type: 'insufficient_data',
+        challenge_active: true,
+        data: [],
+        meta: {
+          challenge_name: activeChallenge.name,
+          challenge_day: currentDay,
+          total_days: getTotalChallengeDays(activeChallenge),
+          reporting_percentage: reportingData.percentage,
+          threshold: activeChallenge.reporting_threshold,
+          participant_count: participantCount,
+          expected_entries: reportingData.expected,
+          actual_entries: reportingData.actual
+        },
+        message: `Waiting for more individual participation (${reportingData.percentage}% of ${activeChallenge.reporting_threshold}% needed)`
+      });
+    }
+
+    // Sufficient overall reporting - return challenge rankings with personal filtering
+    try {
+      const leaderboardData = await getIndividualLeaderboardWithRates(
+        activeChallenge.id, 
+        currentDay, 
+        activeChallenge.reporting_threshold
+      );
+      
+      res.json({
+        type: 'challenge',
+        challenge_active: true,
+        data: {
+          ranked: leaderboardData.ranked,
+          unranked: leaderboardData.unranked
+        },
+        meta: {
+          challenge_name: activeChallenge.name,
+          challenge_day: currentDay,
+          total_days: getTotalChallengeDays(activeChallenge),
+          overall_reporting_percentage: reportingData.percentage,
+          participant_count: participantCount,
+          ranked_count: leaderboardData.ranked.length,
+          unranked_count: leaderboardData.unranked.length,
+          personal_threshold: activeChallenge.reporting_threshold
+        }
+      });
+    } catch (leaderboardError) {
+      console.error('Error getting individual leaderboard with rates:', leaderboardError);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(rows);
-  });
+
+  } catch (error) {
+    console.error('Leaderboard error:', error);
+    res.status(500).json({ error: 'Failed to load leaderboard' });
+  }
 });
 
 // Admin routes
@@ -1040,35 +1361,84 @@ app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) =>
   });
 });
 
-// Team leaderboard
-app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, (req, res) => {
-  db.all(`
-    SELECT 
-      u.team,
-      COUNT(DISTINCT u.id) as member_count,
-      COALESCE(SUM(s.count), 0) as total_steps,
-      COALESCE(AVG(s.count), 0) as avg_steps_per_entry,
-      CASE 
-        WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
-        ELSE 0 
-      END as avg_steps_per_day_reported,
-      CASE 
-        WHEN COUNT(DISTINCT u.id) > 0 AND COUNT(s.id) > 0 THEN 
-          COALESCE(SUM(s.count), 0) / COUNT(s.id)
-        ELSE 0 
-      END as team_steps_per_day_reported
-    FROM users u
-    LEFT JOIN steps s ON u.id = s.user_id
-    WHERE u.team IS NOT NULL AND u.team != ''
-    GROUP BY u.team
-    ORDER BY team_steps_per_day_reported DESC
-  `, (err, rows) => {
-    if (err) {
-      console.error('Error fetching team leaderboard:', err);
+// Challenge-aware team leaderboard
+app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
+  try {
+    const activeChallenge = await getActiveChallenge();
+    
+    // If no active challenge, return all-time team rankings
+    if (!activeChallenge) {
+      db.all(`
+        SELECT 
+          u.team,
+          COUNT(DISTINCT u.id) as member_count,
+          COALESCE(SUM(s.count), 0) as total_steps,
+          COALESCE(AVG(s.count), 0) as avg_steps_per_entry,
+          CASE 
+            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+            ELSE 0 
+          END as avg_steps_per_day_reported,
+          CASE 
+            WHEN COUNT(DISTINCT u.id) > 0 AND COUNT(s.id) > 0 THEN 
+              COALESCE(SUM(s.count), 0) / COUNT(s.id)
+            ELSE 0 
+          END as team_steps_per_day_reported
+        FROM users u
+        LEFT JOIN steps s ON u.id = s.user_id
+        WHERE u.team IS NOT NULL AND u.team != ''
+        GROUP BY u.team
+        ORDER BY team_steps_per_day_reported DESC
+      `, (err, rows) => {
+        if (err) {
+          console.error('Error fetching all-time team leaderboard:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        res.json({
+          type: 'all_time',
+          challenge_active: false,
+          data: rows,
+          message: 'All-time team rankings (no active challenge)'
+        });
+      });
+      return;
+    }
+
+    // Challenge is active - return team rankings with per-team filtering
+    const currentDay = getCurrentChallengeDay(activeChallenge);
+    const participantCount = await getChallengeParticipantCount(activeChallenge.id);
+    try {
+      const teamLeaderboardData = await getTeamLeaderboardWithRates(
+        activeChallenge.id, 
+        currentDay, 
+        activeChallenge.reporting_threshold
+      );
+      
+      res.json({
+        type: 'challenge',
+        challenge_active: true,
+        data: {
+          ranked: teamLeaderboardData.ranked,
+          unranked: teamLeaderboardData.unranked
+        },
+        meta: {
+          challenge_name: activeChallenge.name,
+          challenge_day: currentDay,
+          total_days: getTotalChallengeDays(activeChallenge),
+          participant_count: participantCount,
+          ranked_count: teamLeaderboardData.ranked.length,
+          unranked_count: teamLeaderboardData.unranked.length,
+          personal_threshold: activeChallenge.reporting_threshold
+        }
+      });
+    } catch (leaderboardError) {
+      console.error('Error getting team leaderboard with rates:', leaderboardError);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(rows);
-  });
+
+  } catch (error) {
+    console.error('Team leaderboard error:', error);
+    res.status(500).json({ error: 'Failed to load team leaderboard' });
+  }
 });
 
 // Get all challenges (admin only)
@@ -1084,10 +1454,14 @@ app.get('/api/admin/challenges', requireApiAdmin, (req, res) => {
 
 // Create new challenge (admin only)
 app.post('/api/admin/challenges', requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
-  const { name, start_date, end_date } = req.body;
+  const { name, start_date, end_date, reporting_threshold } = req.body;
   
-  if (!name || !start_date || !end_date) {
-    return res.status(400).json({ error: 'Name, start date, and end date are required' });
+  if (!name || !start_date || !end_date || reporting_threshold === undefined) {
+    return res.status(400).json({ error: 'Name, start date, end date, and reporting threshold are required' });
+  }
+  
+  if (reporting_threshold < 1 || reporting_threshold > 100) {
+    return res.status(400).json({ error: 'Reporting threshold must be between 1 and 100' });
   }
   
   if (!isValidDate(start_date) || !isValidDate(end_date)) {
@@ -1100,8 +1474,8 @@ app.post('/api/admin/challenges', requireApiAdmin, validateCSRFToken, sanitizeUs
   }
   
   db.run(
-    `INSERT INTO challenges (name, start_date, end_date) VALUES (?, ?, ?)`,
-    [name.trim(), start_date, end_date],
+    `INSERT INTO challenges (name, start_date, end_date, reporting_threshold) VALUES (?, ?, ?, ?)`,
+    [name.trim(), start_date, end_date, reporting_threshold],
     function(err) {
       if (err) {
         console.error('Error creating challenge:', err);
@@ -1112,6 +1486,7 @@ app.post('/api/admin/challenges', requireApiAdmin, validateCSRFToken, sanitizeUs
         name: name.trim(),
         start_date,
         end_date,
+        reporting_threshold,
         is_active: 0,
         message: 'Challenge created successfully' 
       });
@@ -1122,10 +1497,14 @@ app.post('/api/admin/challenges', requireApiAdmin, validateCSRFToken, sanitizeUs
 // Update challenge (admin only)
 app.put('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { challengeId } = req.params;
-  const { name, start_date, end_date, is_active } = req.body;
+  const { name, start_date, end_date, reporting_threshold, is_active } = req.body;
   
-  if (!name || !start_date || !end_date) {
-    return res.status(400).json({ error: 'Name, start date, and end date are required' });
+  if (!name || !start_date || !end_date || reporting_threshold === undefined) {
+    return res.status(400).json({ error: 'Name, start date, end date, and reporting threshold are required' });
+  }
+  
+  if (reporting_threshold < 1 || reporting_threshold > 100) {
+    return res.status(400).json({ error: 'Reporting threshold must be between 1 and 100' });
   }
   
   if (!isValidDate(start_date) || !isValidDate(end_date)) {
@@ -1148,8 +1527,8 @@ app.put('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFToken
   }
   
   db.run(
-    `UPDATE challenges SET name = ?, start_date = ?, end_date = ?, is_active = ? WHERE id = ?`,
-    [name.trim(), start_date, end_date, is_active ? 1 : 0, challengeId],
+    `UPDATE challenges SET name = ?, start_date = ?, end_date = ?, reporting_threshold = ?, is_active = ? WHERE id = ?`,
+    [name.trim(), start_date, end_date, reporting_threshold, is_active ? 1 : 0, challengeId],
     function(err) {
       if (err) {
         console.error('Error updating challenge:', err);

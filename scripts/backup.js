@@ -26,20 +26,8 @@ async function createApplicationBackup() {
     
     // For production, run via SSH
     if (process.env.NODE_ENV === 'production' || process.argv.includes('--production')) {
-      const command = `fly ssh console --command "cd /app && node -e \\"
-        const db = require('./database.js');
-        db.utils.createBackup()
-          .then(result => {
-            console.log('✅ Backup created:', result.path);
-            console.log('📊 Size:', result.size, 'bytes');
-            process.exit(0);
-          })
-          .catch(err => {
-            console.error('❌ Backup failed:', err.message);
-            process.exit(1);
-          });
-      \\""`;
-      
+      // Use a simpler SSH command approach to avoid quote escaping issues
+      const command = 'fly ssh console --command "node -e \"const db = require(\'./database.js\'); db.utils.createBackup().then(r => { console.log(\'✅ Backup created:\', r.path); console.log(\'📊 Size:\', r.size, \'bytes\'); process.exit(0); }).catch(e => { console.error(\'❌ Backup failed:\', e.message); process.exit(1); })\""';
       execSync(command, { stdio: 'inherit' });
     } else {
       // For local development
@@ -85,20 +73,8 @@ async function cleanupOldBackups() {
     log('🧹 Cleaning up old backups...');
     
     if (process.env.NODE_ENV === 'production' || process.argv.includes('--production')) {
-      const command = `fly ssh console --command "cd /app && node -e \\"
-        const db = require('./database.js');
-        db.utils.cleanupOldBackups(10)
-          .then(result => {
-            console.log('🗑️ Cleaned:', result.cleaned, 'backups');
-            console.log('📁 Kept:', result.kept, 'backups');
-            process.exit(0);
-          })
-          .catch(err => {
-            console.error('❌ Cleanup failed:', err.message);
-            process.exit(1);
-          });
-      \\""`;
-      
+      // Use a simpler SSH command approach to avoid quote escaping issues
+      const command = 'fly ssh console --command "node -e \"const db = require(\'./database.js\'); db.utils.cleanupOldBackups(10).then(r => { console.log(\'🗑️ Cleaned:\', r.cleaned, \'backups\'); console.log(\'📁 Kept:\', r.kept, \'backups\'); process.exit(0); }).catch(e => { console.error(\'❌ Cleanup failed:\', e.message); process.exit(1); })\""';
       execSync(command, { stdio: 'inherit' });
     } else {
       const db = require('../database.js');

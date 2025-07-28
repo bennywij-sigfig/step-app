@@ -171,6 +171,8 @@
             min-height: 42px;
             position: relative;
             overflow: hidden;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
         }
         
         /* Right-align the Save Steps button */
@@ -320,7 +322,9 @@
             border-radius: 8px;
             margin-top: 12px;
             font-size: 14px;
+            font-weight: 500;
             animation: slideIn 0.3s ease-out;
+            border-left: 4px solid #28a745;
         }
         
         .error-message {
@@ -330,7 +334,9 @@
             border-radius: 8px;
             margin-top: 12px;
             font-size: 14px;
+            font-weight: 500;
             animation: slideIn 0.3s ease-out;
+            border-left: 4px solid #dc3545;
         }
         
         @keyframes slideIn {
@@ -530,24 +536,38 @@
         
         h2 {
             color: #333;
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: -0.5px;
+            position: relative;
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
         }
         
         h3 {
-            color: #555;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            margin-top: 25px;
+            color: #444;
+            font-size: 18px;
+            font-weight: 650;
+            margin-bottom: 18px;
+            margin-top: 28px;
+            letter-spacing: -0.3px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>👟 Step Challenge</h1>
+            <h1>Step Challenge</h1>
             <p>Welcome, <span id="userName"></span>!</p>
         </div>
 

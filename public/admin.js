@@ -130,7 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </td>
                                     <td>${user.total_steps.toLocaleString()}</td>
                                     <td>${user.days_logged}</td>
-                                    <td>${user.is_admin ? '✅' : '❌'}</td>
+                                    <td><span style="font-weight: bold; color: ${user.is_admin ? '#28a745' : '#dc3545'}">${user.is_admin ? 'Yes' : 'No'}</span></td>
                                     <td>
                                         <button class="save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled>
                                             Save
@@ -184,19 +184,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">✅ Team updated successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">Team updated successfully!</div>';
                     saveBtn.style.background = '#28a745';
                     saveBtn.textContent = 'Saved';
                     setTimeout(() => {
                         messageDiv.innerHTML = '';
                     }, 3000);
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save';
                 }
             } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save';
             }
@@ -206,38 +206,135 @@ document.addEventListener('DOMContentLoaded', function() {
         async function loadTeamLeaderboard() {
             try {
                 const response = await fetch('/api/team-leaderboard');
-                const teams = await response.json();
+                const data = await response.json();
                 
                 const teamLeaderboard = document.getElementById('teamLeaderboard');
-                if (teams.length === 0) {
-                    teamLeaderboard.innerHTML = '<p>No teams with members yet.</p>';
-                } else {
-                    teamLeaderboard.innerHTML = `
+                
+                // Handle different response types (same logic as main dashboard)
+                if (data.type === 'insufficient_data') {
+                    teamLeaderboard.innerHTML = `<div class="info-message" style="background: rgba(255, 193, 7, 0.1); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 193, 7, 0.2); margin-bottom: 20px;">
+                        <h3 style="color: #856404; margin: 0 0 10px 0;">${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>
+                        <p style="color: #856404; margin: 0 0 10px 0;">${data.message}</p>
+                        <p style="font-size: 0.9em; color: #6c757d; margin: 0;">
+                            ${data.meta.actual_entries}/${data.meta.expected_entries} expected team entries 
+                            (${data.meta.reporting_percentage}% team participation)
+                        </p>
+                    </div>`;
+                    return;
+                }
+                
+                // Handle legacy all-time format or new challenge format
+                let challengeInfo = '';
+                
+                if (data.type === 'all_time') {
+                    challengeInfo = '<h3 style="color: #555; margin: 0 0 20px 0;">All-Time Team Rankings</h3>';
+                } else if (data.type === 'challenge') {
+                    challengeInfo = `<div style="background: rgba(102, 126, 234, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid rgba(102, 126, 234, 0.2);">
+                        <h3 style="color: #495057; margin: 0 0 8px 0;">${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>
+                        <p style="font-size: 0.9em; color: #6c757d; margin: 0;">
+                            Challenge Progress • Threshold: ${data.meta.personal_threshold}% reporting required for ranking
+                        </p>
+                    </div>`;
+                }
+                
+                let html = challengeInfo;
+                
+                // Show ranked teams section
+                if (data.data && data.data.ranked && data.data.ranked.length > 0) {
+                    html += `<div style="margin-bottom: 30px;">
+                        <h4 style="color: #28a745; margin: 0 0 15px 0; font-weight: 600;">Ranked Teams</h4>
                         <table>
                             <thead>
                                 <tr>
                                     <th>Rank</th>
                                     <th>Team</th>
                                     <th>Members</th>
-                                    <th>Total Steps</th>
+                                    <th>Reporting Rate</th>
                                     <th>Steps/Day</th>
+                                    <th>Total Steps</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                ${teams.map((team, index) => `
-                                    <tr>
+                                ${data.data.ranked.map((team, index) => `
+                                    <tr style="background: rgba(40, 167, 69, 0.05);">
                                         <td><span class="team-rank">#${index + 1}</span></td>
                                         <td><strong>${team.team}</strong></td>
                                         <td>${team.member_count}</td>
+                                        <td><span style="color: #28a745; font-weight: 500;">${team.team_reporting_rate >= 1 ? Math.round(team.team_reporting_rate) : team.team_reporting_rate}%</span></td>
+                                        <td><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong></td>
                                         <td>${team.total_steps.toLocaleString()}</td>
-                                        <td>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>
                         </table>
-                    `;
+                    </div>`;
                 }
+                
+                // Show unranked teams section
+                if (data.data && data.data.unranked && data.data.unranked.length > 0) {
+                    html += `<div>
+                        <h4 style="color: #ffc107; margin: 0 0 10px 0; font-weight: 600;">Unranked Teams</h4>
+                        <p style="font-size: 0.85em; color: #6c757d; margin: 0 0 15px 0;">Need more consistent team reporting to be ranked</p>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Team</th>
+                                    <th>Members</th>
+                                    <th>Reporting Rate</th>
+                                    <th>Steps/Day</th>
+                                    <th>Total Steps</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.data.unranked.map((team) => `
+                                    <tr style="opacity: 0.8; background: rgba(255, 193, 7, 0.05);">
+                                        <td><span style="color: #6c757d;">-</span></td>
+                                        <td><strong>${team.team}</strong></td>
+                                        <td>${team.member_count}</td>
+                                        <td><span style="color: #ffc107; font-weight: 500;">${team.team_reporting_rate >= 1 ? Math.round(team.team_reporting_rate) : team.team_reporting_rate}%</span></td>
+                                        <td><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong></td>
+                                        <td>${team.total_steps.toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>`;
+                }
+                
+                // Handle legacy array format (all-time rankings) or empty data
+                if (Array.isArray(data)) {
+                    if (data.length === 0) {
+                        html = '<p>No teams with members yet.</p>';
+                    } else {
+                        html = `<table>
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Team</th>
+                                    <th>Members</th>
+                                    <th>Steps/Day</th>
+                                    <th>Total Steps</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.map((team, index) => `
+                                    <tr>
+                                        <td><span class="team-rank">#${index + 1}</span></td>
+                                        <td><strong>${team.team}</strong></td>
+                                        <td>${team.member_count}</td>
+                                        <td><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong></td>
+                                        <td>${team.total_steps.toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>`;
+                    }
+                }
+                
+                teamLeaderboard.innerHTML = html;
             } catch (error) {
+                console.error('Team leaderboard error:', error);
                 document.getElementById('teamLeaderboard').innerHTML = '<p>Error loading team leaderboard</p>';
             }
         }
@@ -310,7 +407,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const messageDiv = document.getElementById('teamsMessage');
             
             if (!teamName.trim()) {
-                messageDiv.innerHTML = '<div class="message error">❌ Please enter a team name</div>';
+                messageDiv.innerHTML = '<div class="message error">Please enter a team name</div>';
                 return;
             }
             
@@ -326,18 +423,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">✅ Team created successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">Team created successfully!</div>';
                     document.getElementById('newTeamName').value = '';
                     loadManageTeams();
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else if (response.status === 429) {
                     const retryAfter = Math.floor(data.retryAfter / 60) || 60;
-                    messageDiv.innerHTML = '<div class="message error">⏰ Too many requests. Please wait ' + retryAfter + ' minutes before trying again.</div>';
+                    messageDiv.innerHTML = '<div class="message error">Too many requests. Please wait ' + retryAfter + ' minutes before trying again.</div>';
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                 }
             } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
             }
         }
 
@@ -356,7 +453,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const messageDiv = document.getElementById('teamsMessage');
             
             if (!teamName.trim()) {
-                messageDiv.innerHTML = '<div class="message error">❌ Team name cannot be empty</div>';
+                messageDiv.innerHTML = '<div class="message error">Team name cannot be empty</div>';
                 return;
             }
             
@@ -375,17 +472,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">✅ Team updated successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">Team updated successfully!</div>';
                     saveBtn.style.background = '#28a745';
                     saveBtn.textContent = 'Saved';
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save';
                 }
             } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save';
             }
@@ -407,14 +504,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">✅ Team deleted successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">Team deleted successfully!</div>';
                     loadManageTeams();
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                 }
             } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
             }
         }
 
@@ -434,14 +531,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">✅ User deleted successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">User deleted successfully!</div>';
                     loadUsers(); // Reload the users table
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                 }
             } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
             }
         }
 
@@ -483,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // Show success message
                     const messageDiv = document.getElementById('usersMessage');
-                    messageDiv.innerHTML = '<div class="message success">✅ CSV export downloaded successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">CSV export downloaded successfully!</div>';
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                     
                 } else {
@@ -492,7 +589,7 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (error) {
                 console.error('Export error:', error);
                 const messageDiv = document.getElementById('usersMessage');
-                messageDiv.innerHTML = '<div class="message error">❌ Export failed. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Export failed. Please try again.</div>';
                 setTimeout(() => messageDiv.innerHTML = '', 3000);
             }
         }
@@ -514,6 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <th>Challenge Name</th>
                                     <th>Start Date</th>
                                     <th>End Date</th>
+                                    <th>Threshold %</th>
                                     <th>Status</th>
                                     <th>Actions</th>
                                 </tr>
@@ -535,6 +633,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <input type="date" id="challengeEndDate-${challenge.id}" value="${challenge.end_date}" 
                                                    style="width: 100%; padding: 10px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;"
                                                    class="challenge-date-input" data-challenge-id="${challenge.id}">
+                                        </td>
+                                        <td>
+                                            <input type="number" id="challengeThreshold-${challenge.id}" value="${challenge.reporting_threshold || 70}" min="1" max="100"
+                                                   style="width: 100%; padding: 10px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;"
+                                                   class="challenge-threshold-input" data-challenge-id="${challenge.id}">
                                         </td>
                                         <td>
                                             <label style="display: flex; align-items: center; gap: 5px;">
@@ -568,15 +671,21 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = document.getElementById('newChallengeName').value;
             const startDate = document.getElementById('newChallengeStartDate').value;
             const endDate = document.getElementById('newChallengeEndDate').value;
+            const threshold = document.getElementById('newChallengeThreshold').value;
             const messageDiv = document.getElementById('challengesMessage');
             
-            if (!name.trim() || !startDate || !endDate) {
-                messageDiv.innerHTML = '<div class="message error">❌ Please fill in all fields</div>';
+            if (!name.trim() || !startDate || !endDate || !threshold) {
+                messageDiv.innerHTML = '<div class="message error">Please fill in all fields</div>';
+                return;
+            }
+            
+            if (threshold < 1 || threshold > 100) {
+                messageDiv.innerHTML = '<div class="message error">Threshold must be between 1% and 100%</div>';
                 return;
             }
             
             if (new Date(startDate) >= new Date(endDate)) {
-                messageDiv.innerHTML = '<div class="message error">❌ Start date must be before end date</div>';
+                messageDiv.innerHTML = '<div class="message error">Start date must be before end date</div>';
                 return;
             }
             
@@ -589,24 +698,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify({ 
                         name: name,
                         start_date: startDate,
-                        end_date: endDate
+                        end_date: endDate,
+                        reporting_threshold: parseInt(threshold)
                     })
                 });
                 
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">✅ Challenge created successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">Challenge created successfully!</div>';
                     document.getElementById('newChallengeName').value = '';
                     document.getElementById('newChallengeStartDate').value = '';
                     document.getElementById('newChallengeEndDate').value = '';
+                    document.getElementById('newChallengeThreshold').value = '70';
                     loadChallenges();
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                 }
             } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
             }
         }
 
@@ -623,17 +734,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const name = document.getElementById(`challengeName-${challengeId}`).value;
             const startDate = document.getElementById(`challengeStartDate-${challengeId}`).value;
             const endDate = document.getElementById(`challengeEndDate-${challengeId}`).value;
+            const threshold = document.getElementById(`challengeThreshold-${challengeId}`).value;
             const isActive = document.getElementById(`challengeActive-${challengeId}`).checked;
             const saveBtn = document.getElementById(`saveChallenge-${challengeId}`);
             const messageDiv = document.getElementById('challengesMessage');
             
-            if (!name.trim() || !startDate || !endDate) {
-                messageDiv.innerHTML = '<div class="message error">❌ All fields are required</div>';
+            if (!name.trim() || !startDate || !endDate || !threshold) {
+                messageDiv.innerHTML = '<div class="message error">All fields are required</div>';
+                return;
+            }
+            
+            if (threshold < 1 || threshold > 100) {
+                messageDiv.innerHTML = '<div class="message error">Threshold must be between 1% and 100%</div>';
                 return;
             }
             
             if (new Date(startDate) >= new Date(endDate)) {
-                messageDiv.innerHTML = '<div class="message error">❌ Start date must be before end date</div>';
+                messageDiv.innerHTML = '<div class="message error">Start date must be before end date</div>';
                 return;
             }
             
@@ -650,6 +767,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         name: name,
                         start_date: startDate,
                         end_date: endDate,
+                        reporting_threshold: parseInt(threshold),
                         is_active: isActive
                     })
                 });
@@ -657,7 +775,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">✅ Challenge updated successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">Challenge updated successfully!</div>';
                     saveBtn.style.background = '#28a745';
                     saveBtn.textContent = 'Saved';
                     if (isActive) {
@@ -666,12 +784,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save';
                 }
             } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
                 saveBtn.disabled = false;
                 saveBtn.textContent = 'Save';
             }
@@ -693,14 +811,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">✅ Challenge deleted successfully!</div>';
+                    messageDiv.innerHTML = '<div class="message success">Challenge deleted successfully!</div>';
                     loadChallenges();
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">❌ ' + data.error + '</div>';
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                 }
             } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">❌ Network error. Please try again.</div>';
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
             }
         }
 
@@ -728,6 +846,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Challenge input changes
             if (e.target.classList.contains('challenge-name-input') || 
                 e.target.classList.contains('challenge-date-input') || 
+                e.target.classList.contains('challenge-threshold-input') ||
                 e.target.classList.contains('challenge-active-input')) {
                 const challengeId = e.target.dataset.challengeId;
                 enableChallengeSaveButton(parseInt(challengeId));

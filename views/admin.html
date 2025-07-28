@@ -162,12 +162,16 @@
         .save-btn, button:not(.delete-btn):not(.nav button) {
             background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
             color: white;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 15px rgba(72, 187, 120, 0.3);
         }
         
         .delete-btn {
             background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
             color: white;
             margin-left: 8px;
+            letter-spacing: 0.3px;
+            box-shadow: 0 4px 15px rgba(229, 62, 62, 0.3);
         }
         
         .save-btn:hover, button:hover {
@@ -263,21 +267,31 @@
         
         h2 {
             color: #333;
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: -0.5px;
+            position: relative;
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 40px;
+            height: 3px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            border-radius: 2px;
         }
         
         h3 {
-            color: #555;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            margin-top: 25px;
+            color: #444;
+            font-size: 18px;
+            font-weight: 650;
+            margin-bottom: 18px;
+            margin-top: 28px;
+            letter-spacing: -0.3px;
         }
         
         /* Mobile responsive styles */
@@ -414,7 +428,7 @@
 <body>
     <div class="container">
         <div class="header">
-        <h1>🏆 Step Challenge - Admin Dashboard</h1>
+        <h1>Step Challenge - Admin Dashboard</h1>
         <p>Manage users, teams, and view all challenge data</p>
     </div>
 
@@ -424,7 +438,7 @@
         <button id="manageTeamsBtn">Manage Teams</button>
         <button id="challengesBtn">Manage Challenges</button>
         <button id="overviewBtn">Overview</button>
-        <button id="exportBtn" style="background: #28a745; color: white;">📊 Export CSV</button>
+        <button id="exportBtn" style="background: #28a745; color: white;">Export CSV</button>
     </div>
 
     <div id="overviewView" class="card hidden">
@@ -506,6 +520,11 @@
                     <div class="date-input" style="flex: 0 0 160px;">
                         <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">End Date</label>
                         <input type="date" id="newChallengeEndDate" 
+                               style="width: 100%; padding: 12px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;">
+                    </div>
+                    <div class="date-input" style="flex: 0 0 120px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">Threshold %</label>
+                        <input type="number" id="newChallengeThreshold" placeholder="70" min="1" max="100" value="70"
                                style="width: 100%; padding: 12px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;">
                     </div>
                     <button id="createChallengeBtn" 

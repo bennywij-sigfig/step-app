@@ -33,6 +33,45 @@
 
 ---
 
+## 🚧 IN PROGRESS - RANKED/UNRANKED LEADERBOARD SYSTEM (July 28, 2025)
+
+### Current Status: Partially Implemented
+- [x] **Individual Leaderboards** - ✅ WORKING: Ranked/unranked sections with personal reporting rates
+- [ ] **Team Leaderboards** - ⚠️ BROKEN: Need per-team participation rate calculations
+- [x] **Backend API** - Challenge-aware endpoints with Pacific Time calculations (fixed timezone bugs)
+- [x] **Frontend Display** - Updated UI to show ranked/unranked sections properly
+- [x] **Database Schema** - Added reporting thresholds, challenge_id columns, performance indexes
+
+### Remaining Work Before Deploy:
+1. **Fix team leaderboard calculations** - Implement proper per-team reporting rates
+2. **Local testing** - Comprehensive testing of both individual and team leaderboards
+3. **Database backup** - Create production backup before deployment
+4. **Commit and deploy** - Push changes to production
+
+### Implementation Notes:
+- Fixed critical timezone bug (`utcToZonedTime` → `toZonedTime`)  
+- Added 70% threshold for testing (configurable per challenge)
+- Pacific Time calculations working for challenge day tracking
+- Individual participants now properly separated into ranked (≥threshold) vs unranked (<threshold)
+- Frontend displays both sections with visual distinction and reporting percentages
+
+### COMPLETED IN THIS SESSION ✅:
+- [x] Fix team participation rate calculation logic - ✅ COMPLETED
+- [x] Remove ecosystem check from team leaderboards - ✅ COMPLETED  
+- [x] Admin team leaderboard consistency fixes - ✅ COMPLETED
+- [x] UI beautification (remove emoji clutter) - ✅ COMPLETED
+- [x] Add admin threshold controls (70% default, editable) - ✅ COMPLETED
+- [x] Prevent future date step entries (+1 day timezone buffer) - ✅ COMPLETED
+
+### Next Session TODO (READY FOR DEPLOYMENT): 
+- [ ] **Test all changes locally** - Team leaderboards, admin controls, future date prevention
+- [ ] **Create production backup** (CRITICAL - before any deployment)
+- [ ] **Git commit and push to remote** - All session changes ready for production
+- [ ] **Deploy to Fly.io** (`fly deploy`) - Test on production server
+- [ ] Consider consolidating calculateIndividualReportingPercentage & calculateTeamReportingPercentage functions (currently redundant - both measure individual entries vs expected, just different populations)
+
+---
+
 ## 🚨 CRITICAL STABILITY ISSUES (Immediate Action Required)
 
 ### Data Safety (URGENT - Before Any Deployment)
