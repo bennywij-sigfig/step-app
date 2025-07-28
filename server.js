@@ -123,7 +123,7 @@ app.use(express.static('public'));
 // Rate limiting configuration
 const magicLinkLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: 10, // limit each IP to 10 requests per windowMs
   message: {
     error: 'Too many login requests from this IP, please try again in an hour.',
     retryAfter: 3600
