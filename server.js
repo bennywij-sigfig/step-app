@@ -685,16 +685,11 @@ app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
     // Send email
     const loginUrl = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
     
-    // Random Simpsons quotes (classic and memorable)
+    // Random quotes
     const quotes = [
-      "To alcohol! The cause of, and solution to, all of life's problems.",
-      "I can't promise I'll try, but I'll try to try.",
-      "Kids, just because I don't care doesn't mean I'm not listening.",
-      "It takes two to lie; one to lie, and one to listen.",
-      "I learned that beneath my goody two-shoes lies some very dark socks.",
-      "Trying is the first step towards failure.",
-      "I'm not a bad guy! I work hard, and I love my kids. So why should I spend half my Sunday hearing about how I'm going to hell?",
-      "Facts are meaningless. You could use facts to prove anything that's even remotely true.",
+      "To alcohol! The cause of, and solution to, all of life's problems. -- Homer",
+      "Do or do not, there is no try. -- Yoda",
+      "The most important thing we learn at school is the fact that the most important things can't be learned at school. -- Murakami",
     ];
     
     const xkcdLinks = [
