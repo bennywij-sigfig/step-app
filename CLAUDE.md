@@ -5,9 +5,11 @@ Production web application for tracking daily steps in company-wide challenges (
 
 ## Status: Production Deployed ✅
 - **URL**: https://step-app-4x-yhw.fly.dev/
-- **Last Deploy**: July 28, 2025 (ranked leaderboards + theme system + deployment fixes)
+- **Last Deploy**: July 28, 2025 (UI fixes + database stability improvements)
 - Ranked/unranked leaderboard system with team member disclosure
 - 5-color admin theme system (Ocean Blue, Sunset Orange, Forest Green, Lavender Purple, Monochrome)
+- Admin panel challenge creation fully functional with database migrations
+- Clean admin team leaderboard display (removed undefined threshold messages)
 - Comprehensive security: CSRF protection, rate limiting, CSP headers
 - Fly.io deployment with optimized configuration (CLI crash issues resolved)
 - Cross-browser compatibility including Safari
@@ -35,10 +37,13 @@ npm run dev        # Development mode with auto-restart
 ```
 
 ## Recent Updates (July 28, 2025)
+- **Admin UI Cleanup**: Removed undefined threshold messages from team leaderboard display
+- **Challenge Creation Fix**: Resolved database errors when creating new challenges in production
+- **Database Migrations**: Added automatic schema updates for backward compatibility (reporting_threshold, timezone, created_at columns)
+- **Enhanced Error Handling**: Better error messages and duplicate name checking for challenge creation
 - **Ranked/Unranked Leaderboard System**: Individual and team leaderboards with participation thresholds (70% default)
 - **Team Member Disclosure**: Expandable team member lists with individual statistics and reporting rates
 - **Admin Theme System**: 5-color theme picker with real-time switching and localStorage persistence
-- **Deployment Fix**: Resolved Fly CLI crashes by optimizing fly.toml configuration (removed conflicting constraints)
 - **Production Testing**: Comprehensive Playwright testing validates all functionality in production
 - **Pacific Time Support**: Proper timezone handling for challenge day calculations
 - **Future Date Prevention**: Blocks step entries beyond current day with timezone buffer
