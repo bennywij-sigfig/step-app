@@ -515,7 +515,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Delete user
         async function deleteUser(userId, userName) {
-            if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone and will permanently remove their account and all step data.`)) {
+            if (!confirm(`🚨 PERMANENT DELETION WARNING 🚨\n\nAre you sure you want to PERMANENTLY DELETE user "${userName}"?\n\nThis will:\n• Delete their user account forever\n• Delete all their step data permanently\n• Remove them from their team\n• Cannot be undone or recovered\n\nType "DELETE" to confirm this permanent action.`)) {
+                return;
+            }
+            
+            // Second confirmation with text input
+            const confirmText = prompt(`Please type "DELETE" to confirm permanent deletion of "${userName}":`);
+            if (confirmText !== 'DELETE') {
+                alert('Action cancelled. You must type "DELETE" exactly to confirm.');
                 return;
             }
             
