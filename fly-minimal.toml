@@ -1,0 +1,22 @@
+# Minimal fly.toml for testing deployment issues
+app = 'step-app-4x-yhw'
+primary_region = 'ord'
+
+[build]
+
+# Single volume configuration for SQLite
+[[mounts]]
+  source = 'data'
+  destination = '/data'
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
