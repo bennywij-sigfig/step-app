@@ -169,8 +169,10 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('myStepsBtn').addEventListener('click', () => {
             document.getElementById('myStepsView').classList.remove('hidden');
             document.getElementById('leaderboardView').classList.add('hidden');
+            document.getElementById('teamLeaderboardView').classList.add('hidden');
             document.getElementById('myStepsBtn').classList.add('active');
             document.getElementById('leaderboardBtn').classList.remove('active');
+            document.getElementById('teamLeaderboardBtn').classList.remove('active');
         });
         
         document.getElementById('leaderboardBtn').addEventListener('click', () => {
