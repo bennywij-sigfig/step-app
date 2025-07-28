@@ -952,7 +952,7 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
   
   // Prevent future date entries (allow up to +1 day for timezone flexibility)
   const stepDate = new Date(date + 'T00:00:00');
-  const nowPacific = getPacificTime();
+  const nowPacific = getCurrentPacificTime();
   const maxAllowedDate = new Date(nowPacific);
   maxAllowedDate.setDate(maxAllowedDate.getDate() + 1); // Allow +1 day for timezone flexibility
   
