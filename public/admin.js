@@ -131,15 +131,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <td>${user.total_steps.toLocaleString()}</td>
                                     <td>${user.days_logged}</td>
                                     <td><span style="font-weight: bold; color: ${user.is_admin ? '#28a745' : '#dc3545'}">${user.is_admin ? 'Yes' : 'No'}</span></td>
-                                    <td>
-                                        <button class="save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled>
-                                            Save
+                                    <td class="actions-cell">
+                                        <button class="action-btn save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled title="Save team assignment">
+                                            💾
                                         </button>
-                                        <button class="delete-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${user.name}" style="background: linear-gradient(135deg, #fd7e14 0%, #e9630b 100%); margin-left: 4px;">
-                                            Clear Steps
+                                        <button class="action-btn clear-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Clear all steps for this user">
+                                            🗑️
                                         </button>
-                                        <button class="delete-btn delete-user-btn" data-user-id="${user.id}" data-user-name="${user.name}">
-                                            Delete
+                                        <button class="action-btn delete-btn delete-user-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Delete user account">
+                                            ❌
                                         </button>
                                     </td>
                                 </tr>

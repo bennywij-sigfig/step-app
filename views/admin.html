@@ -153,8 +153,9 @@
         
         th, td {
             text-align: left;
-            padding: 14px;
+            padding: 10px 14px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            vertical-align: middle;
         }
         
         th {
@@ -170,6 +171,15 @@
         
         tbody tr:hover {
             background: rgba(255, 255, 255, 0.8);
+        }
+
+        /* Improve row height consistency and prevent tall rows */
+        tbody tr {
+            height: 48px;
+        }
+
+        tbody td {
+            line-height: 1.4;
         }
         select, input[type="text"], input[type="date"] {
             padding: 10px;
@@ -230,6 +240,60 @@
         
         .save-btn:active, button:active {
             transform: translateY(0);
+        }
+
+        /* Compact action buttons for user table */
+        .actions-cell {
+            white-space: nowrap;
+            padding: 8px 12px !important;
+        }
+
+        .action-btn {
+            border: none;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 2px;
+            position: relative;
+        }
+
+        .action-btn.save-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        }
+
+        .action-btn.clear-btn {
+            background: linear-gradient(135deg, #fd7e14 0%, #e9630b 100%);
+        }
+
+        .action-btn.delete-btn {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+        }
+
+        .action-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+
+        .action-btn:disabled {
+            background: #6c757d !important;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.6;
+        }
+
+        .action-btn:disabled:hover {
+            transform: none;
+            box-shadow: none;
         }
         .message {
             margin-top: 15px;
