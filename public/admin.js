@@ -156,8 +156,8 @@ document.addEventListener('DOMContentLoaded', function() {
         function updateUserTeam(userId) {
             const saveBtn = document.getElementById(`save-${userId}`);
             saveBtn.disabled = false;
-            saveBtn.style.background = '#007bff';
-            saveBtn.textContent = 'Save';
+            saveBtn.classList.remove('save-success');
+            saveBtn.classList.add('save-active');
         }
 
         // Save team assignment
@@ -188,20 +188,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (response.ok) {
                     messageDiv.innerHTML = '<div class="message success">Team updated successfully!</div>';
-                    saveBtn.style.background = '#28a745';
-                    saveBtn.textContent = 'Saved';
+                    saveBtn.classList.remove('save-active');
+                    saveBtn.classList.add('save-success');
                     setTimeout(() => {
                         messageDiv.innerHTML = '';
+                        saveBtn.classList.remove('save-success');
+                        saveBtn.disabled = true;
                     }, 3000);
                 } else {
                     messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
                     saveBtn.disabled = false;
-                    saveBtn.textContent = 'Save';
+                    saveBtn.classList.remove('save-active');
                 }
             } catch (error) {
                 messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
                 saveBtn.disabled = false;
-                saveBtn.textContent = 'Save';
+                saveBtn.classList.remove('save-active');
             }
         }
 
