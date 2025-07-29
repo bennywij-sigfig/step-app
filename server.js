@@ -576,6 +576,52 @@ function sanitizeUserInput(req, res, next) {
   next();
 }
 
+// Robust numeric input validation to prevent type confusion attacks
+function validateNumericInput(value, fieldName, min = 0, max = Number.MAX_SAFE_INTEGER) {
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    throw new Error(`${fieldName} is required`);
+  }
+  
+  // Type check and conversion
+  if (typeof value !== 'number') {
+    // Allow string numbers but validate carefully
+    if (typeof value === 'string') {
+      // Check for empty string
+      if (value.trim() === '') {
+        throw new Error(`${fieldName} cannot be empty`);
+      }
+      
+      // Check for non-numeric strings
+      if (!/^-?\d+(\.\d+)?$/.test(value.trim())) {
+        throw new Error(`${fieldName} must be a valid number`);
+      }
+      
+      const parsed = parseFloat(value.trim());
+      if (isNaN(parsed)) {
+        throw new Error(`${fieldName} must be a valid number`);
+      }
+      value = parsed;
+    } else {
+      // Reject objects, arrays, booleans, etc.
+      throw new Error(`${fieldName} must be a number, received ${typeof value}`);
+    }
+  }
+  
+  // NaN/Infinity check
+  if (!Number.isFinite(value)) {
+    throw new Error(`${fieldName} must be a finite number`);
+  }
+  
+  // Range validation
+  if (value < min || value > max) {
+    throw new Error(`${fieldName} must be between ${min} and ${max}`);
+  }
+  
+  // Ensure integer for step counts
+  return Math.floor(Math.abs(value)); // Also ensure positive
+}
+
 // Routes
 
 // CSRF token endpoint
@@ -937,79 +983,89 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
   const { date, count } = req.body;
   const userId = req.session.userId;
   
-  if (!date || count === undefined) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-  
-  if (!isValidDate(date)) {
-    return res.status(400).json({ error: 'Invalid date format' });
-  }
-  
-  // Prevent future date entries (allow up to +1 day for timezone flexibility)
-  const stepDate = new Date(date + 'T00:00:00');
-  const nowPacific = getCurrentPacificTime();
-  const maxAllowedDate = new Date(nowPacific);
-  maxAllowedDate.setDate(maxAllowedDate.getDate() + 1); // Allow +1 day for timezone flexibility
-  
-  if (stepDate > maxAllowedDate) {
-    return res.status(400).json({ error: 'Cannot enter steps for future dates' });
-  }
-  
-  if (count < 0 || count > 70000) {
-    return res.status(400).json({ error: 'Step count must be between 0 and 70,000' });
-  }
-
-  // Check if there's an active challenge and validate date
-  db.get(`SELECT * FROM challenges WHERE is_active = 1`, (err, challenge) => {
-    if (err) {
-      console.error('Error checking active challenge:', err);
-      return res.status(500).json({ error: 'Database error' });
+  try {
+    // Validate inputs with strict type checking
+    if (!date) {
+      return res.status(400).json({ error: 'Date is required' });
     }
     
-    if (challenge) {
-      // Parse dates for comparison (ignoring time)
-      const stepDate = new Date(date + 'T00:00:00');
-      const startDate = new Date(challenge.start_date + 'T00:00:00');
-      const endDate = new Date(challenge.end_date + 'T23:59:59');
-      
-      if (stepDate < startDate || stepDate > endDate) {
-        return res.status(400).json({ 
-          error: `Step logging is only allowed during the active challenge period (${challenge.start_date} to ${challenge.end_date})`,
-          challenge_period: {
-            start_date: challenge.start_date,
-            end_date: challenge.end_date,
-            name: challenge.name
-          }
-        });
+    // Validate step count with comprehensive type checking
+    const validatedCount = validateNumericInput(count, 'Step count', 0, 70000);
+    
+    // Validate date format
+    if (!isValidDate(date)) {
+      return res.status(400).json({ error: 'Invalid date format' });
+    }
+    
+    // Prevent future date entries (allow up to +1 day for timezone flexibility)
+    const stepDate = new Date(date + 'T00:00:00');
+    const nowPacific = getCurrentPacificTime();
+    const maxAllowedDate = new Date(nowPacific);
+    maxAllowedDate.setDate(maxAllowedDate.getDate() + 1); // Allow +1 day for timezone flexibility
+    
+    if (stepDate > maxAllowedDate) {
+      return res.status(400).json({ error: 'Cannot enter steps for future dates' });
+    }
+    
+    // Use validated count instead of raw input
+    const stepCount = validatedCount;
+
+    // Check if there's an active challenge and validate date
+    db.get(`SELECT * FROM challenges WHERE is_active = 1`, (err, challenge) => {
+      if (err) {
+        console.error('Error checking active challenge:', err);
+        return res.status(500).json({ error: 'Database error' });
       }
       
-      // Save steps with challenge_id
-      db.run(
-        `INSERT OR REPLACE INTO steps (user_id, date, count, challenge_id, updated_at) VALUES (?, ?, ?, ?, datetime('now'))`,
-        [userId, date, count, challenge.id],
-        function(err) {
-          if (err) {
-            console.error('Error saving steps:', err);
-            return res.status(500).json({ error: 'Database error' });
-          }
-          res.json({ message: 'Steps saved successfully' });
+      if (challenge) {
+        // Parse dates for comparison (ignoring time)
+        const stepDate = new Date(date + 'T00:00:00');
+        const startDate = new Date(challenge.start_date + 'T00:00:00');
+        const endDate = new Date(challenge.end_date + 'T23:59:59');
+        
+        if (stepDate < startDate || stepDate > endDate) {
+          return res.status(400).json({ 
+            error: `Step logging is only allowed during the active challenge period (${challenge.start_date} to ${challenge.end_date})`,
+            challenge_period: {
+              start_date: challenge.start_date,
+              end_date: challenge.end_date,
+              name: challenge.name
+            }
+          });
         }
-      );
-    } else {
-      // No active challenge, save steps without challenge_id (for backward compatibility)
-      db.run(
-        `INSERT OR REPLACE INTO steps (user_id, date, count, updated_at) VALUES (?, ?, ?, datetime('now'))`,
-        [userId, date, count],
-        function(err) {
-          if (err) {
-            console.error('Error saving steps:', err);
-            return res.status(500).json({ error: 'Database error' });
+        
+        // Save steps with challenge_id using validated count
+        db.run(
+          `INSERT OR REPLACE INTO steps (user_id, date, count, challenge_id, updated_at) VALUES (?, ?, ?, ?, datetime('now'))`,
+          [userId, date, stepCount, challenge.id],
+          function(err) {
+            if (err) {
+              console.error('Error saving steps:', err);
+              return res.status(500).json({ error: 'Database error' });
+            }
+            res.json({ message: 'Steps saved successfully', count: stepCount });
           }
-          res.json({ message: 'Steps saved successfully' });
-        }
-      );
-    }
-  });
+        );
+      } else {
+        // No active challenge, save steps without challenge_id using validated count
+        db.run(
+          `INSERT OR REPLACE INTO steps (user_id, date, count, updated_at) VALUES (?, ?, ?, datetime('now'))`,
+          [userId, date, stepCount],
+          function(err) {
+            if (err) {
+              console.error('Error saving steps:', err);
+              return res.status(500).json({ error: 'Database error' });
+            }
+            res.json({ message: 'Steps saved successfully', count: stepCount });
+          }
+        );
+      }
+    });
+  } catch (error) {
+    // Handle validation errors
+    console.log(`Input validation failed for user ${userId}: ${error.message}`);
+    return res.status(400).json({ error: error.message });
+  }
 });
 
 // Challenge-aware individual leaderboard
