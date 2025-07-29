@@ -179,7 +179,7 @@ const adminApiLimiter = rateLimit({
   }
 });
 
-// MCP API rate limiter - token-based
+// MCP API rate limiter - token-based (hourly limit)
 const mcpApiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 60, // limit each token to 60 requests per hour
@@ -192,17 +192,47 @@ const mcpApiLimiter = rateLimit({
   // Use token-based key generator
   keyGenerator: (req) => {
     const token = req.body?.params?.token || req.query?.token || 'anonymous';
-    return `mcp_${token}`;
+    return `mcp_hourly_${token}`;
   },
   handler: (req, res) => {
     const token = req.body?.params?.token || req.query?.token || 'unknown';
-    console.log(`MCP API rate limit exceeded for token: ${token.substring(0, 10)}... from IP: ${req.ip}`);
+    console.log(`MCP API hourly rate limit exceeded for token: ${token.substring(0, 10)}... from IP: ${req.ip}`);
     res.status(429).json({
       jsonrpc: '2.0',
       error: {
         code: -32004,
         message: 'Rate limit exceeded',
         data: 'Too many MCP API requests, please try again in an hour.'
+      },
+      id: req.body?.id || null
+    });
+  }
+});
+
+// MCP API burst rate limiter - protect against rapid fire requests
+const mcpBurstLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 15, // limit each token to 15 requests per minute
+  message: {
+    error: 'Too many rapid MCP API requests, please slow down.',
+    retryAfter: 60
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use token-based key generator
+  keyGenerator: (req) => {
+    const token = req.body?.params?.token || req.query?.token || 'anonymous';
+    return `mcp_burst_${token}`;
+  },
+  handler: (req, res) => {
+    const token = req.body?.params?.token || req.query?.token || 'unknown';
+    console.log(`MCP API burst rate limit exceeded for token: ${token.substring(0, 10)}... from IP: ${req.ip}`);
+    res.status(429).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32005,
+        message: 'Burst rate limit exceeded',
+        data: 'Too many rapid requests, please slow down and try again in a minute.'
       },
       id: req.body?.id || null
     });
@@ -1177,7 +1207,7 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
 // MCP (Model Context Protocol) routes
 
 // MCP RPC endpoint - main JSON-RPC 2.0 handler
-app.post('/mcp/rpc', mcpApiLimiter, async (req, res) => {
+app.post('/mcp/rpc', mcpBurstLimiter, mcpApiLimiter, async (req, res) => {
   try {
     const ipAddress = req.ip;
     const userAgent = req.get('User-Agent');
@@ -1213,6 +1243,7 @@ app.get('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, (req, res) =>
       t.token,
       t.name,
       t.permissions,
+      t.scopes,
       t.expires_at,
       t.last_used_at,
       t.created_at,
@@ -1232,7 +1263,7 @@ app.get('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, (req, res) =>
 
 // Create new MCP token (admin only)
 app.post('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
-  const { user_id, name, permissions = 'read_write', expires_days = 30 } = req.body;
+  const { user_id, name, permissions = 'read_write', scopes = 'steps:read,steps:write,profile:read', expires_days = 30 } = req.body;
 
   try {
     // Validate inputs
@@ -1254,11 +1285,20 @@ app.post('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, validateCSRF
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + expiresDays);
 
+    // Validate scopes
+    const validScopes = ['steps:read', 'steps:write', 'profile:read', '*'];
+    const scopeList = scopes.split(',').map(s => s.trim());
+    const invalidScopes = scopeList.filter(scope => !validScopes.includes(scope));
+    
+    if (invalidScopes.length > 0) {
+      return res.status(400).json({ error: `Invalid scopes: ${invalidScopes.join(', ')}. Valid scopes: ${validScopes.join(', ')}` });
+    }
+
     // Insert token
     db.run(`
-      INSERT INTO mcp_tokens (token, user_id, name, permissions, expires_at)
-      VALUES (?, ?, ?, ?, ?)
-    `, [token, user_id, name, permissions, expiresAt.toISOString()], function(err) {
+      INSERT INTO mcp_tokens (token, user_id, name, permissions, scopes, expires_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [token, user_id, name, permissions, scopes, expiresAt.toISOString()], function(err) {
       if (err) {
         console.error('Error creating MCP token:', err);
         return res.status(500).json({ error: 'Database error' });
@@ -1271,6 +1311,7 @@ app.post('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, validateCSRF
           token,
           name,
           permissions,
+          scopes,
           expires_at: expiresAt.toISOString()
         }
       });

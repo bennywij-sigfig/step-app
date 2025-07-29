@@ -66,10 +66,88 @@ const mcpUtils = {
   }
 };
 
+// Security utilities
+const securityUtils = {
+  // Enforce user data isolation - critical security control
+  enforceUserAccess: (tokenUserId, operationUserId) => {
+    if (tokenUserId !== operationUserId) {
+      throw new Error('Access denied: Cannot access other users\' data');
+    }
+  },
+
+  // Validate token scopes for operations
+  validateTokenScope: (tokenInfo, requiredScope) => {
+    const userScopes = tokenInfo.scopes ? tokenInfo.scopes.split(',') : [];
+    const hasScope = userScopes.includes(requiredScope) || userScopes.includes('*');
+    
+    if (!hasScope) {
+      throw new Error(`Insufficient permissions: Required scope '${requiredScope}'`);
+    }
+  },
+
+  // Prevent prototype pollution by sanitizing object parameters
+  sanitizeParams: (params) => {
+    if (!params || typeof params !== 'object') return params;
+    
+    const cleaned = {};
+    for (const [key, value] of Object.entries(params)) {
+      // Block dangerous prototype properties
+      if (['__proto__', 'constructor', 'prototype'].includes(key)) {
+        continue;
+      }
+      cleaned[key] = value;
+    }
+    return cleaned;
+  },
+
+  // Safe error response without information leakage
+  createSafeErrorResponse: (error, isDevMode = false) => {
+    const safeErrors = {
+      'Access denied: Cannot access other users\' data': 'Access denied',
+      'Invalid or expired token': 'Authentication failed',
+      'Steps already exist': 'Data conflict - use allow_overwrite to replace'
+    };
+
+    // In production, use safe error messages
+    const message = !isDevMode && safeErrors[error.message] 
+      ? safeErrors[error.message] 
+      : error.message;
+
+    return {
+      code: -32000,
+      message: 'Server error',
+      data: message
+    };
+  }
+};
+
+// Query builder to prevent SQL injection
+const queryBuilder = {
+  buildStepsQuery: (hasStartDate, hasEndDate) => {
+    const conditions = ['user_id = ?'];
+    if (hasStartDate) conditions.push('date >= ?');
+    if (hasEndDate) conditions.push('date <= ?');
+    return `SELECT date, count, challenge_id, updated_at FROM steps WHERE ${conditions.join(' AND ')} ORDER BY date DESC`;
+  },
+
+  buildStepsParams: (userId, startDate, endDate) => {
+    const params = [userId];
+    if (startDate) params.push(startDate);
+    if (endDate) params.push(endDate);
+    return params;
+  }
+};
+
 // Helper functions for date validation and timezone handling
 function isValidDate(dateString) {
+  if (!dateString || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
+  
   const date = new Date(dateString + 'T00:00:00');
-  return date instanceof Date && !isNaN(date) && dateString.match(/^\d{4}-\d{2}-\d{2}$/);
+  if (!(date instanceof Date) || isNaN(date)) return false;
+  
+  // Reasonable date range validation (1900-2100)
+  const year = date.getFullYear();
+  return year >= 1900 && year <= 2100;
 }
 
 function getCurrentPacificTime() {
@@ -82,16 +160,21 @@ function validateNumericInput(value, fieldName, min = 0, max = 70000) {
     throw new Error(`${fieldName} is required`);
   }
 
-  // Handle string numbers
+  // Handle string numbers with enhanced validation
   if (typeof value === 'string') {
-    if (!/^\d+$/.test(value.trim())) {
+    const trimmed = value.trim();
+    if (!/^\d+$/.test(trimmed)) {
       throw new Error(`${fieldName} must be a valid number`);
     }
-    value = parseInt(value.trim(), 10);
+    // Prevent integer overflow
+    if (trimmed.length > 10) {
+      throw new Error(`${fieldName} is too large`);
+    }
+    value = parseInt(trimmed, 10);
   }
 
-  // Type check
-  if (typeof value !== 'number') {
+  // Type check and NaN validation
+  if (typeof value !== 'number' || isNaN(value)) {
     throw new Error(`${fieldName} must be a number`);
   }
 
@@ -127,10 +210,18 @@ async function getActiveChallenge() {
 const mcpTools = {
   // Add or update steps with overwrite protection
   add_steps: async (params, tokenInfo, ipAddress, userAgent) => {
-    const { date, count, allow_overwrite = false } = params;
-    const userId = tokenInfo.user_id;
+    const sanitizedParams = securityUtils.sanitizeParams(params);
+    const { date, count, allow_overwrite = false, target_user_id } = sanitizedParams;
+    const tokenUserId = tokenInfo.user_id;
 
     try {
+      // CRITICAL: Enforce user data isolation
+      const operationUserId = target_user_id || tokenUserId;
+      securityUtils.enforceUserAccess(tokenUserId, operationUserId);
+
+      // Validate token scope for write operations
+      securityUtils.validateTokenScope(tokenInfo, 'steps:write');
+
       // Validate inputs
       if (!date) {
         throw new Error('Date is required');
@@ -153,7 +244,7 @@ const mcpTools = {
       }
 
       // Check for existing data (overwrite protection)
-      const existingSteps = await getExistingSteps(userId, date);
+      const existingSteps = await getExistingSteps(operationUserId, date);
       let wasOverwrite = false;
       let oldValue = null;
 
@@ -189,8 +280,8 @@ const mcpTools = {
             : 'INSERT OR REPLACE INTO steps (user_id, date, count, updated_at) VALUES (?, ?, ?, datetime("now"))';
           
           const params = challengeId 
-            ? [userId, date, validatedCount, challengeId]
-            : [userId, date, validatedCount];
+            ? [operationUserId, date, validatedCount, challengeId]
+            : [operationUserId, date, validatedCount];
 
           db.run(query, params, function(err) {
             if (err) return reject(err);
@@ -204,9 +295,9 @@ const mcpTools = {
       // Log the action
       await mcpUtils.logAction(
         tokenInfo.id,
-        userId,
+        tokenUserId,
         'add_steps',
-        { date, count: validatedCount, allow_overwrite },
+        { date, count: validatedCount, allow_overwrite, target_user_id: operationUserId },
         oldValue,
         validatedCount.toString(),
         wasOverwrite,
@@ -230,7 +321,7 @@ const mcpTools = {
       // Log failed action
       await mcpUtils.logAction(
         tokenInfo.id,
-        userId,
+        tokenUserId,
         'add_steps',
         { date, count, allow_overwrite },
         null,
@@ -248,30 +339,29 @@ const mcpTools = {
 
   // Get steps with date filtering
   get_steps: async (params, tokenInfo, ipAddress, userAgent) => {
-    const { start_date, end_date } = params;
-    const userId = tokenInfo.user_id;
+    const sanitizedParams = securityUtils.sanitizeParams(params);
+    const { start_date, end_date, target_user_id } = sanitizedParams;
+    const tokenUserId = tokenInfo.user_id;
 
     try {
-      let query = 'SELECT date, count, challenge_id, updated_at FROM steps WHERE user_id = ?';
-      let queryParams = [userId];
+      // CRITICAL: Enforce user data isolation
+      const operationUserId = target_user_id || tokenUserId;
+      securityUtils.enforceUserAccess(tokenUserId, operationUserId);
 
-      if (start_date) {
-        if (!isValidDate(start_date)) {
-          throw new Error('Invalid start_date format. Use YYYY-MM-DD');
-        }
-        query += ' AND date >= ?';
-        queryParams.push(start_date);
+      // Validate token scope for read operations
+      securityUtils.validateTokenScope(tokenInfo, 'steps:read');
+
+      // Validate date inputs
+      if (start_date && !isValidDate(start_date)) {
+        throw new Error('Invalid start_date format. Use YYYY-MM-DD');
+      }
+      if (end_date && !isValidDate(end_date)) {
+        throw new Error('Invalid end_date format. Use YYYY-MM-DD');
       }
 
-      if (end_date) {
-        if (!isValidDate(end_date)) {
-          throw new Error('Invalid end_date format. Use YYYY-MM-DD');
-        }
-        query += ' AND date <= ?';
-        queryParams.push(end_date);
-      }
-
-      query += ' ORDER BY date DESC';
+      // Use safe query builder to prevent SQL injection
+      const query = queryBuilder.buildStepsQuery(!!start_date, !!end_date);
+      const queryParams = queryBuilder.buildStepsParams(operationUserId, start_date, end_date);
 
       const getSteps = () => {
         return new Promise((resolve, reject) => {
@@ -287,9 +377,9 @@ const mcpTools = {
       // Log the action
       await mcpUtils.logAction(
         tokenInfo.id,
-        userId,
+        tokenUserId,
         'get_steps',
-        { start_date, end_date },
+        { start_date, end_date, target_user_id: operationUserId },
         null,
         null,
         false,
@@ -312,7 +402,7 @@ const mcpTools = {
       // Log failed action
       await mcpUtils.logAction(
         tokenInfo.id,
-        userId,
+        tokenUserId,
         'get_steps',
         { start_date, end_date },
         null,
@@ -330,12 +420,21 @@ const mcpTools = {
 
   // Get user profile information
   get_user_profile: async (params, tokenInfo, ipAddress, userAgent) => {
-    const userId = tokenInfo.user_id;
+    const sanitizedParams = securityUtils.sanitizeParams(params);
+    const { target_user_id } = sanitizedParams;
+    const tokenUserId = tokenInfo.user_id;
 
     try {
+      // CRITICAL: Enforce user data isolation
+      const operationUserId = target_user_id || tokenUserId;
+      securityUtils.enforceUserAccess(tokenUserId, operationUserId);
+
+      // Validate token scope for profile read operations
+      securityUtils.validateTokenScope(tokenInfo, 'profile:read');
+
       const getUserInfo = () => {
         return new Promise((resolve, reject) => {
-          db.get('SELECT email, name, team_id FROM users WHERE id = ?', [userId], (err, user) => {
+          db.get('SELECT email, name, team_id FROM users WHERE id = ?', [operationUserId], (err, user) => {
             if (err) return reject(err);
             if (!user) return reject(new Error('User not found'));
             resolve(user);
@@ -360,9 +459,9 @@ const mcpTools = {
       // Log the action
       await mcpUtils.logAction(
         tokenInfo.id,
-        userId,
+        tokenUserId,
         'get_user_profile',
-        {},
+        { target_user_id: operationUserId },
         null,
         null,
         false,
@@ -395,9 +494,9 @@ const mcpTools = {
       // Log failed action
       await mcpUtils.logAction(
         tokenInfo.id,
-        userId,
+        tokenUserId,
         'get_user_profile',
-        {},
+        { target_user_id: operationUserId },
         null,
         null,
         false,
@@ -494,6 +593,8 @@ const handleMCPRequest = async (body, ipAddress, userAgent) => {
       };
     }
 
+    // Additional scope validation will be done within each method
+
     // Extract method parameters (excluding token)
     const methodParams = { ...body.params };
     delete methodParams.token;
@@ -509,13 +610,14 @@ const handleMCPRequest = async (body, ipAddress, userAgent) => {
 
   } catch (error) {
     console.error('MCP method error:', error);
+    
+    // Use safe error response to prevent information leakage
+    const isDevMode = process.env.NODE_ENV === 'development';
+    const safeError = securityUtils.createSafeErrorResponse(error, isDevMode);
+    
     return {
       jsonrpc: '2.0',
-      error: {
-        code: -32000,
-        message: 'Server error',
-        data: error.message
-      },
+      error: safeError,
       id: body.id || null
     };
   }

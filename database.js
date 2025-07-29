@@ -188,13 +188,14 @@ db.serialize(() => {
     }
   });
 
-  // MCP tokens table for API access
+  // MCP tokens table for API access with enhanced security
   db.run(`CREATE TABLE IF NOT EXISTS mcp_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     token TEXT UNIQUE NOT NULL,
     user_id INTEGER NOT NULL,
     name TEXT NOT NULL,
     permissions TEXT DEFAULT 'read_write' CHECK (permissions IN ('read_only', 'read_write')),
+    scopes TEXT DEFAULT 'steps:read,steps:write,profile:read',
     expires_at DATETIME NOT NULL,
     last_used_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -230,6 +231,25 @@ db.serialize(() => {
   db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_expires ON mcp_tokens(expires_at)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_token_user ON mcp_audit_log(token_id, user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_created ON mcp_audit_log(created_at)`);
+  
+  // Add scopes column to existing tokens if it doesn't exist
+  db.run(`ALTER TABLE mcp_tokens ADD COLUMN scopes TEXT DEFAULT 'steps:read,steps:write,profile:read'`, (err) => {
+    // Ignore error if column already exists
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding scopes column:', err);
+    } else if (!err) {
+      console.log('✅ Added scopes column to mcp_tokens table');
+    }
+  });
+  
+  // Update existing tokens to have default scopes if they don't already
+  db.run(`UPDATE mcp_tokens SET scopes = 'steps:read,steps:write,profile:read' WHERE scopes IS NULL OR scopes = ''`, (err) => {
+    if (err) {
+      console.error('Error updating default scopes:', err);
+    } else {
+      console.log('✅ Updated existing tokens with default scopes');
+    }
+  });
   
   // Add constraint to prevent multiple active challenges (SQLite doesn't support partial unique indexes easily)
   // We'll handle this in application logic for now
