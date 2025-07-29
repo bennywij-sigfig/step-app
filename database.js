@@ -207,6 +207,9 @@ db.serialize(() => {
   db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('liz.ridge@sigfig.com', 'Liz', 1)`);
   db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('megan.crowley@sigfig.com', 'Megan', 1)`);
   db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('amit.srivastava@sigfig.com', 'Amit', 1)`);
+  
+  // Ensure admin privileges for existing users (handles INSERT OR IGNORE cases)
+  db.run(`UPDATE users SET is_admin = 1 WHERE email IN ('benny@sigfig.com', 'benazir.qureshi@sigfig.com', 'liz.ridge@sigfig.com', 'megan.crowley@sigfig.com', 'amit.srivastava@sigfig.com')`);
 });
 
 // Database utility functions for reliability
