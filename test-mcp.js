@@ -1,7 +1,7 @@
 // Test script for MCP integration
 const axios = require('axios');
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = process.env.TEST_URL || 'https://step-app-4x-yhw.fly.dev';
 
 async function testMCPIntegration() {
   console.log('🧪 Testing MCP Integration...\n');
