@@ -289,7 +289,22 @@ The API returns standard JSON-RPC 2.0 error responses:
 
 ### Testing MCP Integration
 
-Use the included test script to validate MCP functionality:
+#### **Python Testing Suite** (Recommended)
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Get an MCP token (admin required)
+python get_mcp_token.py --interactive
+
+# Comprehensive testing
+python test_mcp_python.py --token YOUR_TOKEN --test-all
+
+# Interactive testing menu
+python test_mcp_python.py --interactive
+```
+
+#### **JavaScript Testing** (Legacy)
 ```bash
 # Test MCP integration against running server
 node test-mcp.js --test-server
@@ -297,6 +312,94 @@ node test-mcp.js --test-server
 # View usage examples
 node test-mcp.js
 ```
+
+### Claude Code Integration
+
+#### **Quick Start for Claude Code Users**
+```python
+import requests
+import json
+from datetime import datetime
+
+# Replace with your MCP token
+STEP_TOKEN = "mcp_12345678-abcd-..."
+
+def call_step_api(method, params=None):
+    if params is None:
+        params = {}
+    
+    payload = {
+        "jsonrpc": "2.0",
+        "method": method,
+        "params": {**params, "token": STEP_TOKEN},
+        "id": 1
+    }
+    
+    response = requests.post("https://step-app-4x-yhw.fly.dev/mcp/rpc", json=payload)
+    return response.json()
+
+# Add steps for today
+today = datetime.now().strftime("%Y-%m-%d")
+result = call_step_api("add_steps", {"date": today, "count": 12000})
+print(json.dumps(result, indent=2))
+```
+
+#### **Official MCP Server for Claude Desktop/Cursor**
+For persistent integration with Claude Desktop or Cursor:
+
+1. **Install dependencies**: `pip install -r requirements-mcp.txt`
+2. **Get MCP token**: `python get_mcp_token.py --interactive`
+3. **Run installer**: `python install_step_mcp.py`
+4. **Restart Claude Desktop/Cursor**
+
+See `CLAUDE_CODE_SETUP.md` for detailed instructions.
+
+### End User Distribution
+
+For distributing MCP access to Claude Desktop/Cursor users:
+
+#### **Files to Distribute:**
+- `mcp_server_anthropic.py` - MCP server implementation
+- `install_step_mcp.py` - Automated installer
+- `USER_SETUP_GUIDE.md` - User instructions
+- `README_DISTRIBUTION.md` - Quick start guide
+
+#### **Admin Workflow:**
+1. Create tokens: `python get_mcp_token.py --interactive`
+2. Provide users with token + distribution files
+3. Users run: `python install_step_mcp.py`
+4. Users can then ask Claude: *"Add 12,000 steps for today"*
+
+See `ADMIN_DISTRIBUTION_GUIDE.md` for complete distribution workflow.
+
+## MCP Integration Files
+
+### **Core MCP Implementation:**
+- `mcp-server.js` - MCP JSON-RPC 2.0 server implementation with security hardening
+- `server.js` - Express server with MCP endpoints and admin API
+- `database.js` - Database schema including MCP tables
+
+### **Testing & Development:**
+- `test_mcp_python.py` - Comprehensive Python testing suite with interactive mode
+- `get_mcp_token.py` - Admin tool for creating and managing MCP tokens
+- `test-mcp.js` - JavaScript testing script (legacy)
+- `mcp_demo_claude_code.py` - Direct API demo for LLM environments
+
+### **Claude Code Integration:**
+- `claude_code_integration.py` - Ready-to-use API client with helper functions
+- `mcp_server_anthropic.py` - Official Anthropic MCP server for Claude Desktop/Cursor
+- `CLAUDE_CODE_SETUP.md` - Complete setup guide for both integration methods
+
+### **End User Distribution:**
+- `install_step_mcp.py` - Automated installer for end users
+- `USER_SETUP_GUIDE.md` - Detailed end user setup instructions  
+- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing MCP access
+- `README_DISTRIBUTION.md` - Quick start guide for distribution package
+- `MCP_TESTING_GUIDE.md` - Comprehensive testing and integration guide
+
+### **Dependencies:**
+- `requirements.txt` - Python dependencies for testing tools
+- `requirements-mcp.txt` - Dependencies for MCP server
 
 ## Database Schema
 
