@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             saveBtn.disabled = true;
-            saveBtn.textContent = 'Saving...';
+            saveBtn.classList.add('save-active');
             
             try {
                 const response = await authenticatedFetch(`/api/admin/users/${userId}/team`, {
