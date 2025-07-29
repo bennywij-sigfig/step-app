@@ -188,10 +188,48 @@ db.serialize(() => {
     }
   });
 
+  // MCP tokens table for API access
+  db.run(`CREATE TABLE IF NOT EXISTS mcp_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token TEXT UNIQUE NOT NULL,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    permissions TEXT DEFAULT 'read_write' CHECK (permissions IN ('read_only', 'read_write')),
+    expires_at DATETIME NOT NULL,
+    last_used_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+  )`);
+
+  // MCP audit log for security and debugging
+  db.run(`CREATE TABLE IF NOT EXISTS mcp_audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    token_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    action TEXT NOT NULL,
+    params TEXT,
+    old_value TEXT,
+    new_value TEXT,
+    was_overwrite BOOLEAN DEFAULT 0,
+    ip_address TEXT,
+    user_agent TEXT,
+    success BOOLEAN DEFAULT 1,
+    error_message TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (token_id) REFERENCES mcp_tokens (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+  )`);
+
   // Add critical performance indexes
   db.run(`CREATE INDEX IF NOT EXISTS idx_steps_challenge_date_user ON steps(challenge_id, date, user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_steps_user_challenge ON steps(user_id, challenge_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_challenges_active ON challenges(is_active) WHERE is_active = 1`);
+  
+  // MCP performance indexes
+  db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_user ON mcp_tokens(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_expires ON mcp_tokens(expires_at)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_token_user ON mcp_audit_log(token_id, user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_created ON mcp_audit_log(created_at)`);
   
   // Add constraint to prevent multiple active challenges (SQLite doesn't support partial unique indexes easily)
   // We'll handle this in application logic for now

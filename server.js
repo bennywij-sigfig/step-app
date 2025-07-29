@@ -8,6 +8,7 @@ const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const rateLimit = require('express-rate-limit');
 const db = require('./database');
+const { mcpUtils, handleMCPRequest, getMCPCapabilities } = require('./mcp-server');
 
 // Load environment variables
 require('dotenv').config();
@@ -174,6 +175,36 @@ const adminApiLimiter = rateLimit({
     res.status(429).json({
       error: 'Too many admin API requests, please try again in an hour.',
       retryAfter: 3600
+    });
+  }
+});
+
+// MCP API rate limiter - token-based
+const mcpApiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 60, // limit each token to 60 requests per hour
+  message: {
+    error: 'Too many MCP API requests, please try again in an hour.',
+    retryAfter: 3600
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use token-based key generator
+  keyGenerator: (req) => {
+    const token = req.body?.params?.token || req.query?.token || 'anonymous';
+    return `mcp_${token}`;
+  },
+  handler: (req, res) => {
+    const token = req.body?.params?.token || req.query?.token || 'unknown';
+    console.log(`MCP API rate limit exceeded for token: ${token.substring(0, 10)}... from IP: ${req.ip}`);
+    res.status(429).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32004,
+        message: 'Rate limit exceeded',
+        data: 'Too many MCP API requests, please try again in an hour.'
+      },
+      id: req.body?.id || null
     });
   }
 });
@@ -1141,6 +1172,184 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
     console.error('Leaderboard error:', error);
     res.status(500).json({ error: 'Failed to load leaderboard' });
   }
+});
+
+// MCP (Model Context Protocol) routes
+
+// MCP RPC endpoint - main JSON-RPC 2.0 handler
+app.post('/mcp/rpc', mcpApiLimiter, async (req, res) => {
+  try {
+    const ipAddress = req.ip;
+    const userAgent = req.get('User-Agent');
+    
+    const response = await handleMCPRequest(req.body, ipAddress, userAgent);
+    res.json(response);
+  } catch (error) {
+    console.error('MCP RPC error:', error);
+    res.status(500).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32603,
+        message: 'Internal error',
+        data: 'Server error processing MCP request'
+      },
+      id: req.body?.id || null
+    });
+  }
+});
+
+// MCP capabilities discovery endpoint (no authentication required)
+app.get('/mcp/capabilities', (req, res) => {
+  res.json(getMCPCapabilities());
+});
+
+// Admin routes for MCP token management
+
+// Get all MCP tokens (admin only)
+app.get('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, (req, res) => {
+  db.all(`
+    SELECT 
+      t.id,
+      t.token,
+      t.name,
+      t.permissions,
+      t.expires_at,
+      t.last_used_at,
+      t.created_at,
+      u.email as user_email,
+      u.name as user_name
+    FROM mcp_tokens t
+    JOIN users u ON t.user_id = u.id
+    ORDER BY t.created_at DESC
+  `, (err, tokens) => {
+    if (err) {
+      console.error('Error fetching MCP tokens:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(tokens);
+  });
+});
+
+// Create new MCP token (admin only)
+app.post('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
+  const { user_id, name, permissions = 'read_write', expires_days = 30 } = req.body;
+
+  try {
+    // Validate inputs
+    if (!user_id || !name) {
+      return res.status(400).json({ error: 'User ID and name are required' });
+    }
+
+    if (!['read_only', 'read_write'].includes(permissions)) {
+      return res.status(400).json({ error: 'Invalid permissions. Must be read_only or read_write' });
+    }
+
+    const expiresDays = parseInt(expires_days);
+    if (isNaN(expiresDays) || expiresDays < 1 || expiresDays > 365) {
+      return res.status(400).json({ error: 'Expires days must be between 1 and 365' });
+    }
+
+    // Generate token and expiration
+    const token = mcpUtils.generateToken(user_id);
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + expiresDays);
+
+    // Insert token
+    db.run(`
+      INSERT INTO mcp_tokens (token, user_id, name, permissions, expires_at)
+      VALUES (?, ?, ?, ?, ?)
+    `, [token, user_id, name, permissions, expiresAt.toISOString()], function(err) {
+      if (err) {
+        console.error('Error creating MCP token:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.json({
+        message: 'MCP token created successfully',
+        token: {
+          id: this.lastID,
+          token,
+          name,
+          permissions,
+          expires_at: expiresAt.toISOString()
+        }
+      });
+    });
+
+  } catch (error) {
+    console.error('MCP token creation error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Revoke MCP token (admin only)
+app.delete('/api/admin/mcp-tokens/:id', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
+  const tokenId = req.params.id;
+
+  db.run('DELETE FROM mcp_tokens WHERE id = ?', [tokenId], function(err) {
+    if (err) {
+      console.error('Error revoking MCP token:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    if (this.changes === 0) {
+      return res.status(404).json({ error: 'Token not found' });
+    }
+
+    res.json({ message: 'MCP token revoked successfully' });
+  });
+});
+
+// Get MCP audit log (admin only)
+app.get('/api/admin/mcp-audit', adminApiLimiter, requireApiAdmin, (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 50;
+  const offset = (page - 1) * limit;
+
+  db.all(`
+    SELECT 
+      a.id,
+      a.action,
+      a.params,
+      a.old_value,
+      a.new_value,
+      a.was_overwrite,
+      a.ip_address,
+      a.success,
+      a.error_message,
+      a.created_at,
+      u.email as user_email,
+      u.name as user_name,
+      t.name as token_name
+    FROM mcp_audit_log a
+    JOIN users u ON a.user_id = u.id
+    JOIN mcp_tokens t ON a.token_id = t.id
+    ORDER BY a.created_at DESC
+    LIMIT ? OFFSET ?
+  `, [limit, offset], (err, logs) => {
+    if (err) {
+      console.error('Error fetching MCP audit log:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+
+    // Get total count for pagination
+    db.get('SELECT COUNT(*) as total FROM mcp_audit_log', (err, countResult) => {
+      if (err) {
+        console.error('Error counting audit log entries:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      res.json({
+        logs,
+        pagination: {
+          page,
+          limit,
+          total: countResult.total,
+          pages: Math.ceil(countResult.total / limit)
+        }
+      });
+    });
+  });
 });
 
 // Admin routes
