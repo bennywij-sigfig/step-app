@@ -206,8 +206,144 @@ async function getActiveChallenge() {
   });
 }
 
-// MCP Tools Implementation
-const mcpTools = {
+// Standard MCP Methods Implementation
+const mcpMethods = {
+  // MCP initialization method
+  initialize: async (params) => {
+    const { capabilities, clientInfo, protocolVersion } = params || {};
+    
+    return {
+      protocolVersion: "2025-03-26",
+      capabilities: {
+        tools: {}
+      },
+      serverInfo: {
+        name: "Step Challenge MCP Server",
+        version: "2.0.0"
+      }
+    };
+  },
+
+  // MCP tools list method
+  tools_list: async (params) => {
+    return {
+      tools: [
+        {
+          name: "add_steps",
+          description: "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. Supports updating existing entries with explicit permission.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              token: {
+                type: "string",
+                description: "User authentication token (provided during setup)"
+              },
+              date: {
+                type: "string",
+                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                description: "Target date for step count in YYYY-MM-DD format (e.g., \"2025-07-30\"). Use \"today\" for current date."
+              },
+              count: {
+                type: "number",
+                minimum: 0,
+                maximum: 70000,
+                description: "Number of steps taken (0-70,000). Typical daily counts: sedentary 2000-5000, active 7500-10000, very active 10000+"
+              },
+              allow_overwrite: {
+                type: "boolean",
+                default: false,
+                description: "Set to true to update existing step data for this date. Required when steps already exist for the date."
+              }
+            },
+            required: ["token", "date", "count"]
+          }
+        },
+        {
+          name: "get_steps",
+          description: "Retrieve step history and progress data. Use this to show user their step counts, analyze trends, check goal progress, or generate reports.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              token: {
+                type: "string",
+                description: "User authentication token (provided during setup)"
+              },
+              start_date: {
+                type: "string",
+                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                description: "Optional: Start date for date range filter in YYYY-MM-DD format. Omit to get all history."
+              },
+              end_date: {
+                type: "string",
+                pattern: "^\\d{4}-\\d{2}-\\d{2}$",
+                description: "Optional: End date for date range filter in YYYY-MM-DD format. Omit to get all history."
+              }
+            },
+            required: ["token"]
+          }
+        },
+        {
+          name: "get_user_profile",
+          description: "Get comprehensive user information including profile details, active challenges, team information, and account status. Use this first to understand user context.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              token: {
+                type: "string",
+                description: "User authentication token (provided during setup)"
+              }
+            },
+            required: ["token"]
+          }
+        }
+      ]
+    };
+  },
+
+  // MCP tools call method
+  tools_call: async (toolName, args, tokenInfo, ipAddress, userAgent) => {
+    switch (toolName) {
+      case 'add_steps':
+        const addResult = await stepTools.add_steps(args, tokenInfo, ipAddress, userAgent);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(addResult, null, 2)
+            }
+          ]
+        };
+      
+      case 'get_steps':
+        const getResult = await stepTools.get_steps(args, tokenInfo, ipAddress, userAgent);
+        return {
+          content: [
+            {
+              type: "text", 
+              text: JSON.stringify(getResult, null, 2)
+            }
+          ]
+        };
+      
+      case 'get_user_profile':
+        const profileResult = await stepTools.get_user_profile(args, tokenInfo, ipAddress, userAgent);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(profileResult, null, 2)
+            }
+          ]
+        };
+      
+      default:
+        throw new Error(`Unknown tool: ${toolName}`);
+    }
+  }
+};
+
+// Step Tools Implementation (called by MCP tools/call)
+const stepTools = {
   // Add or update steps with overwrite protection
   add_steps: async (params, tokenInfo, ipAddress, userAgent) => {
     const sanitizedParams = securityUtils.sanitizeParams(params);
@@ -538,89 +674,138 @@ const handleMCPRequest = async (body, ipAddress, userAgent) => {
     };
   }
 
-  // Extract token from params
-  const token = body.params?.token;
-  if (!token) {
-    return {
-      jsonrpc: '2.0',
-      error: {
-        code: -32602,
-        message: 'Invalid params',
-        data: 'Missing token parameter'
-      },
-      id: body.id || null
-    };
-  }
-
-  try {
-    // Validate token
-    const tokenInfo = await mcpUtils.validateToken(token);
-    if (!tokenInfo) {
+  // Handle standard MCP methods that don't require authentication
+  if (body.method === 'initialize') {
+    try {
+      const result = await mcpMethods.initialize(body.params);
+      return {
+        jsonrpc: '2.0',
+        result: result,
+        id: body.id || null
+      };
+    } catch (error) {
       return {
         jsonrpc: '2.0',
         error: {
-          code: -32001,
-          message: 'Authentication failed',
-          data: 'Invalid or expired token'
+          code: -32000,
+          message: 'Server error',
+          data: error.message
+        },
+        id: body.id || null
+      };
+    }
+  }
+
+  if (body.method === 'tools/list') {
+    try {
+      const result = await mcpMethods.tools_list(body.params);
+      return {
+        jsonrpc: '2.0',
+        result: result,
+        id: body.id || null
+      };
+    } catch (error) {
+      return {
+        jsonrpc: '2.0',
+        error: {
+          code: -32000,
+          message: 'Server error',
+          data: error.message
+        },
+        id: body.id || null
+      };
+    }
+  }
+
+  // Handle tools/call - requires authentication via token in arguments
+  if (body.method === 'tools/call') {
+    const toolName = body.params?.name;
+    const toolArgs = body.params?.arguments || {};
+    const token = toolArgs.token;
+
+    if (!token) {
+      return {
+        jsonrpc: '2.0',
+        error: {
+          code: -32602,
+          message: 'Invalid params',
+          data: 'Missing token in tool arguments'
         },
         id: body.id || null
       };
     }
 
-    // Check if method exists
-    if (!mcpTools[body.method]) {
+    // Validate token
+    let tokenInfo;
+    try {
+      tokenInfo = await mcpUtils.validateToken(token);
+      if (!tokenInfo) {
+        return {
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Server error',
+            data: 'Invalid or expired token'
+          },
+          id: body.id || null
+        };
+      }
+    } catch (error) {
       return {
         jsonrpc: '2.0',
         error: {
-          code: -32601,
-          message: 'Method not found',
-          data: `Unknown method: ${body.method}`
+          code: -32000,
+          message: 'Server error',
+          data: error.message
         },
         id: body.id || null
       };
     }
 
     // Check permissions for write operations
-    if (['add_steps'].includes(body.method) && tokenInfo.permissions === 'read_only') {
+    if (['add_steps'].includes(toolName) && tokenInfo.permissions === 'read_only') {
       return {
         jsonrpc: '2.0',
         error: {
-          code: -32003,
-          message: 'Permission denied',
-          data: 'Read-only token cannot perform write operations'
+          code: -32000,
+          message: 'Server error',
+          data: 'Insufficient permissions. This token is read-only.'
         },
         id: body.id || null
       };
     }
 
-    // Additional scope validation will be done within each method
-
-    // Extract method parameters (excluding token)
-    const methodParams = { ...body.params };
-    delete methodParams.token;
-
-    // Execute method
-    const result = await mcpTools[body.method](methodParams, tokenInfo, ipAddress, userAgent);
-
-    return {
-      jsonrpc: '2.0',
-      result,
-      id: body.id
-    };
-
-  } catch (error) {
-    console.error('MCP method error:', error);
-    
-    // Use safe error response to prevent information leakage
-    const isDevMode = process.env.NODE_ENV === 'development';
-    const safeError = securityUtils.createSafeErrorResponse(error, isDevMode);
-    
-    return {
-      jsonrpc: '2.0',
-      error: safeError,
-      id: body.id || null
-    };
+    try {
+      const result = await mcpMethods.tools_call(toolName, toolArgs, tokenInfo, ipAddress, userAgent);
+      return {
+        jsonrpc: '2.0',
+        result: result,
+        id: body.id || null
+      };
+    } catch (error) {
+      console.error('MCP tool call error:', error);
+      return {
+        jsonrpc: '2.0',
+        error: {
+          code: -32000,
+          message: 'Server error',
+          data: error.message
+        },
+        id: body.id || null
+      };
+    }
   }
+
+  // Unknown method
+  return {
+    jsonrpc: '2.0',
+    error: {
+      code: -32601,
+      message: 'Method not found',
+      data: `Unknown method: ${body.method}`
+    },
+    id: body.id || null
+  };
 };
 
 // MCP capabilities discovery - optimized for LLM understanding
