@@ -11,15 +11,15 @@ A production-ready web application for tracking daily steps in company-wide chal
 - **Challenge System**: Time-bound challenges with Pacific Time zone support and configurable reporting thresholds
 - **Mobile Optimized**: Responsive glass-morphism UI design, cross-browser compatible (including Safari)
 - **Production Security**: CSRF protection, rate limiting, CSP headers, SQL injection prevention
-- **MCP Integration**: Complete admin UI for token management with enterprise-grade security controls
+- **Remote MCP Integration**: Zero-installation Claude Desktop/Cursor integration with enterprise security
 
 ## Recent Updates (July 30, 2025)
-- **🎛️ MCP Admin Interface**: Complete token management UI with creation, revocation, and monitoring capabilities
-- **🔒 CSP Compliance**: Fixed Content Security Policy violations with proper event delegation patterns
-- **🛡️ Enhanced Security**: Replaced inline event handlers with CSP-compliant event delegation system
-- **📋 Token Lifecycle**: Full token management with copy/paste, expiration tracking, and usage statistics
-- **📊 Activity Dashboard**: Real-time MCP API monitoring with user filtering and method-based search
-- **✅ Production Hardened**: Enterprise-ready MCP administration through secure web interface
+- **🌐 Remote MCP Server**: Converted to Streamable HTTP remote server - no Python installation required for users
+- **🚀 Zero-Installation Setup**: Users only need URL + token - eliminated complex local server setup
+- **🤖 LLM-Optimized**: Enhanced tool descriptions with examples and usage hints for better AI understanding
+- **🧹 Legacy Cleanup**: Removed `/mcp/rpc` endpoint, archived local Python MCP server files
+- **🛡️ Security Review**: Comprehensive security audit completed - B+ grade, production ready for 150+ users
+- **📚 Simplified Distribution**: Updated all documentation for streamlined remote MCP approach
 
 ## Previous Security Updates (July 29, 2025)
 - **🔒 Input Validation**: Comprehensive backend validation prevents type confusion and SQL injection attacks
