@@ -7,11 +7,24 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        :root {
+            /* Default theme - Ocean Blue */
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --accent-color: #48bb78;
+            --text-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--primary-gradient);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            margin: 0;
+            padding: 20px;
         }
+        
         .main-container {
             backdrop-filter: blur(10px);
             background: rgba(255, 255, 255, 0.1);
@@ -64,16 +77,41 @@
             padding: 1.5rem;
         }
         .btn-primary {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: var(--accent-color);
             border: none;
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            background: var(--primary-color);
+            transform: translateY(-2px);
         }
         .btn-outline-light {
             border-color: rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        .btn-outline-light:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.8);
         }
         .alert {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
             color: #fff;
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.4) !important;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 12px;
         }
         .text-light {
             color: rgba(255, 255, 255, 0.9) !important;
@@ -124,11 +162,11 @@
                             Loading your tokens...
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-outline-light btn-sm" onclick="revealToken()" id="revealBtn">
+                            <button class="btn btn-outline-light btn-sm" id="revealBtn">
                                 <i class="fas fa-eye me-1"></i>
                                 Reveal Token
                             </button>
-                            <button class="btn btn-outline-light btn-sm" onclick="copyToken()" id="copyBtn" style="display: none;">
+                            <button class="btn btn-outline-light btn-sm" id="copyBtn" style="display: none;">
                                 <i class="fas fa-copy me-1"></i>
                                 Copy Token
                             </button>
@@ -197,7 +235,7 @@
                             <div class="config-code" id="claudeDesktopConfig">Loading configuration...</div>
                             
                             <div class="mt-3">
-                                <button class="btn btn-outline-light btn-sm" onclick="copyConfig('claudeDesktopConfig')">
+                                <button class="btn btn-outline-light btn-sm copy-config-btn" data-target="claudeDesktopConfig">
                                     <i class="fas fa-copy me-1"></i>
                                     Copy Configuration
                                 </button>
@@ -213,7 +251,7 @@
                             <div class="config-code" id="cursorConfig">Loading configuration...</div>
                             
                             <div class="mt-3">
-                                <button class="btn btn-outline-light btn-sm" onclick="copyConfig('cursorConfig')">
+                                <button class="btn btn-outline-light btn-sm copy-config-btn" data-target="cursorConfig">
                                     <i class="fas fa-copy me-1"></i>
                                     Copy Configuration
                                 </button>
@@ -229,7 +267,7 @@
                             <div class="config-code" id="claudeCodeConfig">Loading configuration...</div>
                             
                             <div class="mt-3">
-                                <button class="btn btn-outline-light btn-sm" onclick="copyConfig('claudeCodeConfig')">
+                                <button class="btn btn-outline-light btn-sm copy-config-btn" data-target="claudeCodeConfig">
                                     <i class="fas fa-copy me-1"></i>
                                     Copy Configuration
                                 </button>
@@ -377,7 +415,7 @@
 
         function updateConfigurations() {
             const bridgeScriptPath = "/path/to/step_bridge.py"; // User needs to update this
-            const token = currentToken || "YOUR_TOKEN_HERE";
+            const placeholderToken = "YOUR_TOKEN_HERE"; // Always use placeholder in examples
             
             // Claude Desktop configuration (Local Bridge)
             document.getElementById('claudeDesktopConfig').textContent = JSON.stringify({
@@ -386,7 +424,7 @@
                         "command": "python",
                         "args": [bridgeScriptPath],
                         "env": {
-                            "STEP_TOKEN": token
+                            "STEP_TOKEN": placeholderToken
                         }
                     }
                 }
@@ -398,7 +436,7 @@
                     "command": "python",
                     "args": [bridgeScriptPath],
                     "env": {
-                        "STEP_TOKEN": token
+                        "STEP_TOKEN": placeholderToken
                     }
                 }
             }, null, 2);
@@ -412,7 +450,7 @@
                         "command": "python",
                         "args": [bridgeScriptPath],
                         "env": {
-                            "STEP_TOKEN": token
+                            "STEP_TOKEN": placeholderToken
                         }
                     }
                 ]
@@ -446,6 +484,18 @@
             loadTokens();
             // Always show configurations, even without tokens
             updateConfigurations();
+            
+            // Add event listeners for buttons (CSP-compliant)
+            document.getElementById('revealBtn').addEventListener('click', revealToken);
+            document.getElementById('copyBtn').addEventListener('click', copyToken);
+            
+            // Add event listeners for copy config buttons
+            document.querySelectorAll('.copy-config-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetId = e.target.closest('.copy-config-btn').getAttribute('data-target');
+                    copyConfig(targetId);
+                });
+            });
         });
     </script>
 </body>
