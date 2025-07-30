@@ -73,6 +73,11 @@ document.addEventListener('DOMContentLoaded', function() {
             loadChallenges();
         });
         
+        document.getElementById('mcpTokensBtn').addEventListener('click', () => {
+            showView('mcpTokens');
+            loadMCPTokens();
+        });
+        
         document.getElementById('overviewBtn').addEventListener('click', () => {
             showView('overview');
             loadOverview();
@@ -994,6 +999,311 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // MCP Token Management Functions
+        async function loadMCPTokens() {
+            try {
+                // Load users for dropdown and tokens table
+                const [usersRes, tokensRes, auditRes] = await Promise.all([
+                    fetch('/api/admin/users'),
+                    fetch('/api/admin/mcp-tokens'),
+                    fetch('/api/admin/mcp-audit?limit=50')
+                ]);
+                
+                const users = await usersRes.json();
+                const tokens = await tokensRes.json();
+                const auditLog = await auditRes.json();
+                
+                // Populate user dropdown
+                const userSelect = document.getElementById('newTokenUserId');
+                userSelect.innerHTML = '<option value="">Select User...</option>';
+                users.forEach(user => {
+                    userSelect.innerHTML += `<option value="${user.id}">${user.name} (${user.email})</option>`;
+                });
+                
+                // Load tokens table
+                loadTokensTable(tokens);
+                
+                // Load audit table
+                loadAuditTable(auditLog);
+                
+                // Add event listeners
+                document.getElementById('createTokenBtn').addEventListener('click', createMCPToken);
+                document.getElementById('refreshAuditBtn').addEventListener('click', refreshAuditLog);
+                
+                // Add search/filter listeners
+                document.getElementById('auditSearchUser').addEventListener('input', filterAuditLog);
+                document.getElementById('auditSearchMethod').addEventListener('change', filterAuditLog);
+                
+            } catch (error) {
+                console.error('Error loading MCP tokens:', error);
+                document.getElementById('mcpTokensTable').innerHTML = '<p>Error loading tokens</p>';
+                document.getElementById('mcpAuditTable').innerHTML = '<p>Error loading audit log</p>';
+            }
+        }
+        
+        function loadTokensTable(tokens) {
+            const tokenTable = document.getElementById('mcpTokensTable');
+            
+            if (!tokens || tokens.length === 0) {
+                tokenTable.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No MCP tokens created yet</p>';
+                return;
+            }
+            
+            tokenTable.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Token Name</th>
+                            <th>Permissions</th>
+                            <th>Scopes</th>
+                            <th>Created</th>
+                            <th>Expires</th>
+                            <th>Last Used</th>
+                            <th>Usage Count</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tokens.map(token => {
+                            const isExpired = new Date(token.expires_at) < new Date();
+                            const expiresDate = new Date(token.expires_at).toLocaleDateString();
+                            const createdDate = new Date(token.created_at).toLocaleDateString();
+                            const lastUsed = token.last_used_at ? new Date(token.last_used_at).toLocaleDateString() : 'Never';
+                            
+                            return `
+                                <tr ${isExpired ? 'style="opacity: 0.6; background: rgba(255,0,0,0.05);"' : ''}>
+                                    <td><strong>${token.user_name}</strong><br><small>${token.user_email}</small></td>
+                                    <td>${token.name}</td>
+                                    <td><span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: ${token.permissions === 'read_write' ? '#e8f5e8; color: #2d7d2d' : '#fff3cd; color: #856404'};">${token.permissions === 'read_write' ? 'Read+Write' : 'Read Only'}</span></td>
+                                    <td><code style="font-size: 11px; background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 3px;">${token.scopes || 'default'}</code></td>
+                                    <td>${createdDate}</td>
+                                    <td ${isExpired ? 'style="color: #dc3545; font-weight: bold;"' : ''}>${expiresDate}${isExpired ? ' (Expired)' : ''}</td>
+                                    <td>${lastUsed}</td>
+                                    <td style="text-align: center;">${token.usage_count || 0}</td>
+                                    <td class="actions-cell">
+                                        <button class="action-btn delete-btn" onclick="revokeMCPToken(${token.id}, '${token.name}', '${token.user_name}')" title="Revoke token">
+                                            🗑️
+                                        </button>
+                                        <button class="action-btn" onclick="copyTokenValue('${token.token}')" title="Copy token" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                                            📋
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        function loadAuditTable(auditData) {
+            const auditTable = document.getElementById('mcpAuditTable');
+            
+            if (!auditData || auditData.length === 0) {
+                auditTable.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">No MCP activity recorded yet</p>';
+                return;
+            }
+            
+            auditTable.innerHTML = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Method</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                            <th>IP Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${auditData.map(entry => {
+                            const timestamp = new Date(entry.timestamp).toLocaleString();
+                            const isSuccess = entry.status_code < 400;
+                            
+                            return `
+                                <tr>
+                                    <td style="font-size: 12px;">${timestamp}</td>
+                                    <td><strong>${entry.user_name}</strong></td>
+                                    <td><code style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 3px;">${entry.method}</code></td>
+                                    <td><span style="padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; background: ${isSuccess ? '#d4edda; color: #155724' : '#f8d7da; color: #721c24'};">${entry.status_code}</span></td>
+                                    <td style="font-size: 12px; max-width: 200px; word-wrap: break-word;">${entry.details || '-'}</td>
+                                    <td style="font-size: 11px; color: #666;">${entry.ip_address}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+        
+        async function createMCPToken() {
+            const userId = document.getElementById('newTokenUserId').value;
+            const tokenName = document.getElementById('newTokenName').value;
+            const permissions = document.getElementById('newTokenPermissions').value;
+            const scopes = document.getElementById('newTokenScopes').value;
+            const expiresDays = document.getElementById('newTokenExpires').value;
+            const messageDiv = document.getElementById('mcpTokensMessage');
+            
+            // Validation
+            if (!userId) {
+                messageDiv.innerHTML = '<div class="message error">Please select a user</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 3000);
+                return;
+            }
+            
+            if (!tokenName.trim()) {
+                messageDiv.innerHTML = '<div class="message error">Please enter a token name</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 3000);
+                return;
+            }
+            
+            const createBtn = document.getElementById('createTokenBtn');
+            createBtn.disabled = true;
+            createBtn.textContent = 'Creating...';
+            
+            try {
+                const response = await authenticatedFetch('/api/admin/mcp-tokens', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        name: tokenName.trim(),
+                        permissions: permissions,
+                        scopes: scopes.trim(),
+                        expires_days: parseInt(expiresDays)
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `
+                        <div class="message success">
+                            <strong>Token created successfully!</strong><br>
+                            <div style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 5px; font-family: monospace; word-break: break-all; font-size: 12px;">
+                                ${data.token}
+                            </div>
+                            <div style="margin-top: 5px; font-size: 12px; color: #666;">
+                                ⚠️ Save this token now - it won't be shown again!
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Clear form
+                    document.getElementById('newTokenUserId').value = '';
+                    document.getElementById('newTokenName').value = '';
+                    document.getElementById('newTokenScopes').value = 'steps:read,steps:write,profile:read';
+                    document.getElementById('newTokenExpires').value = '30';
+                    
+                    // Reload tokens table
+                    setTimeout(() => {
+                        loadMCPTokens();
+                        messageDiv.innerHTML = '';
+                    }, 10000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
+                    setTimeout(() => messageDiv.innerHTML = '', 5000);
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 5000);
+            } finally {
+                createBtn.disabled = false;
+                createBtn.textContent = 'Create Token';
+            }
+        }
+        
+        async function revokeMCPToken(tokenId, tokenName, userName) {
+            if (!confirm(`Are you sure you want to revoke the token "${tokenName}" for ${userName}? This action cannot be undone and will immediately disable API access.`)) {
+                return;
+            }
+            
+            const messageDiv = document.getElementById('mcpTokensMessage');
+            
+            try {
+                const response = await authenticatedFetch(`/api/admin/mcp-tokens/${tokenId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = '<div class="message success">Token revoked successfully!</div>';
+                    setTimeout(() => {
+                        messageDiv.innerHTML = '';
+                        loadMCPTokens(); // Reload the table
+                    }, 2000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
+                    setTimeout(() => messageDiv.innerHTML = '', 5000);
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 5000);
+            }
+        }
+        
+        async function copyTokenValue(token) {
+            try {
+                await navigator.clipboard.writeText(token);
+                
+                // Show temporary feedback
+                const messageDiv = document.getElementById('mcpTokensMessage');
+                messageDiv.innerHTML = '<div class="message success">Token copied to clipboard!</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 2000);
+            } catch (error) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = token;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                const messageDiv = document.getElementById('mcpTokensMessage');
+                messageDiv.innerHTML = '<div class="message success">Token copied to clipboard!</div>';
+                setTimeout(() => messageDiv.innerHTML = '', 2000);
+            }
+        }
+        
+        async function refreshAuditLog() {
+            const refreshBtn = document.getElementById('refreshAuditBtn');
+            refreshBtn.disabled = true;
+            refreshBtn.textContent = 'Loading...';
+            
+            try {
+                const response = await fetch('/api/admin/mcp-audit?limit=50');
+                const auditLog = await response.json();
+                loadAuditTable(auditLog);
+            } catch (error) {
+                console.error('Error refreshing audit log:', error);
+            } finally {
+                refreshBtn.disabled = false;
+                refreshBtn.textContent = 'Refresh';
+            }
+        }
+        
+        function filterAuditLog() {
+            const userFilter = document.getElementById('auditSearchUser').value.toLowerCase();
+            const methodFilter = document.getElementById('auditSearchMethod').value;
+            
+            const rows = document.querySelectorAll('#mcpAuditTable tbody tr');
+            
+            rows.forEach(row => {
+                const userName = row.cells[1].textContent.toLowerCase();
+                const method = row.cells[2].textContent;
+                
+                const userMatch = !userFilter || userName.includes(userFilter);
+                const methodMatch = !methodFilter || method.includes(methodFilter);
+                
+                row.style.display = (userMatch && methodMatch) ? '' : 'none';
+            });
+        }
+
         // Initialize themes
         initializeThemes();
         
@@ -1006,4 +1316,6 @@ document.addEventListener('DOMContentLoaded', function() {
         window.enableChallengeSaveButton = enableChallengeSaveButton;
         window.updateChallenge = updateChallenge;
         window.deleteChallenge = deleteChallenge;
+        window.revokeMCPToken = revokeMCPToken;
+        window.copyTokenValue = copyTokenValue;
 });
