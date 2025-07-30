@@ -49,7 +49,7 @@ class StepChallengeMCP:
         }
         
         try:
-            response = self.session.post(f"{self.base_url}/mcp/rpc", json=payload)
+            response = self.session.post(f"{self.base_url}/mcp", json=payload)
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
