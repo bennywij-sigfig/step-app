@@ -1011,7 +1011,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 const users = await usersRes.json();
                 const tokens = await tokensRes.json();
-                const auditLog = await auditRes.json();
+                const auditResponse = await auditRes.json();
                 
                 // Populate user dropdown
                 const userSelect = document.getElementById('newTokenUserId');
@@ -1023,7 +1023,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Load tokens table
                 loadTokensTable(tokens);
                 
-                // Load audit table
+                // Load audit table - extract logs array from response
+                const auditLog = auditResponse.logs || auditResponse || [];
                 loadAuditTable(auditLog);
                 
                 // Add event listeners
@@ -1277,7 +1278,8 @@ document.addEventListener('DOMContentLoaded', function() {
             
             try {
                 const response = await fetch('/api/admin/mcp-audit?limit=50');
-                const auditLog = await response.json();
+                const auditResponse = await response.json();
+                const auditLog = auditResponse.logs || auditResponse || [];
                 loadAuditTable(auditLog);
             } catch (error) {
                 console.error('Error refreshing audit log:', error);
