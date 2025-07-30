@@ -230,7 +230,7 @@ const mcpMethods = {
       tools: [
         {
           name: "add_steps",
-          description: "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. IMPORTANT: If data already exists, you must set allow_overwrite=true AND warn the user that existing data will be replaced. Authentication via Authorization header.",
+          description: "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. CRITICAL SAFETY: Never automatically overwrite existing data. If data exists, show user the conflict and ask for explicit confirmation before using allow_overwrite=true. Authentication via Authorization header.",
           inputSchema: {
             type: "object",
             properties: {
@@ -248,7 +248,7 @@ const mcpMethods = {
               allow_overwrite: {
                 type: "boolean",
                 default: false,
-                description: "CRITICAL: Set to true to update existing step data for this date. You MUST warn the user that their existing data will be permanently replaced before setting this to true."
+                description: "DANGER: Only set to true after explicit user confirmation. NEVER set this automatically. User must explicitly agree to overwrite their existing data."
               }
             },
             required: ["date", "count"]
@@ -372,7 +372,19 @@ const stepTools = {
       let oldValue = null;
 
       if (existingSteps && !allow_overwrite) {
-        throw new Error(`DATA_CONFLICT: Steps already exist for ${date} with ${existingSteps.count} steps. To replace this existing data, you must set allow_overwrite=true and inform the user that their previous data will be overwritten.`);
+        return {
+          success: false,
+          error: "DATA_CONFLICT",
+          message: `Steps already exist for ${date}`,
+          existing_data: {
+            date: date,
+            count: existingSteps.count,
+            message: `You already have ${existingSteps.count} steps recorded for ${date}.`
+          },
+          requires_confirmation: true,
+          confirmation_instructions: "To overwrite this data, the user must explicitly confirm they want to replace their existing steps. Only then should you call add_steps again with allow_overwrite=true.",
+          user_prompt_required: `Ask the user: "You already have ${existingSteps.count} steps for ${date}. Do you want to replace this with ${validatedCount} steps? This will permanently delete your previous data."`
+        };
       }
 
       if (existingSteps) {
@@ -814,7 +826,7 @@ const getMCPCapabilities = () => {
       tools: [
         {
           name: 'add_steps',
-          description: 'Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. IMPORTANT: If data already exists, you must set allow_overwrite=true AND warn the user that existing data will be replaced.',
+          description: 'Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. CRITICAL SAFETY: Never automatically overwrite existing data. If data exists, show user the conflict and ask for explicit confirmation before using allow_overwrite=true.',
           parameters: {
             type: 'object',
             properties: {
@@ -836,7 +848,7 @@ const getMCPCapabilities = () => {
               allow_overwrite: { 
                 type: 'boolean', 
                 default: false, 
-                description: 'CRITICAL: Set to true to update existing step data for this date. You MUST warn the user that their existing data will be permanently replaced before setting this to true.' 
+                description: 'DANGER: Only set to true after explicit user confirmation. NEVER set this automatically. User must explicitly agree to overwrite their existing data.' 
               }
             },
             required: ['token', 'date', 'count'],
@@ -917,7 +929,8 @@ const getMCPCapabilities = () => {
           'Start by calling get_user_profile to understand user context and active challenges',
           'Use add_steps to log daily step counts with date and count',
           'Use get_steps to retrieve history, analyze trends, or check goal progress',
-          'Always handle overwrite scenarios by setting allow_overwrite=true for updates',
+          'CRITICAL: If add_steps returns requires_confirmation=true, ask user for explicit permission before overwriting',
+          'NEVER automatically use allow_overwrite=true without user confirmation',
           'Provide meaningful summaries and progress analysis based on retrieved data'
         ],
         date_handling: [
