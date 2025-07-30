@@ -230,14 +230,10 @@ const mcpMethods = {
       tools: [
         {
           name: "add_steps",
-          description: "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. Supports updating existing entries with explicit permission.",
+          description: "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. Supports updating existing entries with explicit permission. Authentication via Authorization header.",
           inputSchema: {
             type: "object",
             properties: {
-              token: {
-                type: "string",
-                description: "User authentication token (provided during setup)"
-              },
               date: {
                 type: "string",
                 pattern: "^\\d{4}-\\d{2}-\\d{2}$",
@@ -255,19 +251,15 @@ const mcpMethods = {
                 description: "Set to true to update existing step data for this date. Required when steps already exist for the date."
               }
             },
-            required: ["token", "date", "count"]
+            required: ["date", "count"]
           }
         },
         {
           name: "get_steps",
-          description: "Retrieve step history and progress data. Use this to show user their step counts, analyze trends, check goal progress, or generate reports.",
+          description: "Retrieve step history and progress data. Use this to show user their step counts, analyze trends, check goal progress, or generate reports. Authentication via Authorization header.",
           inputSchema: {
             type: "object",
             properties: {
-              token: {
-                type: "string",
-                description: "User authentication token (provided during setup)"
-              },
               start_date: {
                 type: "string",
                 pattern: "^\\d{4}-\\d{2}-\\d{2}$",
@@ -279,21 +271,16 @@ const mcpMethods = {
                 description: "Optional: End date for date range filter in YYYY-MM-DD format. Omit to get all history."
               }
             },
-            required: ["token"]
+            required: []
           }
         },
         {
           name: "get_user_profile",
-          description: "Get comprehensive user information including profile details, active challenges, team information, and account status. Use this first to understand user context.",
+          description: "Get comprehensive user information including profile details, active challenges, team information, and account status. Use this first to understand user context. Authentication via Authorization header.",
           inputSchema: {
             type: "object",
-            properties: {
-              token: {
-                type: "string",
-                description: "User authentication token (provided during setup)"
-              }
-            },
-            required: ["token"]
+            properties: {},
+            required: []
           }
         }
       ]
@@ -648,7 +635,7 @@ const stepTools = {
 };
 
 // JSON-RPC 2.0 handler
-const handleMCPRequest = async (body, ipAddress, userAgent) => {
+const handleMCPRequest = async (body, ipAddress, userAgent, authHeader = null) => {
   // Validate JSON-RPC 2.0 format
   if (!body.jsonrpc || body.jsonrpc !== '2.0') {
     return {
@@ -717,11 +704,18 @@ const handleMCPRequest = async (body, ipAddress, userAgent) => {
     }
   }
 
-  // Handle tools/call - requires authentication via token in arguments
+  // Handle tools/call - requires authentication via Bearer token in headers or token in arguments
   if (body.method === 'tools/call') {
     const toolName = body.params?.name;
     const toolArgs = body.params?.arguments || {};
-    const token = toolArgs.token;
+    
+    // Extract token from Bearer header or tool arguments
+    let token = null;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    } else if (toolArgs.token) {
+      token = toolArgs.token; // Backward compatibility
+    }
 
     if (!token) {
       return {
@@ -729,7 +723,7 @@ const handleMCPRequest = async (body, ipAddress, userAgent) => {
         error: {
           code: -32602,
           message: 'Invalid params',
-          data: 'Missing token in tool arguments'
+          data: 'Missing authentication token in Authorization header or tool arguments'
         },
         id: body.id || null
       };
@@ -776,7 +770,11 @@ const handleMCPRequest = async (body, ipAddress, userAgent) => {
     }
 
     try {
-      const result = await mcpMethods.tools_call(toolName, toolArgs, tokenInfo, ipAddress, userAgent);
+      // Clean tool arguments - remove token since it's now handled via headers
+      const cleanArgs = { ...toolArgs };
+      delete cleanArgs.token;
+      
+      const result = await mcpMethods.tools_call(toolName, cleanArgs, tokenInfo, ipAddress, userAgent);
       return {
         jsonrpc: '2.0',
         result: result,

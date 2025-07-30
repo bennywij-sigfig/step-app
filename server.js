@@ -1022,6 +1022,27 @@ app.get('/api/user', apiLimiter, requireApiAuth, (req, res) => {
   });
 });
 
+// API endpoint to get user's MCP tokens (for setup page)
+app.get('/api/user/mcp-tokens', apiLimiter, requireApiAuth, (req, res) => {
+  const userId = req.session.userId;
+  
+  db.all(`
+    SELECT id, token, name, permissions, expires_at, last_used_at, created_at 
+    FROM mcp_tokens 
+    WHERE user_id = ? AND expires_at > datetime('now')
+    ORDER BY created_at DESC
+  `, [userId], (err, tokens) => {
+    if (err) {
+      console.error('MCP tokens fetch error:', err);
+      return res.status(500).json({ error: 'Failed to fetch MCP tokens' });
+    }
+    
+    res.json({
+      tokens: tokens || []
+    });
+  });
+});
+
 // Get user steps (protected - only own steps)
 app.get('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
   const userId = req.session.userId;
@@ -1211,6 +1232,7 @@ app.post('/mcp', mcpBurstLimiter, mcpApiLimiter, async (req, res) => {
   try {
     const ipAddress = req.ip;
     const userAgent = req.get('User-Agent');
+    const authHeader = req.get('Authorization');
     
     // Set headers for Streamable HTTP remote MCP support
     res.setHeader('Content-Type', 'application/json');
@@ -1219,7 +1241,7 @@ app.post('/mcp', mcpBurstLimiter, mcpApiLimiter, async (req, res) => {
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
-    const response = await handleMCPRequest(req.body, ipAddress, userAgent);
+    const response = await handleMCPRequest(req.body, ipAddress, userAgent, authHeader);
     res.json(response);
   } catch (error) {
     console.error('Remote MCP server error:', error);
@@ -1241,6 +1263,30 @@ app.options('/mcp', (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.status(200).end();
+});
+
+// MCP Bridge Script Download (Public - no authentication required)
+app.get('/download/step_bridge.py', (req, res) => {
+  try {
+    const scriptPath = path.join(__dirname, 'step_bridge.py');
+    
+    // Security: Set proper headers for script download
+    res.setHeader('Content-Type', 'text/x-python');
+    res.setHeader('Content-Disposition', 'attachment; filename="step_bridge.py"');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    
+    // Send the bridge script file
+    res.sendFile(scriptPath, (err) => {
+      if (err) {
+        console.error('Error serving bridge script:', err);
+        res.status(404).json({ error: 'Bridge script not found' });
+      }
+    });
+  } catch (error) {
+    console.error('Bridge script download error:', error);
+    res.status(500).json({ error: 'Failed to download bridge script' });
+  }
 });
 
 // MCP capabilities discovery endpoint (no authentication required)
@@ -2010,6 +2056,11 @@ app.get('/admin', requireAdmin, (req, res) => {
 // Redirect admin.html to protected route
 app.get('/admin.html', requireAdmin, (req, res) => {
   res.redirect('/admin');
+});
+
+// MCP Setup page (authenticated users)
+app.get('/mcp-setup', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'mcp-setup.html'));
 });
 
 // Database cleanup job for expired tokens (runs every hour in production)
