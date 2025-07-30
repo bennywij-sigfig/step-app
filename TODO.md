@@ -7,11 +7,19 @@
 **Setup Experience:** All-in-one setup page with multi-client support and one-click downloads  
 **Security status:** B+ security grade with token exposure vulnerabilities fixed  
 **Client Support:** Claude Desktop, Cursor, Claude Code CLI, ChatGPT Desktop  
-**Last deployed:** July 30, 2025 (Secure MCP bridge architecture implementation)
+**Last deployed:** July 30, 2025 (MCP setup page bug fixes + secure bridge architecture)
 
 ---
 
 ## 🎉 RECENTLY COMPLETED (July 30, 2025) ✅
+
+### MCP Setup Page Bug Fixes & UX Improvements
+- [x] **Fixed "Reveal Token" Button** - Removed CSP-violating inline handlers, replaced with addEventListener
+- [x] **Fixed JSON Configuration Examples** - Replaced real tokens with placeholders for security
+- [x] **Fixed Font Consistency** - Updated MCP setup page to match admin UI font stack
+- [x] **Fixed MCP Audit Log Display** - Resolved "Invalid Date" and "undefined" status/method issues
+- [x] **Improved No-Token User Experience** - Added proper messaging when users have no MCP tokens
+- [x] **Enhanced Token Security** - Configuration examples now always show placeholders
 
 ### Secure MCP Bridge Architecture Implementation (Production Ready)
 - [x] **Local MCP Bridge Script** - Created `step_bridge.py` with secure stdio MCP protocol implementation
@@ -260,7 +268,7 @@ All remote MCP functionality is complete and deployed to production. Security-re
 **✅ Production Deployment Status:** LIVE AND STABLE WITH REMOTE MCP
 - **URL:** https://step-app-4x-yhw.fly.dev/
 - **Remote MCP Endpoint:** https://step-app-4x-yhw.fly.dev/mcp
-- **Last deployed:** July 30, 2025 (remote MCP server + LLM optimizations)
+- **Last deployed:** July 30, 2025 (MCP setup page bug fixes + bridge architecture)
 - **Deployment process:** ✅ STABLE - Consistent deployments with health monitoring
 - **Infrastructure:** Fly.io with Docker, health monitoring, SQLite persistence
 - **Security:** B+ grade comprehensive security with enterprise MCP integration
