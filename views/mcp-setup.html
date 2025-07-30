@@ -242,7 +242,7 @@
                             <h6 class="text-white mb-3">Claude Desktop Configuration</h6>
                             <p class="text-light">Add this to your Claude Desktop MCP settings:</p>
                             
-                            <p class="text-light mb-2"><strong>Location:</strong> <code>~/.claude_desktop_config.json</code></p>
+                            <p class="text-light mb-2"><strong>Location:</strong> <code>~/Library/Application Support/Claude/claude_desktop_config.json</code></p>
                             <div class="config-code" id="claudeDesktopConfig">Loading configuration...</div>
                             
                             <div class="mt-3">
@@ -272,10 +272,18 @@
                         <!-- Claude Code CLI -->
                         <div class="tab-pane fade" id="claude-code" role="tabpanel">
                             <h6 class="text-white mb-3">Claude Code CLI Configuration</h6>
-                            <p class="text-light">Add this to your Claude Code MCP configuration:</p>
+                            <p class="text-light">Configure the MCP server for Claude Code CLI:</p>
                             
-                            <p class="text-light mb-2"><strong>Location:</strong> <code>~/.claude.json</code></p>
-                            <div class="config-code" id="claudeCodeConfig">Loading configuration...</div>
+                            <div class="mb-3">
+                                <p class="text-light mb-2"><strong>Option 1 - CLI Command (Recommended):</strong></p>
+                                <div class="config-code">claude mcp add step-challenge python ~/step_bridge.py -e STEP_TOKEN=YOUR_TOKEN_HERE</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <p class="text-light mb-2"><strong>Option 2 - Manual Config File:</strong></p>
+                                <p class="text-light mb-1"><strong>Location:</strong> <code>~/.claude.json</code> (user scope) or <code>.mcp.json</code> (project scope)</p>
+                                <div class="config-code" id="claudeCodeConfig">Loading configuration...</div>
+                            </div>
                             
                             <div class="mt-3">
                                 <button class="btn btn-outline-light btn-sm copy-config-btn" data-target="claudeCodeConfig">
@@ -283,6 +291,10 @@
                                     Copy Configuration
                                 </button>
                             </div>
+                            <small class="text-light d-block mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                After configuration, verify with: <code>claude mcp list</code>
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -314,6 +326,15 @@
                             <li>Check that aiohttp is installed: <code>pip install aiohttp</code></li>
                             <li>Verify your token is not expired</li>
                             <li>Make sure STEP_TOKEN environment variable is set correctly</li>
+                            <li><strong>Claude Desktop:</strong> Use full path instead of <code>python</code> if needed (e.g., <code>/usr/bin/python3</code>)</li>
+                            <li><strong>Claude Code:</strong> Check server status with <code>claude mcp list</code> and debug with <code>claude --mcp-debug</code></li>
+                        </ul>
+                        
+                        <p><strong>Python Path Issues (macOS):</strong></p>
+                        <ul>
+                            <li>If you see "python ENOENT" errors, try using <code>python3</code> instead of <code>python</code></li>
+                            <li>Find your Python path with: <code>which python3</code></li>
+                            <li>Use the full path (e.g., <code>/opt/homebrew/bin/python3</code>) in your configuration</li>
                         </ul>
                         
                         <p><strong>Need Help?</strong></p>
