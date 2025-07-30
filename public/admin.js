@@ -1035,6 +1035,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('auditSearchUser').addEventListener('input', filterAuditLog);
                 document.getElementById('auditSearchMethod').addEventListener('change', filterAuditLog);
                 
+                // Add event delegation for token action buttons
+                addTokenEventListeners();
+                
             } catch (error) {
                 console.error('Error loading MCP tokens:', error);
                 document.getElementById('mcpTokensTable').innerHTML = '<p>Error loading tokens</p>';
@@ -1083,10 +1086,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <td>${lastUsed}</td>
                                     <td style="text-align: center;">${token.usage_count || 0}</td>
                                     <td class="actions-cell">
-                                        <button class="action-btn delete-btn" onclick="revokeMCPToken(${token.id}, '${token.name}', '${token.user_name}')" title="Revoke token">
+                                        <button class="action-btn delete-btn mcp-revoke-btn" data-token-id="${token.id}" data-token-name="${token.name}" data-user-name="${token.user_name}" title="Revoke token">
                                             🗑️
                                         </button>
-                                        <button class="action-btn" onclick="copyTokenValue('${token.token}')" title="Copy token" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
+                                        <button class="action-btn mcp-copy-btn" data-token-value="${token.token}" title="Copy token" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
                                             📋
                                         </button>
                                     </td>
@@ -1186,7 +1189,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="message success">
                             <strong>Token created successfully!</strong><br>
                             <div style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.05); border-radius: 5px; font-family: monospace; word-break: break-all; font-size: 12px;">
-                                ${data.token}
+                                ${data.token || 'Token created but not displayed for security'}
                             </div>
                             <div style="margin-top: 5px; font-size: 12px; color: #666;">
                                 ⚠️ Save this token now - it won't be shown again!
@@ -1218,6 +1221,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        function addTokenEventListeners() {
+            // Remove existing listeners to prevent duplicates
+            const tokenTable = document.getElementById('mcpTokensTable');
+            if (tokenTable) {
+                tokenTable.removeEventListener('click', handleTokenActions);
+                tokenTable.addEventListener('click', handleTokenActions);
+            }
+        }
+        
+        function handleTokenActions(event) {
+            const target = event.target;
+            
+            if (target.classList.contains('mcp-revoke-btn')) {
+                const tokenId = target.getAttribute('data-token-id');
+                const tokenName = target.getAttribute('data-token-name');
+                const userName = target.getAttribute('data-user-name');
+                revokeMCPToken(tokenId, tokenName, userName);
+            } else if (target.classList.contains('mcp-copy-btn')) {
+                const tokenValue = target.getAttribute('data-token-value');
+                copyTokenValue(tokenValue);
+            }
+        }
+
         async function revokeMCPToken(tokenId, tokenName, userName) {
             if (!confirm(`Are you sure you want to revoke the token "${tokenName}" for ${userName}? This action cannot be undone and will immediately disable API access.`)) {
                 return;
@@ -1236,7 +1262,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     messageDiv.innerHTML = '<div class="message success">Token revoked successfully!</div>';
                     setTimeout(() => {
                         messageDiv.innerHTML = '';
-                        loadMCPTokens(); // Reload the table
+                        loadMCPTokens(); // Reload the table with event listeners
                     }, 2000);
                 } else {
                     messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
@@ -1318,6 +1344,4 @@ document.addEventListener('DOMContentLoaded', function() {
         window.enableChallengeSaveButton = enableChallengeSaveButton;
         window.updateChallenge = updateChallenge;
         window.deleteChallenge = deleteChallenge;
-        window.revokeMCPToken = revokeMCPToken;
-        window.copyTokenValue = copyTokenValue;
 });
