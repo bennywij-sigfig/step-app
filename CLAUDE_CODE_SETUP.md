@@ -1,12 +1,14 @@
 # Adding Step Challenge to Claude Code
 
-This guide shows you two ways to integrate the Step Challenge App with Claude Code.
+This guide shows you how to integrate the Step Challenge App with Claude Code using our remote MCP server.
 
-## 🎯 **Quick Start: Direct API Usage** (Recommended)
+## 🎯 **Direct API Usage** (Recommended for Claude Code)
 
 This is the simplest approach - use the Step Challenge API directly in Claude Code sessions.
 
 ### Step 1: Get Your MCP Token
+
+Contact your administrator to get an MCP token, or if you're an admin:
 ```bash
 python get_mcp_token.py --interactive
 ```
@@ -33,7 +35,7 @@ def call_step_api(method, params=None):
         "id": 1
     }
     
-    response = requests.post("https://step-app-4x-yhw.fly.dev/mcp/rpc", json=payload)
+    response = requests.post("https://step-app-4x-yhw.fly.dev/mcp", json=payload)
     return response.json()
 
 # Test it!
@@ -75,74 +77,54 @@ batch_update_steps({
 
 ---
 
-## 🛠️ **Advanced: Official MCP Server** (For power users)
+## 🌐 **Remote MCP Integration** (For Claude Desktop/Cursor)
 
-This creates a proper Anthropic MCP server that Claude Code can connect to officially.
+**Note**: This approach is for Claude Desktop and Cursor only, not Claude Code.
 
-### Step 1: Install MCP Dependencies
-```bash
-pip install mcp
+For Claude Desktop or Cursor users, you can configure a remote MCP server connection:
+
+### Step 1: Configure Remote MCP Server
+
+**For Claude Desktop**: Add to your MCP configuration:
+```json
+{
+  "mcpServers": {
+    "step-challenge": {
+      "type": "url",
+      "url": "https://step-app-4x-yhw.fly.dev/mcp",
+      "transport": "streamable_http",
+      "headers": {
+        "Authorization": "Bearer your_mcp_token_here"
+      }
+    }
+  }
+}
 ```
 
-### Step 2: Get Your Token
-```bash
-python get_mcp_token.py --interactive
-```
+**For Cursor**: Add similar configuration in Cursor's MCP settings.
 
-### Step 3: Set Up MCP Server
-1. **Test the server**:
-   ```bash
-   export STEP_CHALLENGE_TOKEN="your_token_here"
-   python mcp_server_anthropic.py
-   ```
-
-2. **Find your Claude Code settings**:
-   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`  
-   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-   - **Linux**: `~/.config/Claude/claude_desktop_config.json`
-
-3. **Add to Claude Code MCP configuration**:
-   ```json
-   {
-     "mcpServers": {
-       "step-challenge": {
-         "command": "python",
-         "args": ["/absolute/path/to/mcp_server_anthropic.py"],
-         "env": {
-           "STEP_CHALLENGE_TOKEN": "your_mcp_token_here"
-         }
-       }
-     }
-   }
-   ```
-
-4. **Restart Claude Code**
-
-### Step 4: Use MCP Tools in Claude Code
-Once configured, you can ask Claude Code to:
-
-- "Add 12,000 steps for today using the step challenge tool"
-- "Get my step summary for the last week"  
+### Step 2: Use Natural Language Commands
+Once configured, you can ask Claude:
+- "Add 12,000 steps for today"
+- "Show my step progress for this week"
 - "Check if I met my 10,000 step goal yesterday"
-- "Show my step challenge profile"
-
-Claude Code will automatically use the MCP tools to interact with your Step Challenge account.
+- "Generate a monthly step report"
 
 ---
 
 ## 🆚 **Which Approach Should You Use?**
 
-### **Use Direct API (Approach #1) if:**
-- ✅ You want to get started quickly
-- ✅ You're comfortable copying code into Claude Code sessions
-- ✅ You want full control over the API interactions
-- ✅ You don't mind re-importing helper functions each session
+### **Use Direct API (Claude Code)**:
+- ✅ Works with Claude Code specifically
+- ✅ Full control over API interactions
+- ✅ Quick setup with just code snippets
+- ✅ No external configuration needed
 
-### **Use Official MCP Server (Approach #2) if:**
-- ✅ You want Claude Code to automatically know about step tracking
-- ✅ You prefer natural language commands ("add my steps")
-- ✅ You want persistent integration across all Claude Code sessions
-- ✅ You're comfortable with more advanced setup
+### **Use Remote MCP Server (Claude Desktop/Cursor)**:
+- ✅ Natural language integration 
+- ✅ Persistent across all conversations
+- ✅ Zero-installation setup
+- ✅ Professional remote server hosting
 
 ---
 
@@ -160,10 +142,10 @@ else:
     print(result.get('error'))
 ```
 
-### For MCP Server Approach:
-Ask Claude Code: *"Can you check my step challenge profile?"*
+### For Remote MCP Server Approach (Claude Desktop/Cursor):
+Ask Claude: *"Can you check my step challenge profile?"*
 
-If it responds with your profile information, the MCP server is working correctly.
+If it responds with your profile information, the remote MCP server is working correctly.
 
 ---
 
@@ -234,10 +216,10 @@ def check_goal(target=10000):
    - Install required packages: `pip install requests`
    - For MCP server: `pip install mcp`
 
-3. **MCP server not connecting**
-   - Check the file path in your configuration is absolute
-   - Verify the token environment variable is set correctly
-   - Restart Claude Code after configuration changes
+3. **Remote MCP server not connecting**
+   - Verify the server URL is correct: `https://step-app-4x-yhw.fly.dev/mcp`
+   - Check that your token is properly formatted in headers
+   - Restart Claude Desktop/Cursor after configuration changes
 
 4. **API errors**
    - Check rate limits (60/hour, 15/minute per token)
@@ -247,6 +229,7 @@ def check_goal(target=10000):
 ### Getting Help:
 - Test your token: `python test_mcp_python.py --token YOUR_TOKEN`
 - Check API status: Visit https://step-app-4x-yhw.fly.dev/mcp/capabilities
+- Test remote connection: Use the test script with `--test-all` flag
 - View logs: Check the MCP audit logs via admin panel
 
 ---

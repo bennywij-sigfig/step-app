@@ -119,7 +119,7 @@ def call_mcp_api(method, params):
         "id": 1
     }
     
-    response = requests.post(f"{BASE_URL}/mcp/rpc", json=payload)
+    response = requests.post(f"{BASE_URL}/mcp", json=payload)
     return response.json()
 
 # Example: Add today's steps

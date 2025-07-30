@@ -360,30 +360,31 @@ result = call_step_api("add_steps", {"date": today, "count": 12000})
 print(json.dumps(result, indent=2))
 ```
 
-#### **Official MCP Server for Claude Desktop/Cursor**
+#### **Remote MCP Server for Claude Desktop/Cursor**
 For persistent integration with Claude Desktop or Cursor:
 
-1. **Install dependencies**: `pip install -r requirements-mcp.txt`
-2. **Get MCP token**: `python get_mcp_token.py --interactive`
-3. **Run installer**: `python install_step_mcp.py`
-4. **Restart Claude Desktop/Cursor**
+1. **Get MCP token**: Contact your administrator or use `python get_mcp_token.py --interactive`
+2. **Add remote server** to your AI client settings:
+   - **URL**: `https://step-app-4x-yhw.fly.dev/mcp`
+   - **Transport**: `Streamable HTTP`
+   - **Token**: Your MCP token
+3. **Restart Claude Desktop/Cursor**
 
-See `CLAUDE_CODE_SETUP.md` for detailed instructions.
+See `USER_SETUP_GUIDE.md` for detailed instructions.
 
 ### End User Distribution
 
-For distributing MCP access to Claude Desktop/Cursor users:
+For distributing remote MCP access to Claude Desktop/Cursor users:
 
-#### **Files to Distribute:**
-- `mcp_server_anthropic.py` - MCP server implementation
-- `install_step_mcp.py` - Automated installer
-- `USER_SETUP_GUIDE.md` - User instructions
-- `README_DISTRIBUTION.md` - Quick start guide
+#### **Information to Provide:**
+- **Server URL**: `https://step-app-4x-yhw.fly.dev/mcp`
+- **User's personal MCP token**
+- **Setup instructions**: `USER_SETUP_GUIDE.md` or `README_DISTRIBUTION.md`
 
 #### **Admin Workflow:**
 1. Create tokens: `python get_mcp_token.py --interactive`
-2. Provide users with token + distribution files
-3. Users run: `python install_step_mcp.py`
+2. Provide users with server URL + their personal token
+3. Users add remote server to their AI client settings (2-minute setup)
 4. Users can then ask Claude: *"Add 12,000 steps for today"*
 
 See `ADMIN_DISTRIBUTION_GUIDE.md` for complete distribution workflow.
@@ -403,19 +404,18 @@ See `ADMIN_DISTRIBUTION_GUIDE.md` for complete distribution workflow.
 
 ### **Claude Code Integration:**
 - `claude_code_integration.py` - Ready-to-use API client with helper functions
-- `mcp_server_anthropic.py` - Official Anthropic MCP server for Claude Desktop/Cursor
-- `CLAUDE_CODE_SETUP.md` - Complete setup guide for both integration methods
+- `CLAUDE_CODE_SETUP.md` - Complete setup guide for direct API usage
 
 ### **End User Distribution:**
-- `install_step_mcp.py` - Automated installer for end users
-- `USER_SETUP_GUIDE.md` - Detailed end user setup instructions  
-- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing MCP access
-- `README_DISTRIBUTION.md` - Quick start guide for distribution package
+- `USER_SETUP_GUIDE.md` - Remote MCP server setup instructions
+- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing remote MCP access
+- `README_DISTRIBUTION.md` - Zero-installation setup guide for all AI clients
 - `MCP_TESTING_GUIDE.md` - Comprehensive testing and integration guide
+- `archive/local-mcp-server/` - Legacy local installation files (archived)
 
 ### **Dependencies:**
-- `requirements.txt` - Python dependencies for testing tools
-- `requirements-mcp.txt` - Dependencies for MCP server
+- `requirements.txt` - Python dependencies for testing and admin tools
+- `requirements-mcp.txt` - Legacy dependencies (archived)
 
 ## Database Schema
 
