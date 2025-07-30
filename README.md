@@ -11,6 +11,22 @@ A production-ready web application for tracking daily steps in company-wide chal
 - **Challenge System**: Time-bound challenges with Pacific Time zone support and configurable reporting thresholds
 - **Mobile Optimized**: Responsive glass-morphism UI design, cross-browser compatible (including Safari)
 - **Production Security**: CSRF protection, rate limiting, CSP headers, SQL injection prevention
+- **MCP Integration**: Complete admin UI for token management with enterprise-grade security controls
+
+## Recent Updates (July 30, 2025)
+- **🎛️ MCP Admin Interface**: Complete token management UI with creation, revocation, and monitoring capabilities
+- **🔒 CSP Compliance**: Fixed Content Security Policy violations with proper event delegation patterns
+- **🛡️ Enhanced Security**: Replaced inline event handlers with CSP-compliant event delegation system
+- **📋 Token Lifecycle**: Full token management with copy/paste, expiration tracking, and usage statistics
+- **📊 Activity Dashboard**: Real-time MCP API monitoring with user filtering and method-based search
+- **✅ Production Hardened**: Enterprise-ready MCP administration through secure web interface
+
+## Previous Security Updates (July 29, 2025)
+- **🔒 Input Validation**: Comprehensive backend validation prevents type confusion and SQL injection attacks
+- **🚀 Penetration Testing**: Full security audit completed - all attack vectors successfully blocked
+- **🔧 Rate Limiting**: Increased magic link requests from 5→10 per hour per IP for VPN users
+- **🛡️ CSRF Protection**: Security assessment confirmed 24-hour session tokens adequate for use case
+- **📊 Data Validation**: Robust numeric validation with descriptive error messages and safe type conversion
 
 ## Quick Start
 

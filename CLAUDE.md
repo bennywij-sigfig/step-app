@@ -3,10 +3,11 @@
 ## Overview
 Production web application for tracking daily steps in company-wide challenges (~150 users).
 
-## Status: Production Deployed with MCP Integration ✅
+## Status: Production Deployed with MCP Admin UI ✅
 - **URL**: https://step-app-4x-yhw.fly.dev/
-- **Last Deploy**: July 29, 2025 (MCP integration + comprehensive testing tools)
+- **Last Deploy**: July 30, 2025 (MCP Admin UI + CSP security fixes)
 - **MCP API**: Fully operational JSON-RPC 2.0 endpoint with enterprise security
+- **MCP Admin Panel**: Complete token management interface with creation, revocation, and monitoring
 - **Claude Integration**: Ready for Claude Desktop/Cursor with automated installer
 - Ranked/unranked leaderboard system with team member disclosure
 - 5-color admin theme system (Ocean Blue, Sunset Orange, Forest Green, Lavender Purple, Monochrome)
@@ -73,7 +74,21 @@ python test_mcp_python.py --token YOUR_TOKEN --test-all
 python install_step_mcp.py
 ```
 
-## Recent Updates (July 29, 2025)
+## Recent Updates (July 30, 2025)
+
+### 🎛️ **MCP Admin UI Complete**
+- **Token Management Interface**: Full-featured admin panel with creation, revocation, and monitoring
+- **CSP Security Compliance**: Fixed Content Security Policy violations with proper event delegation
+- **Production Hardening**: Secure event handling patterns replacing inline JavaScript handlers
+- **Enterprise Token Lifecycle**: Copy functionality, usage tracking, expiration monitoring, and audit trails
+- **Real-time Activity Dashboard**: MCP API monitoring with comprehensive filtering and search capabilities
+
+### 🛡️ **Security Enhancements**
+- **Event Delegation**: CSP-compliant JavaScript patterns eliminating inline event handlers
+- **Token Display Security**: Improved token presentation with fallback security messaging
+- **Admin Action Security**: All token operations properly protected with CSRF tokens and confirmations
+
+## Previous Updates (July 29, 2025)
 
 ### 🤖 **MCP Integration Complete**
 - **Production MCP API**: JSON-RPC 2.0 endpoint with comprehensive security (B+ security grade)
