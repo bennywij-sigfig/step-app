@@ -1435,22 +1435,55 @@ app.get('/api/admin/mcp-audit', adminApiLimiter, requireApiAdmin, (req, res) => 
       console.error('Error fetching MCP audit log:', err);
       return res.status(500).json({ error: 'Database error' });
     }
+    
+    // Transform data to match frontend expectations
+    const transformedLogs = logs.map(log => {
+      // Create details string from available data
+      let details = '';
+      if (log.error_message) {
+        details = log.error_message;
+      } else if (log.params) {
+        try {
+          const params = JSON.parse(log.params);
+          details = Object.keys(params).map(key => `${key}: ${params[key]}`).join(', ');
+        } catch (e) {
+          details = log.params;
+        }
+      } else if (log.was_overwrite) {
+        details = 'Overwrite existing data';
+      }
+      
+      return {
+        id: log.id,
+        timestamp: log.created_at,
+        user_name: log.user_name,
+        user_email: log.user_email,
+        method: log.action,
+        status_code: log.success ? 200 : 500,
+        params: log.params,
+        old_value: log.old_value,
+        new_value: log.new_value,
+        was_overwrite: log.was_overwrite,
+        ip_address: log.ip_address,
+        error_message: log.error_message,
+        token_name: log.token_name,
+        details: details || '-'
+      };
+    });
 
     // Get total count for pagination
     db.get('SELECT COUNT(*) as total FROM mcp_audit_log', (err, countResult) => {
       if (err) {
-        console.error('Error counting audit log entries:', err);
+        console.error('Error getting audit log count:', err);
         return res.status(500).json({ error: 'Database error' });
       }
-
+      
       res.json({
-        logs,
-        pagination: {
-          page,
-          limit,
-          total: countResult.total,
-          pages: Math.ceil(countResult.total / limit)
-        }
+        logs: transformedLogs,
+        page,
+        limit,
+        total: countResult.total,
+        pages: Math.ceil(countResult.total / limit)
       });
     });
   });
