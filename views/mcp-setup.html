@@ -441,6 +441,7 @@
             document.getElementById('claudeDesktopConfig').textContent = JSON.stringify({
                 "mcpServers": {
                     "step-challenge": {
+                        "type": "stdio",
                         "command": "python",
                         "args": [bridgeScriptPath],
                         "env": {
@@ -452,20 +453,8 @@
 
             // Cursor configuration (Local Bridge)
             document.getElementById('cursorConfig').textContent = JSON.stringify({
-                "step-challenge": {
-                    "command": "python",
-                    "args": [bridgeScriptPath],
-                    "env": {
-                        "STEP_TOKEN": placeholderToken
-                    }
-                }
-            }, null, 2);
-
-            // Claude Code configuration (Local Bridge)
-            document.getElementById('claudeCodeConfig').textContent = JSON.stringify({
-                "mcp_servers": [
-                    {
-                        "name": "step-challenge",
+                "mcpServers": {
+                    "step-challenge": {
                         "type": "stdio",
                         "command": "python",
                         "args": [bridgeScriptPath],
@@ -473,7 +462,21 @@
                             "STEP_TOKEN": placeholderToken
                         }
                     }
-                ]
+                }
+            }, null, 2);
+
+            // Claude Code configuration (Local Bridge)
+            document.getElementById('claudeCodeConfig').textContent = JSON.stringify({
+                "mcpServers": {
+                    "step-challenge": {
+                        "type": "stdio",
+                        "command": "python",
+                        "args": [bridgeScriptPath],
+                        "env": {
+                            "STEP_TOKEN": placeholderToken
+                        }
+                    }
+                }
             }, null, 2);
         }
 
