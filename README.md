@@ -11,15 +11,15 @@ A production-ready web application for tracking daily steps in company-wide chal
 - **Challenge System**: Time-bound challenges with Pacific Time zone support and configurable reporting thresholds
 - **Mobile Optimized**: Responsive glass-morphism UI design, cross-browser compatible (including Safari)
 - **Production Security**: CSRF protection, rate limiting, CSP headers, SQL injection prevention
-- **MCP Integration**: Local bridge for Claude Desktop/Cursor/Claude Code with secure stdio protocol
+- **MCP Integration**: Python bridge script (primary) and Node.js stdio server (alternate) for Claude Desktop/Cursor/Claude Code
 
 ## Recent Updates (July 30, 2025)
-- **🌉 Local MCP Bridge**: Secure stdio MCP server that proxies to our API via Bearer tokens
-- **🔒 Security-First Design**: Environment variable token handling, masked UI display, comprehensive security review
-- **🎛️ All-in-One Setup Page**: User-friendly setup with multi-client support and one-click downloads
-- **🤖 Full MCP Compliance**: Standards-compliant stdio MCP protocol for Claude Desktop, Cursor, and Claude Code
-- **🛡️ Production Security**: B+ security grade with token exposure vulnerabilities fixed
-- **📱 Simple User Experience**: Download script + configure environment variable - works in 2 minutes
+- **🐍 Python MCP Bridge**: Primary approach - single Python file with rich tool descriptions for optimal LLM integration
+- **🔗 Node.js MCP Server**: Alternate approach - full stdio protocol implementation for advanced users
+- **🔒 Security-First Design**: Environment variable token handling with secure authentication
+- **📁 Configuration Management**: Clear documentation for `claude.json` and config file locations
+- **🛡️ Production Security**: B+ security grade with comprehensive token validation
+- **📱 Simple User Experience**: One-click download + token setup - works locally with full control
 
 ## Previous Security Updates (July 29, 2025)
 - **🔒 Input Validation**: Comprehensive backend validation prevents type confusion and SQL injection attacks
@@ -136,68 +136,116 @@ Currently deployed at: **https://step-app-4x-yhw.fly.dev/**
 - **Admin Access**: Set `is_admin=1` in users table for admin panel access
 - **Testing**: Playwright test configuration included for browser automation
 
-## MCP (Model Context Protocol) API
+## MCP (Model Context Protocol) Integration
 
-The Step Challenge App provides a comprehensive MCP server implementation that enables programmatic access to step tracking functionality through a secure JSON-RPC 2.0 API.
+The Step Challenge App provides two MCP integration approaches for Claude Desktop, Cursor, and Claude Code:
+
+### **🐍 Python Bridge (Primary - Recommended)**
+Single Python file that bridges AI clients to the Step Challenge API with rich tool descriptions for optimal LLM performance. **Users prefer this approach** due to simplicity and widespread Python availability.
+
+### **🔗 Node.js Stdio Server (Alternate - Advanced)**  
+Full MCP protocol implementation for users who prefer Node.js or need advanced MCP features. See `USER_SETUP_GUIDE.md` for setup instructions.
 
 ### Overview
 
-The MCP API allows external applications, automation tools, and integrations to:
+Both MCP approaches allow AI assistants to:
 - Add and update daily step counts programmatically
 - Retrieve step history with flexible date filtering
 - Access user profile and challenge information
 - Maintain full audit trails with security logging
 
 **Key Features:**
-- **Token-based Authentication**: Secure MCP tokens with configurable permissions and scopes
+- **Local Execution**: MCP server runs on user's machine with full control
+- **Token-based Authentication**: Secure MCP tokens validate against remote API
 - **User Data Isolation**: Users can only access their own data through tokens
-- **Overwrite Protection**: Prevents accidental data loss with explicit overwrite flags
-- **Rate Limiting**: 60 requests/hour and 15 requests/minute per token
-- **Comprehensive Audit Logging**: All API actions are logged for security and debugging
+- **Stdio Protocol**: Standards-compliant MCP stdio communication
+- **No Network Latency**: Direct local execution with immediate responses
+- **Privacy-First**: Local processing with minimal data transmission
 
-### Admin Instructions
+### Admin Setup Instructions
 
-Administrators can manage MCP tokens through the admin API endpoints (no UI currently available):
-
-#### 1. **Create MCP Token**
+#### 1. **Create MCP Tokens for Users**
 ```bash
-# Create a new MCP token for a user
+# Use the interactive token creation tool
+python get_mcp_token.py --interactive
+
+# Or create via admin API
 POST /api/admin/mcp-tokens
 Content-Type: application/json
 X-CSRF-Token: [admin_csrf_token]
 
 {
   "user_id": 123,
-  "name": "My App Integration",
-  "permissions": "read_write",  // or "read_only"
+  "name": "Local MCP Integration",
+  "permissions": "read_write",
   "scopes": "steps:read,steps:write,profile:read",
   "expires_days": 30
 }
 ```
 
-#### 2. **List All MCP Tokens**
+#### 2. **Distribute MCP Server Files**
+- Provide users with `mcp-server.js` and setup instructions
+- Include token in secure communication (email, secure chat)
+- Point users to `USER_SETUP_GUIDE.md` for configuration
+
+#### 3. **Monitor Usage**
 ```bash
+# View MCP audit log
+GET /api/admin/mcp-audit?page=1&limit=50
+
+# List all active tokens
 GET /api/admin/mcp-tokens
 ```
 
-#### 3. **Revoke MCP Token**
-```bash
-DELETE /api/admin/mcp-tokens/[token_id]
-X-CSRF-Token: [admin_csrf_token]
+### End User Setup
+
+#### **Configuration Files**
+
+**For Claude Code** - Create `claude.json` in:
+- **Project directory**: `./claude.json`
+- **User directory**: `~/.config/claude/claude.json` (macOS/Linux)
+- **User directory**: `%APPDATA%\claude\claude.json` (Windows)
+
+```json
+{
+  "mcpServers": {
+    "step-challenge": {
+      "command": "node",
+      "args": ["/path/to/step-challenge/mcp-server.js"],
+      "env": {
+        "STEP_CHALLENGE_TOKEN": "your_mcp_token_here"
+      }
+    }
+  }
+}
 ```
 
-#### 4. **View MCP Audit Log**
+**For Claude Desktop** - Edit `claude_desktop_config.json` in:
+- **macOS**: `~/Library/Application Support/Claude/`
+- **Windows**: `%APPDATA%\Claude\`
+- **Linux**: `~/.config/claude/`
+
+**For Cursor** - Configure via MCP settings in Preferences
+
+#### **Testing the Setup**
 ```bash
-GET /api/admin/mcp-audit?page=1&limit=50
+# Test server directly
+STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+
+# Test with echo
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
 ```
 
-### End User Instructions
+#### **Usage Examples**
+Once configured, ask your AI assistant:
+- "Add 10,500 steps for today"
+- "Show my step progress this week"
+- "Check my step challenge profile"
 
-Users interact with the MCP API using their assigned tokens through the JSON-RPC 2.0 protocol:
-
-#### **API Endpoint**
-- **Remote MCP Server**: `POST /mcp`
-- **Capabilities Discovery**: `GET /mcp/capabilities`
+#### **Local MCP Server Details**
+- **Command**: `node mcp-server.js`
+- **Protocol**: Stdio-based JSON-RPC 2.0
+- **Authentication**: Environment variable `STEP_CHALLENGE_TOKEN`
 
 #### **Authentication**
 All API calls require a valid MCP token provided in the `params.token` field.
@@ -381,11 +429,17 @@ See `ADMIN_DISTRIBUTION_GUIDE.md` for complete workflow.
 
 ## MCP Integration Files
 
-### **Core MCP Implementation:**
-- `mcp-server.js` - Bearer token API with JSON-RPC 2.0 MCP protocol support
-- `server.js` - Express server with MCP endpoints, setup page, and bridge download
-- `step_bridge.py` - Local stdio MCP bridge script for AI clients
-- `views/mcp-setup.html` - All-in-one setup page with secure token handling
+### **🐍 Python Bridge (Primary):**
+- `step_bridge.py` - Single-file MCP bridge with rich tool descriptions
+- `views/mcp-setup.html` - Web-based setup page with one-click download
+- `server.js` - Download endpoint `/download/step_bridge.py`
+
+### **🔗 Node.js Stdio Server (Alternate):**
+- `mcp-server.js` - Full JSON-RPC 2.0 MCP protocol implementation
+- `USER_SETUP_GUIDE.md` - Setup instructions for Node.js approach
+
+### **Shared Infrastructure:**
+- `server.js` - Express server with MCP endpoints and token validation
 
 ### **User Experience:**
 - `/mcp-setup` - Authenticated setup page with multi-client configuration examples

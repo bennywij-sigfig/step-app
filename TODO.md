@@ -1,36 +1,39 @@
 # Step Challenge App - TODO List
 
-## 🚀 Current Status: PRODUCTION DEPLOYED WITH SECURE MCP BRIDGE ✅
+## 🚀 Current Status: PRODUCTION DEPLOYED WITH DUAL MCP APPROACHES ✅
 **Deployment:** Live on Fly.io at https://step-app-4x-yhw.fly.dev/  
 **Core functionality:** Step tracking, ranked/unranked leaderboards, admin theme system, mobile-responsive UI  
-**MCP Integration:** Local stdio bridge with secure Bearer token authentication  
-**Setup Experience:** All-in-one setup page with multi-client support and one-click downloads  
-**Security status:** B+ security grade with token exposure vulnerabilities fixed  
-**Client Support:** Claude Desktop, Cursor, Claude Code CLI, ChatGPT Desktop  
-**Last deployed:** July 30, 2025 (MCP setup page bug fixes + secure bridge architecture)
+**MCP Integration:** Python bridge (primary) + Node.js stdio server (alternate) with secure Bearer token authentication  
+**Setup Experience:** Web-based setup page with one-click Python bridge download OR advanced Node.js distribution  
+**Security status:** B+ security grade with comprehensive token management and user isolation  
+**Client Support:** Claude Desktop, Cursor, Claude Code CLI with both MCP approaches  
+**Last deployed:** July 30, 2025 (Coherent dual-approach MCP architecture with rich tool descriptions)
 
 ---
 
 ## 🎉 RECENTLY COMPLETED (July 30, 2025) ✅
 
-### MCP Setup Page Bug Fixes & UX Improvements
-- [x] **Fixed "Reveal Token" Button** - Removed CSP-violating inline handlers, replaced with addEventListener
-- [x] **Fixed JSON Configuration Examples** - Replaced real tokens with placeholders for security
-- [x] **Fixed Font Consistency** - Updated MCP setup page to match admin UI font stack
-- [x] **Fixed MCP Audit Log Display** - Resolved "Invalid Date" and "undefined" status/method issues
-- [x] **Improved No-Token User Experience** - Added proper messaging when users have no MCP tokens
-- [x] **Enhanced Token Security** - Configuration examples now always show placeholders
-- [x] **Added Clear File Placement Instructions** - New step 2 with `mv` command to place script in home directory
-- [x] **Updated Configuration Paths** - All examples now use `~/step_bridge.py` instead of placeholder paths
-- [x] **Improved Troubleshooting Section** - Updated with correct file paths and test commands
+### MCP Architecture Coherence & Dual-Approach Implementation
+- [x] **Python Bridge Script Created** - `step_bridge.py` with rich tool descriptions extracted from Node.js implementation
+- [x] **Rich LLM Context Preserved** - Full tool schemas with usage hints like "Typical daily counts: sedentary 2000-5000"
+- [x] **Dual Approach Documentation** - Clear separation between Python bridge (primary) and Node.js stdio (alternate)
+- [x] **Archive Cleanup** - Removed outdated `/archive/` directory with obsolete MCP implementations
+- [x] **Documentation Updates** - README.md and USER_SETUP_GUIDE.md clarified for both approaches
+- [x] **Setup Page Alignment** - `/mcp-setup` correctly configured for Python bridge with proper environment variables
+- [x] **Internal Coherence Achieved** - All MCP components now properly aligned and documented
 
-### Secure MCP Bridge Architecture Implementation (Production Ready)
-- [x] **Local MCP Bridge Script** - Created `step_bridge.py` with secure stdio MCP protocol implementation
-- [x] **Environment Variable Authentication** - Fixed token exposure via process lists using STEP_TOKEN env var
-- [x] **All-in-One Setup Page** - Built `/mcp-setup` with authenticated access and multi-client configuration
-- [x] **Secure Token Handling** - Implemented token masking with explicit reveal mechanism
-- [x] **Bridge Script Download** - Added `/download/step_bridge.py` endpoint with proper security headers
+### Python Bridge Implementation (Primary Approach - Production Ready)
+- [x] **Single-File Distribution** - Easy-to-distribute `step_bridge.py` with minimal dependencies (just aiohttp)  
+- [x] **Rich Tool Descriptions** - Preserved all detailed tool schemas from Node.js implementation for optimal LLM performance
+- [x] **Environment Variable Security** - Uses `STEP_TOKEN` env var to prevent command-line token exposure
+- [x] **Standards-Compliant MCP** - Full JSON-RPC 2.0 MCP protocol implementation with proper error handling
+- [x] **Web-Based Setup Experience** - `/mcp-setup` page with one-click download and copy-paste configurations
 - [x] **Multi-Client Support** - Configuration examples for Claude Desktop, Cursor, Claude Code CLI
+
+### Node.js Stdio Server (Alternate Approach - Advanced Users)
+- [x] **Advanced Implementation Preserved** - `mcp-server.js` maintained for users who prefer Node.js
+- [x] **Clear Documentation** - `USER_SETUP_GUIDE.md` updated to clarify it's for advanced Node.js approach
+- [x] **Distribution Model** - Admin-distributed server files for users who need full MCP protocol features
 
 ### Security Enhancements (B+ Security Grade)
 - [x] **Token Exposure Fixes** - Eliminated command line and web interface token exposure vulnerabilities
@@ -65,33 +68,39 @@
 
 ## 📊 MCP INTEGRATION STATUS (July 30, 2025)
 
-### ✅ **Local Bridge Implementation - PRODUCTION READY**
-- **Bridge Script**: `step_bridge.py` provides full stdio MCP protocol compliance
-- **Security Model**: Environment variable token passing (STEP_TOKEN) prevents process exposure
-- **API Integration**: Bridge proxies to secure Bearer token API at `/mcp` endpoint
-- **Error Handling**: Comprehensive error handling with proper MCP error responses
-- **Dependencies**: Only requires `aiohttp` - minimal installation footprint
+### ✅ **Dual-Approach Architecture - PRODUCTION READY**
+- **🐍 Python Bridge (Primary)**: `step_bridge.py` with rich tool descriptions for optimal LLM performance
+- **🔗 Node.js Stdio Server (Alternate)**: `mcp-server.js` for advanced users who prefer Node.js
+- **Coherent Implementation**: Both approaches use same remote API with identical security model
+- **Rich Tool Context**: Detailed schemas with usage hints preserved from Node.js implementation
+- **User Choice**: Simple Python bridge OR advanced Node.js server based on user preferences
 
-### ✅ **User Experience - SELF-SERVICE READY**
-- **Setup Page**: `/mcp-setup` provides authenticated access to setup instructions
-- **Multi-Client Support**: Configuration examples for Claude Desktop, Cursor, Claude Code CLI
-- **Token Security**: Masked display with explicit reveal mechanism
-- **Download System**: `/download/step_bridge.py` provides secure script distribution
-- **2-Minute Setup**: Complete setup process reduced to download + configure + add to client
+### ✅ **Python Bridge (Recommended) - SELF-SERVICE READY**
+- **Setup Page**: `/mcp-setup` provides authenticated access with one-click download
+- **Single File**: `step_bridge.py` with minimal dependencies (just `aiohttp`)
+- **Rich LLM Context**: Full tool descriptions with examples and typical value ranges
+- **Security Model**: Environment variable token passing (`STEP_TOKEN`) prevents process exposure
+- **2-Minute Setup**: Download → place in home directory → configure AI client
+
+### ✅ **Node.js Stdio Server (Advanced) - ADMIN DISTRIBUTED**
+- **Full MCP Protocol**: Complete JSON-RPC 2.0 implementation with advanced features
+- **Admin Distribution**: `mcp-server.js` + dependencies distributed by administrators
+- **Advanced Users**: For developers who prefer Node.js or need advanced MCP capabilities
+- **Setup Guide**: `USER_SETUP_GUIDE.md` provides complete Node.js setup instructions
 
 ### ✅ **Client Integration Status**
-- **Claude Desktop**: ✅ Working with stdio bridge configuration
-- **Cursor**: ✅ Working with stdio bridge configuration  
-- **Claude Code CLI**: ✅ Working with stdio bridge configuration
-- **ChatGPT Desktop**: ✅ Should work with stdio bridge (if MCP supported)
-- **Direct API**: ✅ Still available for custom integrations
+- **Claude Desktop**: ✅ Working with both Python bridge and Node.js stdio approaches
+- **Cursor**: ✅ Working with both Python bridge and Node.js stdio approaches
+- **Claude Code CLI**: ✅ Working with both Python bridge and Node.js stdio approaches
+- **ChatGPT Desktop**: ✅ Should work with both approaches (if MCP supported)
+- **Direct HTTP API**: ✅ Still available for custom integrations at `/mcp` endpoint
 
 ### 🎯 **Architecture Benefits**
-- **No Remote MCP Complexity**: Bypassed OAuth 2.0 DCR requirements that Claude Code expects
-- **Standards Compliant**: Full stdio MCP protocol implementation
-- **Security Enhanced**: Fixed token exposure vulnerabilities from security review
-- **User Friendly**: Self-service setup with visual guides and copy-paste configurations
-- **Admin Simplified**: Just share setup page URL, users handle their own configuration
+- **User Choice**: Simple Python bridge for most users, advanced Node.js for power users
+- **Standards Compliant**: Both approaches implement full MCP stdio protocol
+- **Rich LLM Integration**: Preserved detailed tool descriptions from Node.js implementation
+- **Flexible Distribution**: Web-based self-service OR admin-managed distribution
+- **Internal Coherence**: All documentation and implementations properly aligned
 
 ---
 
@@ -314,7 +323,36 @@ All remote MCP functionality is complete and deployed to production. Security-re
 - ✅ **Documentation Updated** - All guides reflect simplified remote-only approach
 - ✅ **Production Testing Verified** - All MCP endpoints working with proper CORS and authentication
 
-**🚀 DEPLOYMENT STATUS:** Remote MCP server architecture deployed and production-ready - backup strategy remains critical before scaling
+**🚀 DEPLOYMENT STATUS:** Dual-approach MCP architecture deployed and production-ready - backup strategy remains critical before scaling
+
+---
+
+## 📁 MCP INTEGRATION FILES (Current Architecture)
+
+### **🐍 Python Bridge (Primary Approach):**
+- `step_bridge.py` - Single-file MCP bridge with rich tool descriptions
+- `views/mcp-setup.html` - Web-based setup page with one-click download
+- `server.js` - Download endpoint `/download/step_bridge.py`
+
+### **🔗 Node.js Stdio Server (Alternate Approach):**
+- `mcp-server.js` - Full JSON-RPC 2.0 MCP protocol implementation
+- `USER_SETUP_GUIDE.md` - Setup instructions for Node.js approach
+- `database.js` - Required dependency for Node.js approach
+
+### **Shared Infrastructure:**
+- `server.js` - Express server with MCP endpoints and token validation
+- `database.js` - MCP token tables and audit logging
+- `views/mcp-setup.html` - Setup page supports both approaches
+
+### **Documentation:**
+- `README.md` - Updated with dual-approach documentation
+- `USER_SETUP_GUIDE.md` - Node.js setup guide (advanced users)
+- `MCP_TESTING_GUIDE.md` - Testing and integration guide
+- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for MCP access
+
+### **Admin Tools:**
+- `get_mcp_token.py` - CLI tool for creating MCP tokens
+- Admin panel MCP token management (web UI)
 
 ---
 

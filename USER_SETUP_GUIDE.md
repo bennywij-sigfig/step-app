@@ -1,30 +1,37 @@
-# Step Challenge Remote MCP Integration for End Users
+# Step Challenge Node.js MCP Server Setup Guide (Alternate Approach)
 
-This guide helps Claude Desktop and Cursor users connect to the Step Challenge app for step tracking via remote MCP servers.
+**Note**: This guide covers the Node.js MCP server approach. **For the simpler Python bridge approach (recommended for most users), visit the web-based setup page at https://step-app-4x-yhw.fly.dev/mcp-setup**
+
+This guide helps advanced users set up the Node.js MCP server for Claude Desktop, Cursor, and Claude Code integration.
 
 ## 🎯 What This Does
 
-Once set up, you can ask Claude Desktop or Cursor to:
+Once set up, you can ask Claude Desktop, Cursor, or Claude Code to:
 - "Add 12,000 steps for today"
 - "Show my step progress for this week" 
 - "Check if I met my 10,000 step goal yesterday"
 - "Update my steps for multiple days"
 
-Claude will automatically interact with your Step Challenge account through the remote server!
+Claude will automatically interact with your Step Challenge account through the local MCP server!
 
 ## 📋 Prerequisites
 
-- **Claude Desktop** or **Cursor** installed on your computer (MCP does NOT work with Claude.ai webapp)
+- **Claude Desktop**, **Cursor**, or **Claude Code** installed on your computer (MCP does NOT work with Claude.ai webapp)
+- **Node.js** installed on your system (required for this advanced approach)
 - An account on the Step Challenge app (contact your admin to get access)
-- **No Python, file downloads, or local setup required!**
+- The Step Challenge MCP server files (provided by your admin)
 
-## 🔑 Step 1: Get Your MCP Token
+**💡 Tip**: If you don't have Node.js or prefer a simpler setup, use the Python bridge approach at https://step-app-4x-yhw.fly.dev/mcp-setup
 
-Contact your Step Challenge administrator and ask them to create an MCP token for your account. They will:
+## 🔑 Step 1: Get Your MCP Token and Server Files
 
-1. Log into the admin panel
-2. Create a token specifically for you  
-3. Provide you with a token that looks like: `mcp_12345678-abcd-efgh-ijkl-mnopqrstuvwx_a1b2c3d4`
+Contact your Step Challenge administrator to get:
+
+1. **MCP Token**: A token that looks like `mcp_12345678-abcd-efgh-ijkl-mnopqrstuvwx_a1b2c3d4`
+2. **Server Files**: The Step Challenge MCP server directory containing `mcp-server.js` and related files  
+3. **Setup Instructions**: This guide for the Node.js approach
+
+**💡 Alternative**: Get your token directly from https://step-app-4x-yhw.fly.dev/mcp-setup if you have access
 
 **Keep this token secure** - it provides access to your step data!
 
@@ -32,49 +39,71 @@ Contact your Step Challenge administrator and ask them to create an MCP token fo
 
 ### For Claude Desktop:
 
-1. **Open Claude Desktop Settings**
-2. **Navigate to Connectors** (or similar MCP settings section)
-3. **Add a new remote MCP server** with these settings:
-   - **Name**: `Step Challenge`
-   - **URL**: `https://step-app-4x-yhw.fly.dev/mcp`
-   - **Transport Type**: `Streamable HTTP`
-   - **Authorization Token**: `your_mcp_token_here`
+1. **Locate your Claude Desktop configuration directory**:
+   - **macOS**: `~/Library/Application Support/Claude/`
+   - **Windows**: `%APPDATA%\Claude\`
+   - **Linux**: `~/.config/claude/`
 
-**Alternative JSON Configuration Method:**
-If your Claude Desktop uses JSON config files, add this to your config:
+2. **Create or edit `claude_desktop_config.json`** in the configuration directory:
 
 ```json
 {
   "mcpServers": {
     "step-challenge": {
-      "type": "url",
-      "url": "https://step-app-4x-yhw.fly.dev/mcp",
-      "name": "step-challenge",
-      "authorization_token": "your_mcp_token_here"
+      "command": "node",
+      "args": ["/path/to/step-challenge/mcp-server.js"],
+      "env": {
+        "STEP_CHALLENGE_TOKEN": "your_mcp_token_here"
+      }
     }
   }
 }
 ```
 
+**Replace `/path/to/step-challenge/mcp-server.js` with the actual path to your MCP server file.**
+
 ### For Cursor:
 
 1. **Open Cursor Settings**: Go to Preferences/Settings
-2. **Find MCP Configuration**: Look for "MCP Servers" or "Remote Servers"
-3. **Add the remote server** using the same settings as Claude Desktop above
+2. **Find MCP Configuration**: Look for "MCP Servers" or "Extensions"
+3. **Add a new MCP server** with:
+   - **Command**: `node`
+   - **Args**: `["/path/to/step-challenge/mcp-server.js"]`
+   - **Environment Variables**: `STEP_CHALLENGE_TOKEN=your_mcp_token_here`
 
 ### For Claude Code:
 
-Claude Code supports remote MCP servers through project configuration. Add this to your project settings or use the MCP add command:
+1. **Create a `claude.json` file** in your project root or home directory:
 
-```bash
-claude mcp add --transport http step-challenge https://step-app-4x-yhw.fly.dev/mcp
+```json
+{
+  "mcpServers": {
+    "step-challenge": {
+      "command": "node",
+      "args": ["/path/to/step-challenge/mcp-server.js"],
+      "env": {
+        "STEP_CHALLENGE_TOKEN": "your_mcp_token_here"
+      }
+    }
+  }
+}
 ```
+
+**Configuration File Locations for Claude Code:**
+- **Project-specific**: `./claude.json` (in your current directory)
+- **User-wide**: `~/.config/claude/claude.json` (macOS/Linux) or `%APPDATA%\claude\claude.json` (Windows)
+- **Environment variable**: Set `CLAUDE_CONFIG_PATH` to point to your config file
 
 ## 🚀 Step 3: Test Your Setup
 
-1. **Restart** your MCP client (Claude Desktop, Cursor, or Claude Code) completely
-2. **Start a new conversation**
-3. **Ask**: *"Can you check my step challenge profile?"*
+1. **Ensure Node.js is installed**: Run `node --version` in your terminal
+2. **Test the MCP server directly** (optional):
+   ```bash
+   STEP_CHALLENGE_TOKEN=your_token_here node /path/to/step-challenge/mcp-server.js
+   ```
+3. **Restart** your MCP client (Claude Desktop, Cursor, or Claude Code) completely
+4. **Start a new conversation**
+5. **Ask**: *"Can you check my step challenge profile?"*
 
 If it works, you should see your user information and current challenge details!
 
@@ -124,10 +153,12 @@ If it works, you should see your user information and current challenge details!
 
 ### "MCP server not found" or connection errors:
 
-1. **Check URL** - Make sure you're using `https://step-app-4x-yhw.fly.dev/mcp`
-2. **Check token** - Ensure your token is copied correctly with no extra spaces
-3. **Check internet** - Make sure you can access the Step Challenge website
-4. **Restart completely** - Close and reopen your MCP client
+1. **Check Node.js** - Ensure Node.js is installed and accessible: `node --version`
+2. **Check file path** - Verify the path to `mcp-server.js` is correct and accessible
+3. **Check token** - Ensure your token is copied correctly with no extra spaces
+4. **Check permissions** - Make sure the MCP server file is readable
+5. **Test manually** - Try running the server directly: `STEP_CHALLENGE_TOKEN=your_token node /path/to/mcp-server.js`
+6. **Restart completely** - Close and reopen your MCP client
 
 ### "Authentication failed":
 
@@ -141,11 +172,12 @@ If it works, you should see your user information and current challenge details!
 2. **Check step counts** - Must be between 0 and 70,000
 3. **Overwrite protection** - If steps exist, say "update" or "overwrite" in your request
 
-### Server connection issues:
+### Local server issues:
 
-1. **Test in browser** - Visit https://step-app-4x-yhw.fly.dev/ to verify the server is running
-2. **Check firewall** - Ensure your firewall allows HTTPS connections
-3. **Contact admin** - The server might be experiencing issues
+1. **Check server logs** - Look at the console output when the MCP server starts
+2. **Verify network access** - Ensure your system can reach https://step-app-4x-yhw.fly.dev/
+3. **Check Node.js version** - The server requires Node.js 14 or higher
+4. **Contact admin** - The remote API might be experiencing issues
 
 ## 📞 Getting Help
 
@@ -183,18 +215,21 @@ Steps: 11,500 (goal: 10,000)
 Exceeded by: 1,500 steps"
 ```
 
-## 🆚 What Changed from Local MCP Servers
+## 🆚 Advantages of Local Stdio MCP Setup
 
-If you previously used local MCP servers with Python files:
+This local stdio MCP server approach provides:
 
-- **✅ No more Python installation required**
-- **✅ No more file downloads or local setup**
-- **✅ No more complex JSON configuration**
-- **✅ Automatic updates when the server is updated**
-- **✅ Better security and reliability**
-- **✅ Works across all your devices with the same token**
+- **✅ Direct control** - Server runs locally on your machine
+- **✅ No network dependencies** - Works offline after initial token validation
+- **✅ Better privacy** - Data processing happens locally
+- **✅ Faster response times** - No network latency for MCP operations
+- **✅ Customizable** - You can modify the server behavior if needed
+- **✅ Standards compliant** - Uses official MCP stdio protocol
 
-The remote MCP server approach is much simpler and more reliable than the previous local setup!
+**Trade-offs compared to remote setup:**
+- **Requires Node.js installation** - You need Node.js on your system
+- **Manual updates** - Server files need to be updated manually when available
+- **Local setup** - Requires configuration file creation and path management
 
 ---
 

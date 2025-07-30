@@ -35,11 +35,11 @@ Production web application for tracking daily steps in company-wide challenges (
 - `public/admin.js` - Admin panel functionality and theme management
 - `fly.toml` - Optimal deployment configuration (avoids CLI crashes)
 
-### **Remote MCP Integration**
-- `mcp-server.js` - Secure JSON-RPC 2.0 server with Streamable HTTP support
-- `server.js` - Main server with `/mcp` endpoint for remote access
+### **Local Stdio MCP Integration**
+- `mcp-server.js` - Secure stdio-based MCP server with JSON-RPC 2.0 support
+- `server.js` - Main server with `/mcp` endpoint for token validation
 - `get_mcp_token.py` - Admin tool for creating and managing MCP tokens
-- `test_mcp_python.py` - Comprehensive testing suite for remote server testing
+- `test_mcp_python.py` - Comprehensive testing suite for API and MCP server testing
 
 ### **Documentation & Guides**
 - `README.md` - Complete project documentation with remote MCP integration
@@ -55,33 +55,29 @@ npm start          # Start production server
 npm run dev        # Development mode with auto-restart
 ```
 
-### **Remote MCP Integration**
+### **Local Stdio MCP Integration**
 ```bash
 # Admin: Create MCP tokens for users
 python get_mcp_token.py --interactive
 
-# Testing: Test remote MCP server
+# Testing: Test API and local MCP server
 python test_mcp_python.py --token YOUR_TOKEN --test-all
 
-# Test remote server endpoint directly
-curl -X POST https://step-app-4x-yhw.fly.dev/mcp \
-  -H "Content-Type: application/json" \
-  -d '{
-    "jsonrpc": "2.0",
-    "method": "get_user_profile", 
-    "params": {"token": "YOUR_TOKEN"},
-    "id": 1
-  }'
+# Test local MCP server directly
+STEP_CHALLENGE_TOKEN=YOUR_TOKEN node mcp-server.js
+
+# Test with Claude Code
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=YOUR_TOKEN node mcp-server.js
 ```
 
 ## Recent Updates (July 30, 2025)
 
-### 🌐 **Remote MCP Server Implementation**
-- **Streamable HTTP Support**: Added `/mcp` endpoint for remote MCP server connectivity
-- **Zero-Installation Setup**: Users only need URL and token - no Python or file downloads
-- **Simplified Distribution**: Admins distribute URL + token instead of complex installations
-- **Clean Architecture**: Single `/mcp` endpoint for remote MCP server access
-- **Enhanced Headers**: Proper Content-Type and Cache-Control headers for Streamable HTTP
+### 🌐 **Local Stdio MCP Server Implementation**
+- **Stdio Protocol Support**: Full MCP stdio protocol compliance for local integration
+- **Node.js Based**: Users need Node.js installed - server files distributed by admin
+- **Local Control**: Users run MCP server locally with full control and privacy
+- **Standards Compliant**: Follows official MCP protocol for Claude Desktop/Cursor/Claude Code
+- **Direct Communication**: No network latency - immediate responses via stdio
 
 ### 🎛️ **MCP Admin UI Enhanced**
 - **Token Management Interface**: Full-featured admin panel with creation, revocation, and monitoring
@@ -90,10 +86,10 @@ curl -X POST https://step-app-4x-yhw.fly.dev/mcp \
 - **Real-time Activity Dashboard**: MCP API monitoring with comprehensive filtering and search capabilities
 
 ### 🛡️ **Security & Reliability**
-- **Streamable HTTP Transport**: More reliable than previous SSE-based approaches
-- **Centralized Management**: All users connect to same server for consistency
-- **HTTPS Encryption**: All MCP communication secured via TLS
-- **Rate Limiting**: Same security controls apply to remote endpoints
+- **Local Execution**: MCP server runs locally - no network exposure
+- **Token Authentication**: Secure token-based auth with remote API validation
+- **User Isolation**: Each token only accesses associated user data
+- **Audit Logging**: All MCP actions logged to remote API for monitoring
 
 ## Previous Updates (July 29, 2025)
 
@@ -136,8 +132,8 @@ curl -X POST https://step-app-4x-yhw.fly.dev/mcp \
 - **Challenges**: Time-bound with configurable reporting thresholds and admin controls
 - **UI**: Mobile-first glass-morphism design with responsive layouts
 - **Security**: CSRF tokens, rate limiting (10/hour magic links, 100/hour API, 50/hour admin), comprehensive input validation, parameterized queries
-- **Remote MCP API**: Streamable HTTP protocol with token-based auth, user isolation, and comprehensive audit logging
-- **AI Integration**: Native Claude Desktop/Cursor/Claude Code support with zero-installation remote server
+- **Local MCP API**: Stdio protocol with token-based auth, user isolation, and comprehensive audit logging
+- **AI Integration**: Native Claude Desktop/Cursor/Claude Code support via local stdio MCP server
 
 ## Security & Infrastructure Status
 
@@ -182,7 +178,7 @@ curl -X POST https://step-app-4x-yhw.fly.dev/mcp \
 
 #### **Remote MCP Server & Security**
 - [x] Design and implement MCP JSON-RPC 2.0 API with enterprise security
-- [x] Add Streamable HTTP transport support with `/mcp` endpoint
+- [x] Add stdio MCP protocol support with local server integration
 - [x] Add user data isolation and authorization controls
 - [x] Implement SQL injection prevention with safe query builders
 - [x] Add comprehensive input validation and prototype pollution protection
@@ -192,18 +188,18 @@ curl -X POST https://step-app-4x-yhw.fly.dev/mcp \
 - [x] Security review by Gemini (B+ grade, production ready)
 - [x] Deploy remote MCP server to production with full testing
 
-#### **Zero-Installation Distribution**
+#### **Local Stdio MCP Distribution**
 - [x] Create comprehensive Python testing suite (test_mcp_python.py)
 - [x] Build admin token management tools (get_mcp_token.py)
-- [x] Develop remote MCP server integration
-- [x] Update documentation for simplified remote setup
-- [x] Remove Python installation requirements for end users
+- [x] Develop local stdio MCP server integration
+- [x] Update documentation for local MCP setup
+- [x] Create Node.js-based MCP server for local deployment
 
 #### **Production Deployment**
 - [x] All code committed, pushed to GitHub, and deployed to Fly.io
-- [x] Production remote MCP server fully operational and tested
-- [x] Documentation updated with remote MCP integration guides
-- [x] Ready for enterprise distribution with zero end-user installation
+- [x] Production local MCP server fully operational and tested
+- [x] Documentation updated with stdio MCP integration guides
+- [x] Ready for enterprise distribution with local MCP server files
 
 ### 🔄 **Future Enhancements (Post-Launch)**
 - [ ] Consider migrating from ORD to Singapore (sin) region for better global latency

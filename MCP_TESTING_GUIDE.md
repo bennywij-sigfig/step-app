@@ -11,11 +11,18 @@ The Step Challenge App provides a secure MCP API that allows programmatic access
 
 ## 📋 Prerequisites
 
-### 1. Install Python Dependencies
+### 1. Install Dependencies
+**For Python Testing Scripts:**
 ```bash
 pip install requests
 # OR use the requirements file
 pip install -r requirements.txt
+```
+
+**For Local MCP Server:**
+```bash
+# Ensure Node.js is installed
+node --version  # Should be 14 or higher
 ```
 
 ### 2. Admin Access Required
@@ -96,10 +103,23 @@ This provides a menu-driven interface to test all MCP functions:
 - ✅ Add steps with overwrite protection
 - ✅ Retrieve step history with date filtering
 
-## 🤖 Step 3: Using with LLM Agents
+## 🤖 Step 3: Local Stdio MCP Server Testing
+
+### Testing the Local MCP Server
+
+**Start the MCP server manually for testing:**
+```bash
+STEP_CHALLENGE_TOKEN=your_mcp_token_here node mcp-server.js
+```
+
+**Test with a simple JSON-RPC call:**
+```bash
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+```
 
 ### Claude Code Integration
 
+**Option 1: Direct API Testing (for debugging):**
 You can use the MCP API directly within Claude Code or other LLM environments:
 
 ```python
@@ -138,14 +158,39 @@ history = call_mcp_api("get_steps", {
 print(json.dumps(history, indent=2))
 ```
 
+**Option 2: Stdio MCP Integration (recommended):**
+
+1. **Create `claude.json` configuration:**
+```json
+{
+  "mcpServers": {
+    "step-challenge": {
+      "command": "node",
+      "args": ["/path/to/step-challenge/mcp-server.js"],
+      "env": {
+        "STEP_CHALLENGE_TOKEN": "your_mcp_token_here"
+      }
+    }
+  }
+}
+```
+
+2. **Test in Claude Code:**
+```bash
+# Start Claude Code with MCP enabled
+claude --mcp
+
+# Ask Claude: "Can you check my step challenge profile?"
+```
+
 ### Other LLM Integrations
 
-The MCP API follows standard JSON-RPC 2.0 protocol, making it compatible with:
-- OpenAI Function Calling
-- Anthropic Tool Use
-- Custom automation scripts
-- CI/CD pipelines
-- Health monitoring systems
+The local MCP server follows standard MCP stdio protocol, making it compatible with:
+- Claude Desktop (via `claude_desktop_config.json`)
+- Cursor (via MCP configuration)
+- Custom MCP clients
+- Any stdio-based MCP integration
+- Development and testing tools
 
 ## 📊 Available MCP Methods
 
@@ -272,12 +317,51 @@ def check_daily_goal(goal=10000):
             print(f"📈 Keep going! {remaining:,} steps to reach goal")
 ```
 
+## 🧪 Testing Workflows
+
+### 1. Test Token and API Access
+```bash
+# Get a token first
+python get_mcp_token.py --interactive
+
+# Test the remote API endpoints
+python test_mcp_python.py --token YOUR_TOKEN --test-all
+```
+
+### 2. Test Local MCP Server
+```bash
+# Test server startup
+STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+
+# Test with echo (in another terminal)
+echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+```
+
+### 3. Test Claude Code Integration
+```bash
+# Ensure claude.json is configured correctly
+cat claude.json
+
+# Start Claude Code and test MCP tools
+claude
+# Ask: "Show me the available MCP tools"
+# Ask: "Check my step challenge profile"
+```
+
 ## 🔗 Next Steps
 
 1. **Create your first MCP token** using the interactive script
-2. **Run the comprehensive test suite** to verify functionality
-3. **Integrate with your automation tools** using the API examples
-4. **Monitor usage** through the admin audit logs
-5. **Scale up** by creating additional tokens as needed
+2. **Test the local MCP server** with manual JSON-RPC calls
+3. **Configure your MCP client** (Claude Desktop, Cursor, or Claude Code)
+4. **Run comprehensive integration tests** to verify all functionality
+5. **Monitor usage** through the admin audit logs
+6. **Deploy to additional users** by distributing server files and tokens
+
+**File Locations Summary:**
+- **MCP Server**: `mcp-server.js` (Node.js stdio MCP server)
+- **Token Creation**: `get_mcp_token.py` (admin tool)
+- **API Testing**: `test_mcp_python.py` (comprehensive test suite)
+- **Claude Code Config**: `claude.json` (project or user directory)
+- **Claude Desktop Config**: `claude_desktop_config.json` (app data directory)
 
 For more advanced usage, see the complete API documentation in the main README.md file.
