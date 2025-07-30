@@ -20,6 +20,9 @@
 - [x] **Fixed MCP Audit Log Display** - Resolved "Invalid Date" and "undefined" status/method issues
 - [x] **Improved No-Token User Experience** - Added proper messaging when users have no MCP tokens
 - [x] **Enhanced Token Security** - Configuration examples now always show placeholders
+- [x] **Added Clear File Placement Instructions** - New step 2 with `mv` command to place script in home directory
+- [x] **Updated Configuration Paths** - All examples now use `~/step_bridge.py` instead of placeholder paths
+- [x] **Improved Troubleshooting Section** - Updated with correct file paths and test commands
 
 ### Secure MCP Bridge Architecture Implementation (Production Ready)
 - [x] **Local MCP Bridge Script** - Created `step_bridge.py` with secure stdio MCP protocol implementation
