@@ -58,10 +58,6 @@ document.addEventListener('DOMContentLoaded', function() {
             showView('users');
         });
         
-        document.getElementById('teamsBtn').addEventListener('click', () => {
-            showView('teams');
-            loadTeamLeaderboard();
-        });
         
         document.getElementById('manageTeamsBtn').addEventListener('click', () => {
             showView('manageTeams');
@@ -106,54 +102,131 @@ document.addEventListener('DOMContentLoaded', function() {
                 const users = await usersRes.json();
                 const teams = await teamsRes.json();
                 
-                const usersTable = document.getElementById('usersTable');
-                usersTable.innerHTML = `
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Team</th>
-                                <th>Total Steps</th>
-                                <th>Days Logged</th>
-                                <th>Admin</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${users.map(user => `
-                                <tr>
-                                    <td>${user.name}</td>
-                                    <td>${user.email}</td>
-                                    <td>
-                                        <select id="team-${user.id}" class="team-select" data-user-id="${user.id}">
-                                            <option value="">No Team</option>
-                                            ${teams.map(team => 
-                                                `<option value="${team.name}" ${user.team === team.name ? 'selected' : ''}>${team.name}</option>`
-                                            ).join('')}
-                                        </select>
-                                    </td>
-                                    <td>${user.total_steps.toLocaleString()}</td>
-                                    <td>${user.days_logged}</td>
-                                    <td><span style="font-weight: bold; color: ${user.is_admin ? '#28a745' : '#dc3545'}">${user.is_admin ? 'Yes' : 'No'}</span></td>
-                                    <td class="actions-cell">
-                                        <button class="action-btn save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled title="Save team assignment">
-                                            💾
-                                        </button>
-                                        <button class="action-btn clear-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Clear all steps for this user">
-                                            🗑️
-                                        </button>
-                                        <button class="action-btn delete-btn delete-user-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Delete user account">
-                                            ❌
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
+                // Store original users data for sorting
+                window.usersData = users;
+                window.teamsData = teams;
+                
+                renderUsersTable(users, teams);
             } catch (error) {
                 document.getElementById('usersTable').innerHTML = '<p>Error loading users</p>';
+            }
+        }
+
+        // Table sorting state
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+
+        // Render users table with sorting capability
+        function renderUsersTable(users, teams) {
+            const usersTable = document.getElementById('usersTable');
+            usersTable.innerHTML = `
+                <table id="users-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-column="name">Name <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="email">Email <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="team">Team <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="total_steps">Total Steps <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="days_logged">Days Logged <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="is_admin">Admin <span class="sort-indicator"></span></th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td>
+                                    <select id="team-${user.id}" class="team-select" data-user-id="${user.id}">
+                                        <option value="">No Team</option>
+                                        ${teams.map(team => 
+                                            `<option value="${team.name}" ${user.team === team.name ? 'selected' : ''}>${team.name}</option>`
+                                        ).join('')}
+                                    </select>
+                                </td>
+                                <td>${user.total_steps.toLocaleString()}</td>
+                                <td>${user.days_logged}</td>
+                                <td><span style="font-weight: bold; color: ${user.is_admin ? '#28a745' : '#dc3545'}">${user.is_admin ? 'Yes' : 'No'}</span></td>
+                                <td class="actions-cell">
+                                    <button class="action-btn save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled title="Save team assignment">
+                                        💾
+                                    </button>
+                                    <button class="action-btn clear-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Clear all steps for this user">
+                                        🗑️
+                                    </button>
+                                    <button class="action-btn delete-btn delete-user-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Delete user account">
+                                        ❌
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            // Add click event listeners to sortable headers
+            document.querySelectorAll('.sortable').forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.column;
+                    sortUsersTable(column);
+                });
+                header.style.cursor = 'pointer';
+            });
+
+            // Update sort indicators
+            updateSortIndicators();
+        }
+
+        // Sort users table by column
+        function sortUsersTable(column) {
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+
+            const sortedUsers = [...window.usersData].sort((a, b) => {
+                let aValue = a[column];
+                let bValue = b[column];
+
+                // Handle special cases
+                if (column === 'team') {
+                    aValue = aValue || '';
+                    bValue = bValue || '';
+                }
+
+                // Convert to appropriate types for comparison
+                if (typeof aValue === 'string' && typeof bValue === 'string') {
+                    aValue = aValue.toLowerCase();
+                    bValue = bValue.toLowerCase();
+                }
+
+                let comparison = 0;
+                if (aValue < bValue) {
+                    comparison = -1;
+                } else if (aValue > bValue) {
+                    comparison = 1;
+                }
+
+                return currentSortDirection === 'asc' ? comparison : -comparison;
+            });
+
+            renderUsersTable(sortedUsers, window.teamsData);
+        }
+
+        // Update sort indicators
+        function updateSortIndicators() {
+            document.querySelectorAll('.sort-indicator').forEach(indicator => {
+                indicator.textContent = '';
+            });
+
+            if (currentSortColumn) {
+                const activeHeader = document.querySelector(`[data-column="${currentSortColumn}"] .sort-indicator`);
+                if (activeHeader) {
+                    activeHeader.textContent = currentSortDirection === 'asc' ? ' ↑' : ' ↓';
+                }
             }
         }
 
@@ -209,138 +282,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
                 saveBtn.disabled = false;
                 saveBtn.classList.remove('save-active');
-            }
-        }
-
-        // Load team leaderboard
-        async function loadTeamLeaderboard() {
-            try {
-                const response = await fetch('/api/team-leaderboard');
-                const data = await response.json();
-                
-                const teamLeaderboard = document.getElementById('teamLeaderboard');
-                
-                // Handle different response types (same logic as main dashboard)
-                if (data.type === 'insufficient_data') {
-                    teamLeaderboard.innerHTML = `<div class="info-message" style="background: rgba(255, 193, 7, 0.1); padding: 20px; border-radius: 12px; border: 1px solid rgba(255, 193, 7, 0.2); margin-bottom: 20px;">
-                        <h3 style="color: #856404; margin: 0 0 10px 0;">${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>
-                        <p style="color: #856404; margin: 0 0 10px 0;">${data.message}</p>
-                        <p style="font-size: 0.9em; color: #6c757d; margin: 0;">
-                            ${data.meta.actual_entries}/${data.meta.expected_entries} expected team entries 
-                            (${data.meta.reporting_percentage}% team participation)
-                        </p>
-                    </div>`;
-                    return;
-                }
-                
-                // Handle legacy all-time format or new challenge format
-                let challengeInfo = '';
-                
-                if (data.type === 'all_time') {
-                    challengeInfo = '<h3 style="color: #555; margin: 0 0 20px 0;">All-Time Team Rankings</h3>';
-                } else if (data.type === 'challenge') {
-                    challengeInfo = `<h3 style="color: #555; margin: 0 0 20px 0;">${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>`;
-                }
-                
-                let html = challengeInfo;
-                
-                // Show ranked teams section
-                if (data.data && data.data.ranked && data.data.ranked.length > 0) {
-                    html += `<div style="margin-bottom: 30px;">
-                        <h4 style="color: #28a745; margin: 0 0 15px 0; font-weight: 600;">Ranked Teams</h4>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Team</th>
-                                    <th>Members</th>
-                                    <th>Reporting Rate</th>
-                                    <th>Steps/Day</th>
-                                    <th>Total Steps</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.data.ranked.map((team, index) => `
-                                    <tr style="background: rgba(40, 167, 69, 0.05);">
-                                        <td><span class="team-rank">#${index + 1}</span></td>
-                                        <td><strong>${team.team}</strong></td>
-                                        <td>${team.member_count}</td>
-                                        <td><span style="color: #28a745; font-weight: 500;">${team.team_reporting_rate >= 1 ? Math.round(team.team_reporting_rate) : team.team_reporting_rate}%</span></td>
-                                        <td><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong></td>
-                                        <td>${team.total_steps.toLocaleString()}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>`;
-                }
-                
-                // Show unranked teams section
-                if (data.data && data.data.unranked && data.data.unranked.length > 0) {
-                    html += `<div>
-                        <h4 style="color: #ffc107; margin: 0 0 10px 0; font-weight: 600;">Unranked Teams</h4>
-                        <p style="font-size: 0.85em; color: #6c757d; margin: 0 0 15px 0;">Need more consistent team reporting to be ranked</p>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Team</th>
-                                    <th>Members</th>
-                                    <th>Reporting Rate</th>
-                                    <th>Steps/Day</th>
-                                    <th>Total Steps</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.data.unranked.map((team) => `
-                                    <tr style="opacity: 0.8; background: rgba(255, 193, 7, 0.05);">
-                                        <td><span style="color: #6c757d;">-</span></td>
-                                        <td><strong>${team.team}</strong></td>
-                                        <td>${team.member_count}</td>
-                                        <td><span style="color: #ffc107; font-weight: 500;">${team.team_reporting_rate >= 1 ? Math.round(team.team_reporting_rate) : team.team_reporting_rate}%</span></td>
-                                        <td><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong></td>
-                                        <td>${team.total_steps.toLocaleString()}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>`;
-                }
-                
-                // Handle legacy array format (all-time rankings) or empty data
-                if (Array.isArray(data)) {
-                    if (data.length === 0) {
-                        html = '<p>No teams with members yet.</p>';
-                    } else {
-                        html = `<table>
-                            <thead>
-                                <tr>
-                                    <th>Rank</th>
-                                    <th>Team</th>
-                                    <th>Members</th>
-                                    <th>Steps/Day</th>
-                                    <th>Total Steps</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${data.map((team, index) => `
-                                    <tr>
-                                        <td><span class="team-rank">#${index + 1}</span></td>
-                                        <td><strong>${team.team}</strong></td>
-                                        <td>${team.member_count}</td>
-                                        <td><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong></td>
-                                        <td>${team.total_steps.toLocaleString()}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>`;
-                    }
-                }
-                
-                teamLeaderboard.innerHTML = html;
-            } catch (error) {
-                console.error('Team leaderboard error:', error);
-                document.getElementById('teamLeaderboard').innerHTML = '<p>Error loading team leaderboard</p>';
             }
         }
 

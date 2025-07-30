@@ -165,6 +165,22 @@
             backdrop-filter: blur(10px);
         }
         
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+        }
+        
+        th.sortable:hover {
+            background: rgba(255, 255, 255, 0.6);
+        }
+        
+        .sort-indicator {
+            color: var(--primary-color);
+            font-weight: bold;
+            margin-left: 4px;
+        }
+        
         tbody tr {
             transition: background-color 0.2s ease;
         }
@@ -541,7 +557,6 @@
 
     <div class="nav">
         <button id="usersBtn" class="active">Manage Users</button>
-        <button id="teamsBtn">Team Leaderboard</button>
         <button id="manageTeamsBtn">Manage Teams</button>
         <button id="challengesBtn">Manage Challenges</button>
         <button id="mcpTokensBtn">MCP Tokens</button>
@@ -591,13 +606,6 @@
         </div>
     </div>
 
-    <div id="teamsView" class="card hidden">
-        <h2>Team Leaderboard</h2>
-        <p>Team rankings based on average steps per member</p>
-        <div id="teamLeaderboard">
-            <p>Loading team data...</p>
-        </div>
-    </div>
 
     <div id="manageTeamsView" class="card hidden">
         <h2>Manage Teams</h2>
