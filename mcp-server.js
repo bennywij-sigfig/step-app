@@ -435,7 +435,7 @@ const mcpTools = {
 
       const getUserInfo = () => {
         return new Promise((resolve, reject) => {
-          db.get('SELECT email, name, team_id FROM users WHERE id = ?', [operationUserId], (err, user) => {
+          db.get('SELECT email, name, team FROM users WHERE id = ?', [operationUserId], (err, user) => {
             if (err) return reject(err);
             if (!user) return reject(new Error('User not found'));
             resolve(user);
@@ -454,7 +454,6 @@ const mcpTools = {
       };
 
       const user = await getUserInfo();
-      const team = await getTeamInfo(user.team_id);
       const challenge = await getActiveChallenge();
 
       // Log the action
@@ -476,7 +475,7 @@ const mcpTools = {
         user: {
           email: user.email,
           name: user.name,
-          team: team ? team.name : null
+          team: user.team || null
         },
         token: {
           name: tokenInfo.name,
