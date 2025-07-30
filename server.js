@@ -1204,18 +1204,25 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
   }
 });
 
-// MCP (Model Context Protocol) routes
+// MCP (Model Context Protocol) remote server
 
-// MCP RPC endpoint - main JSON-RPC 2.0 handler
-app.post('/mcp/rpc', mcpBurstLimiter, mcpApiLimiter, async (req, res) => {
+// Remote MCP server endpoint - Streamable HTTP transport
+app.post('/mcp', mcpBurstLimiter, mcpApiLimiter, async (req, res) => {
   try {
     const ipAddress = req.ip;
     const userAgent = req.get('User-Agent');
     
+    // Set headers for Streamable HTTP remote MCP support
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
     const response = await handleMCPRequest(req.body, ipAddress, userAgent);
     res.json(response);
   } catch (error) {
-    console.error('MCP RPC error:', error);
+    console.error('Remote MCP server error:', error);
     res.status(500).json({
       jsonrpc: '2.0',
       error: {
@@ -1228,8 +1235,18 @@ app.post('/mcp/rpc', mcpBurstLimiter, mcpApiLimiter, async (req, res) => {
   }
 });
 
+// Handle preflight OPTIONS requests for CORS
+app.options('/mcp', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.status(200).end();
+});
+
 // MCP capabilities discovery endpoint (no authentication required)
 app.get('/mcp/capabilities', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.json(getMCPCapabilities());
 });
 

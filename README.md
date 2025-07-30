@@ -196,7 +196,7 @@ GET /api/admin/mcp-audit?page=1&limit=50
 Users interact with the MCP API using their assigned tokens through the JSON-RPC 2.0 protocol:
 
 #### **API Endpoint**
-- **Main API**: `POST /mcp/rpc`
+- **Remote MCP Server**: `POST /mcp`
 - **Capabilities Discovery**: `GET /mcp/capabilities`
 
 #### **Authentication**
@@ -351,7 +351,7 @@ def call_step_api(method, params=None):
         "id": 1
     }
     
-    response = requests.post("https://step-app-4x-yhw.fly.dev/mcp/rpc", json=payload)
+    response = requests.post("https://step-app-4x-yhw.fly.dev/mcp", json=payload)
     return response.json()
 
 # Add steps for today

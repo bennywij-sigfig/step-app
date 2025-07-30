@@ -3,12 +3,12 @@
 ## Overview
 Production web application for tracking daily steps in company-wide challenges (~150 users).
 
-## Status: Production Deployed with MCP Admin UI ✅
+## Status: Production Deployed with Remote MCP Server ✅
 - **URL**: https://step-app-4x-yhw.fly.dev/
-- **Last Deploy**: July 30, 2025 (MCP Admin UI + CSP security fixes)
-- **MCP API**: Fully operational JSON-RPC 2.0 endpoint with enterprise security
+- **Last Deploy**: July 30, 2025 (Remote MCP Server + Streamable HTTP support)
+- **Remote MCP API**: Fully operational Streamable HTTP endpoint at `/mcp`
 - **MCP Admin Panel**: Complete token management interface with creation, revocation, and monitoring
-- **Claude Integration**: Ready for Claude Desktop/Cursor with automated installer
+- **Claude Integration**: Ready for Claude Desktop/Cursor/Claude Code with zero-installation setup
 - Ranked/unranked leaderboard system with team member disclosure
 - 5-color admin theme system (Ocean Blue, Sunset Orange, Forest Green, Lavender Purple, Monochrome)
 - Admin panel challenge creation fully functional with database migrations
@@ -35,19 +35,16 @@ Production web application for tracking daily steps in company-wide challenges (
 - `public/admin.js` - Admin panel functionality and theme management
 - `fly.toml` - Optimal deployment configuration (avoids CLI crashes)
 
-### **MCP Integration**
-- `mcp-server.js` - Secure JSON-RPC 2.0 server with user isolation and audit logging
-- `test_mcp_python.py` - Comprehensive testing suite with interactive mode
+### **Remote MCP Integration**
+- `mcp-server.js` - Secure JSON-RPC 2.0 server with Streamable HTTP support
+- `server.js` - Main server with `/mcp` endpoint for remote access
 - `get_mcp_token.py` - Admin tool for creating and managing MCP tokens
-- `claude_code_integration.py` - Ready-to-use API client for Claude Code
-- `mcp_server_anthropic.py` - Official MCP server for Claude Desktop/Cursor
-- `install_step_mcp.py` - Automated installer for end users
+- `test_mcp_python.py` - Comprehensive testing suite for remote server testing
 
 ### **Documentation & Guides**
-- `README.md` - Complete project documentation with MCP integration
-- `CLAUDE_CODE_SETUP.md` - Claude Code integration instructions
-- `USER_SETUP_GUIDE.md` - End user setup guide for Claude Desktop/Cursor
-- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing MCP access
+- `README.md` - Complete project documentation with remote MCP integration
+- `USER_SETUP_GUIDE.md` - End user setup guide for remote MCP (no installation required)
+- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing remote MCP access
 - `MCP_TESTING_GUIDE.md` - Comprehensive testing and integration guide
 
 ## Commands
@@ -58,43 +55,53 @@ npm start          # Start production server
 npm run dev        # Development mode with auto-restart
 ```
 
-### **MCP Integration**
+### **Remote MCP Integration**
 ```bash
-# Install MCP dependencies
-pip install -r requirements.txt
-pip install -r requirements-mcp.txt
-
 # Admin: Create MCP tokens for users
 python get_mcp_token.py --interactive
 
-# Testing: Comprehensive MCP API testing
+# Testing: Test remote MCP server
 python test_mcp_python.py --token YOUR_TOKEN --test-all
 
-# End Users: Install Claude Desktop/Cursor integration
-python install_step_mcp.py
+# Test remote server endpoint directly
+curl -X POST https://step-app-4x-yhw.fly.dev/mcp \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "method": "get_user_profile", 
+    "params": {"token": "YOUR_TOKEN"},
+    "id": 1
+  }'
 ```
 
 ## Recent Updates (July 30, 2025)
 
-### 🎛️ **MCP Admin UI Complete**
+### 🌐 **Remote MCP Server Implementation**
+- **Streamable HTTP Support**: Added `/mcp` endpoint for remote MCP server connectivity
+- **Zero-Installation Setup**: Users only need URL and token - no Python or file downloads
+- **Simplified Distribution**: Admins distribute URL + token instead of complex installations
+- **Clean Architecture**: Single `/mcp` endpoint for remote MCP server access
+- **Enhanced Headers**: Proper Content-Type and Cache-Control headers for Streamable HTTP
+
+### 🎛️ **MCP Admin UI Enhanced**
 - **Token Management Interface**: Full-featured admin panel with creation, revocation, and monitoring
-- **CSP Security Compliance**: Fixed Content Security Policy violations with proper event delegation
-- **Production Hardening**: Secure event handling patterns replacing inline JavaScript handlers
+- **Remote Server Testing**: Admin tools can test remote MCP endpoints directly
 - **Enterprise Token Lifecycle**: Copy functionality, usage tracking, expiration monitoring, and audit trails
 - **Real-time Activity Dashboard**: MCP API monitoring with comprehensive filtering and search capabilities
 
-### 🛡️ **Security Enhancements**
-- **Event Delegation**: CSP-compliant JavaScript patterns eliminating inline event handlers
-- **Token Display Security**: Improved token presentation with fallback security messaging
-- **Admin Action Security**: All token operations properly protected with CSRF tokens and confirmations
+### 🛡️ **Security & Reliability**
+- **Streamable HTTP Transport**: More reliable than previous SSE-based approaches
+- **Centralized Management**: All users connect to same server for consistency
+- **HTTPS Encryption**: All MCP communication secured via TLS
+- **Rate Limiting**: Same security controls apply to remote endpoints
 
 ## Previous Updates (July 29, 2025)
 
-### 🤖 **MCP Integration Complete**
+### 🤖 **MCP Foundation Completed**
 - **Production MCP API**: JSON-RPC 2.0 endpoint with comprehensive security (B+ security grade)
-- **Claude Code Integration**: Direct API usage + official MCP server for Claude Desktop/Cursor
-- **Enterprise Distribution**: Automated installer and admin workflows for 50-150+ users
+- **Enterprise Token System**: Secure token-based authentication with user isolation
 - **Testing Suite**: Comprehensive Python tools for testing, debugging, and integration
+- **Admin Panel Integration**: Web-based token management and monitoring
 - **Documentation**: Complete guides for developers, admins, and end users
 
 ### 🔒 **Security Hardening** 
@@ -129,8 +136,8 @@ python install_step_mcp.py
 - **Challenges**: Time-bound with configurable reporting thresholds and admin controls
 - **UI**: Mobile-first glass-morphism design with responsive layouts
 - **Security**: CSRF tokens, rate limiting (10/hour magic links, 100/hour API, 50/hour admin), comprehensive input validation, parameterized queries
-- **MCP API**: JSON-RPC 2.0 protocol with token-based auth, user isolation, and comprehensive audit logging
-- **AI Integration**: Native Claude Desktop/Cursor support with automated installer and testing tools
+- **Remote MCP API**: Streamable HTTP protocol with token-based auth, user isolation, and comprehensive audit logging
+- **AI Integration**: Native Claude Desktop/Cursor/Claude Code support with zero-installation remote server
 
 ## Security & Infrastructure Status
 
@@ -173,8 +180,9 @@ python install_step_mcp.py
 - [x] Implement robust backend input validation with security hardening
 - [x] Test input validation with malicious inputs and penetration testing
 
-#### **MCP Integration & Security**
+#### **Remote MCP Server & Security**
 - [x] Design and implement MCP JSON-RPC 2.0 API with enterprise security
+- [x] Add Streamable HTTP transport support with `/mcp` endpoint
 - [x] Add user data isolation and authorization controls
 - [x] Implement SQL injection prevention with safe query builders
 - [x] Add comprehensive input validation and prototype pollution protection
@@ -182,20 +190,20 @@ python install_step_mcp.py
 - [x] Implement dual-layer rate limiting (burst + hourly limits)
 - [x] Add comprehensive audit logging with IP tracking
 - [x] Security review by Gemini (B+ grade, production ready)
-- [x] Deploy MCP API to production with full testing
+- [x] Deploy remote MCP server to production with full testing
 
-#### **Testing & Integration Tools**
+#### **Zero-Installation Distribution**
 - [x] Create comprehensive Python testing suite (test_mcp_python.py)
 - [x] Build admin token management tools (get_mcp_token.py)
-- [x] Develop Claude Code integration (direct API + MCP server)
-- [x] Create automated installer for end users (install_step_mcp.py)
-- [x] Write complete documentation and distribution guides
+- [x] Develop remote MCP server integration
+- [x] Update documentation for simplified remote setup
+- [x] Remove Python installation requirements for end users
 
 #### **Production Deployment**
 - [x] All code committed, pushed to GitHub, and deployed to Fly.io
-- [x] Production MCP API fully operational and tested
-- [x] Documentation updated with comprehensive MCP integration guides
-- [x] Ready for enterprise distribution to Claude Desktop/Cursor users
+- [x] Production remote MCP server fully operational and tested
+- [x] Documentation updated with remote MCP integration guides
+- [x] Ready for enterprise distribution with zero end-user installation
 
 ### 🔄 **Future Enhancements (Post-Launch)**
 - [ ] Consider migrating from ORD to Singapore (sin) region for better global latency

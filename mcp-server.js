@@ -623,55 +623,126 @@ const handleMCPRequest = async (body, ipAddress, userAgent) => {
   }
 };
 
-// MCP capabilities discovery
+// MCP capabilities discovery - optimized for LLM understanding
 const getMCPCapabilities = () => {
   return {
     capabilities: {
       tools: [
         {
           name: 'add_steps',
-          description: 'Add or update daily step count for a specific date',
+          description: 'Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. Supports updating existing entries with explicit permission.',
           parameters: {
             type: 'object',
             properties: {
-              token: { type: 'string', description: 'MCP authentication token' },
-              date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$', description: 'Date in YYYY-MM-DD format' },
-              count: { type: 'number', minimum: 0, maximum: 70000, description: 'Number of steps (0-70,000)' },
-              allow_overwrite: { type: 'boolean', default: false, description: 'Allow overwriting existing step data (default: false)' }
+              token: { 
+                type: 'string', 
+                description: 'User authentication token (provided during setup)' 
+              },
+              date: { 
+                type: 'string', 
+                pattern: '^\\d{4}-\\d{2}-\\d{2}$', 
+                description: 'Target date for step count in YYYY-MM-DD format (e.g., "2025-01-30"). Use "today" for current date.' 
+              },
+              count: { 
+                type: 'number', 
+                minimum: 0, 
+                maximum: 70000, 
+                description: 'Number of steps taken (0-70,000). Typical daily counts: sedentary 2000-5000, active 7500-10000, very active 10000+' 
+              },
+              allow_overwrite: { 
+                type: 'boolean', 
+                default: false, 
+                description: 'Set to true to update existing step data for this date. Required when steps already exist for the date.' 
+              }
             },
-            required: ['token', 'date', 'count']
+            required: ['token', 'date', 'count'],
+            examples: [
+              {
+                description: 'Log 8500 steps for today',
+                params: { token: 'user_token', date: '2025-01-30', count: 8500 }
+              },
+              {
+                description: 'Update yesterday\'s steps to 12000',
+                params: { token: 'user_token', date: '2025-01-29', count: 12000, allow_overwrite: true }
+              }
+            ]
           }
         },
         {
           name: 'get_steps',
-          description: 'Retrieve step history with optional date filtering',
+          description: 'Retrieve step history and progress data. Use this to show user their step counts, analyze trends, check goal progress, or generate reports.',
           parameters: {
             type: 'object',
             properties: {
-              token: { type: 'string', description: 'MCP authentication token' },
-              start_date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$', description: 'Start date filter (optional)' },
-              end_date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$', description: 'End date filter (optional)' }
+              token: { 
+                type: 'string', 
+                description: 'User authentication token (provided during setup)' 
+              },
+              start_date: { 
+                type: 'string', 
+                pattern: '^\\d{4}-\\d{2}-\\d{2}$', 
+                description: 'Optional: Start date for date range filter in YYYY-MM-DD format. Omit to get all history.' 
+              },
+              end_date: { 
+                type: 'string', 
+                pattern: '^\\d{4}-\\d{2}-\\d{2}$', 
+                description: 'Optional: End date for date range filter in YYYY-MM-DD format. Omit to get all history.' 
+              }
             },
-            required: ['token']
+            required: ['token'],
+            examples: [
+              {
+                description: 'Get all step history',
+                params: { token: 'user_token' }
+              },
+              {
+                description: 'Get last 7 days of steps',
+                params: { token: 'user_token', start_date: '2025-01-23', end_date: '2025-01-30' }
+              }
+            ]
           }
         },
         {
           name: 'get_user_profile',
-          description: 'Get user information, token details, and active challenge info',
+          description: 'Get comprehensive user information including profile details, active challenges, team information, and account status. Use this first to understand user context.',
           parameters: {
             type: 'object',
             properties: {
-              token: { type: 'string', description: 'MCP authentication token' }
+              token: { 
+                type: 'string', 
+                description: 'User authentication token (provided during setup)' 
+              }
             },
-            required: ['token']
+            required: ['token'],
+            examples: [
+              {
+                description: 'Get user profile and challenge info',
+                params: { token: 'user_token' }
+              }
+            ]
           }
         }
       ]
     },
     server_info: {
-      name: 'Step Challenge MCP Server',
-      version: '1.0.0',
-      description: 'MCP server for step tracking with overwrite protection and comprehensive audit logging'
+      name: 'Step Challenge Remote MCP Server',
+      version: '2.0.0',
+      description: 'Remote MCP server for corporate step tracking challenges. Supports individual step logging, progress tracking, team challenges, and goal monitoring with enterprise security.',
+      usage_hints: {
+        common_workflows: [
+          'Start by calling get_user_profile to understand user context and active challenges',
+          'Use add_steps to log daily step counts with date and count',
+          'Use get_steps to retrieve history, analyze trends, or check goal progress',
+          'Always handle overwrite scenarios by setting allow_overwrite=true for updates',
+          'Provide meaningful summaries and progress analysis based on retrieved data'
+        ],
+        date_handling: [
+          'Dates must be in YYYY-MM-DD format',
+          'Use current date when user says "today", "yesterday" etc.',
+          'Step counts typically range from 2000 (sedentary) to 15000+ (very active)',
+          'Corporate challenges often have goals like 8000-10000 steps per day'
+        ]
+      }
     }
   };
 };
