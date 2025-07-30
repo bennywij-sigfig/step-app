@@ -34,7 +34,7 @@ MCP_ENDPOINT = f"{API_BASE_URL}/mcp"
 TOOLS = [
     {
         "name": "add_steps",
-        "description": "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. Supports updating existing entries with explicit permission. Authentication via Authorization header.",
+        "description": "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. IMPORTANT: If data already exists, you must set allow_overwrite=true AND warn the user that existing data will be replaced. Authentication via Authorization header.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -52,7 +52,7 @@ TOOLS = [
                 "allow_overwrite": {
                     "type": "boolean",
                     "default": False,
-                    "description": "Set to true to update existing step data for this date. Required when steps already exist for the date."
+                    "description": "CRITICAL: Set to true to update existing step data for this date. You MUST warn the user that their existing data will be permanently replaced before setting this to true."
                 }
             },
             "required": ["date", "count"]

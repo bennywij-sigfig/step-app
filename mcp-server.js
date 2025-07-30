@@ -230,7 +230,7 @@ const mcpMethods = {
       tools: [
         {
           name: "add_steps",
-          description: "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. Supports updating existing entries with explicit permission. Authentication via Authorization header.",
+          description: "Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. IMPORTANT: If data already exists, you must set allow_overwrite=true AND warn the user that existing data will be replaced. Authentication via Authorization header.",
           inputSchema: {
             type: "object",
             properties: {
@@ -248,7 +248,7 @@ const mcpMethods = {
               allow_overwrite: {
                 type: "boolean",
                 default: false,
-                description: "Set to true to update existing step data for this date. Required when steps already exist for the date."
+                description: "CRITICAL: Set to true to update existing step data for this date. You MUST warn the user that their existing data will be permanently replaced before setting this to true."
               }
             },
             required: ["date", "count"]
@@ -372,7 +372,7 @@ const stepTools = {
       let oldValue = null;
 
       if (existingSteps && !allow_overwrite) {
-        throw new Error(`Steps already exist for ${date} (${existingSteps.count} steps). Set allow_overwrite=true to replace existing data.`);
+        throw new Error(`DATA_CONFLICT: Steps already exist for ${date} with ${existingSteps.count} steps. To replace this existing data, you must set allow_overwrite=true and inform the user that their previous data will be overwritten.`);
       }
 
       if (existingSteps) {
@@ -432,12 +432,13 @@ const stepTools = {
       return {
         success: true,
         message: wasOverwrite 
-          ? `Steps updated for ${date}: ${oldValue} → ${validatedCount} (overwritten)`
-          : `Steps saved for ${date}: ${validatedCount}`,
+          ? `⚠️ DATA OVERWRITTEN: Steps for ${date} have been replaced. Previous value: ${oldValue} steps → New value: ${validatedCount} steps. The user's original data has been permanently replaced.`
+          : `✅ Steps saved for ${date}: ${validatedCount} steps`,
         date,
         count: validatedCount,
         was_overwrite: wasOverwrite,
-        old_count: wasOverwrite ? parseInt(oldValue) : null
+        old_count: wasOverwrite ? parseInt(oldValue) : null,
+        warning: wasOverwrite ? "OVERWRITE_OCCURRED" : null
       };
 
     } catch (error) {
@@ -813,7 +814,7 @@ const getMCPCapabilities = () => {
       tools: [
         {
           name: 'add_steps',
-          description: 'Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. Supports updating existing entries with explicit permission.',
+          description: 'Record daily step count for fitness tracking. Use this when user wants to log their steps for a specific date. IMPORTANT: If data already exists, you must set allow_overwrite=true AND warn the user that existing data will be replaced.',
           parameters: {
             type: 'object',
             properties: {
@@ -835,7 +836,7 @@ const getMCPCapabilities = () => {
               allow_overwrite: { 
                 type: 'boolean', 
                 default: false, 
-                description: 'Set to true to update existing step data for this date. Required when steps already exist for the date.' 
+                description: 'CRITICAL: Set to true to update existing step data for this date. You MUST warn the user that their existing data will be permanently replaced before setting this to true.' 
               }
             },
             required: ['token', 'date', 'count'],
