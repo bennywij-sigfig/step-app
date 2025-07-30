@@ -41,7 +41,7 @@ TOOLS = [
                 "date": {
                     "type": "string",
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-                    "description": "Target date for step count in YYYY-MM-DD format (e.g., \"2025-07-30\"). Use \"today\" for current date."
+                    "description": "Target date for step count in YYYY-MM-DD format ONLY. Examples: \"2025-07-30\", \"2025-12-25\". NEVER use \"today\" - always convert to actual date like \"2025-07-30\"."
                 },
                 "count": {
                     "type": "number",

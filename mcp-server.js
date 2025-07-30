@@ -237,7 +237,7 @@ const mcpMethods = {
               date: {
                 type: "string",
                 pattern: "^\\d{4}-\\d{2}-\\d{2}$",
-                description: "Target date for step count in YYYY-MM-DD format (e.g., \"2025-07-30\"). Use \"today\" for current date."
+                description: "Target date for step count in YYYY-MM-DD format ONLY. Examples: \"2025-07-30\", \"2025-12-25\". NEVER use \"today\" - always convert to actual date like \"2025-07-30\"."
               },
               count: {
                 type: "number",
@@ -350,10 +350,15 @@ const stepTools = {
         throw new Error('Date is required');
       }
 
+      // Check for common invalid date formats
+      if (date === 'today' || date === 'yesterday' || date === 'tomorrow') {
+        throw new Error(`Invalid date format: "${date}". You must use YYYY-MM-DD format only. Convert relative dates to actual dates first (e.g., "today" → "2025-07-30").`);
+      }
+
       const validatedCount = validateNumericInput(count, 'Step count', 0, 70000);
 
       if (!isValidDate(date)) {
-        throw new Error('Invalid date format. Use YYYY-MM-DD');
+        throw new Error('Invalid date format. Use YYYY-MM-DD format only (e.g., "2025-07-30").');
       }
 
       // Prevent future date entries
@@ -837,7 +842,7 @@ const getMCPCapabilities = () => {
               date: { 
                 type: 'string', 
                 pattern: '^\\d{4}-\\d{2}-\\d{2}$', 
-                description: 'Target date for step count in YYYY-MM-DD format (e.g., "2025-01-30"). Use "today" for current date.' 
+                description: 'Target date for step count in YYYY-MM-DD format ONLY. Examples: "2025-07-30", "2025-12-25". NEVER use "today" - always convert to actual date like "2025-07-30".' 
               },
               count: { 
                 type: 'number', 
@@ -854,12 +859,12 @@ const getMCPCapabilities = () => {
             required: ['token', 'date', 'count'],
             examples: [
               {
-                description: 'Log 8500 steps for today',
-                params: { token: 'user_token', date: '2025-01-30', count: 8500 }
+                description: 'Log 8500 steps for July 30th, 2025',
+                params: { token: 'user_token', date: '2025-07-30', count: 8500 }
               },
               {
-                description: 'Update yesterday\'s steps to 12000',
-                params: { token: 'user_token', date: '2025-01-29', count: 12000, allow_overwrite: true }
+                description: 'Update steps for July 29th, 2025 to 12000 (with user confirmation)',
+                params: { token: 'user_token', date: '2025-07-29', count: 12000, allow_overwrite: true }
               }
             ]
           }
@@ -934,8 +939,9 @@ const getMCPCapabilities = () => {
           'Provide meaningful summaries and progress analysis based on retrieved data'
         ],
         date_handling: [
-          'Dates must be in YYYY-MM-DD format',
-          'Use current date when user says "today", "yesterday" etc.',
+          'Dates must ALWAYS be in YYYY-MM-DD format - NEVER use "today", "yesterday", etc.',
+          'Convert relative dates to actual dates: "today" → "2025-07-30", "yesterday" → "2025-07-29"',
+          'Examples of correct dates: "2025-07-30", "2025-12-25", "2025-01-15"',
           'Step counts typically range from 2000 (sedentary) to 15000+ (very active)',
           'Corporate challenges often have goals like 8000-10000 steps per day'
         ]
