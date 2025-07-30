@@ -423,10 +423,11 @@ const mcpTools = {
     const sanitizedParams = securityUtils.sanitizeParams(params);
     const { target_user_id } = sanitizedParams;
     const tokenUserId = tokenInfo.user_id;
+    
+    // CRITICAL: Enforce user data isolation - define outside try block for catch access
+    const operationUserId = target_user_id || tokenUserId;
 
     try {
-      // CRITICAL: Enforce user data isolation
-      const operationUserId = target_user_id || tokenUserId;
       securityUtils.enforceUserAccess(tokenUserId, operationUserId);
 
       // Validate token scope for profile read operations
