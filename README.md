@@ -11,15 +11,15 @@ A production-ready web application for tracking daily steps in company-wide chal
 - **Challenge System**: Time-bound challenges with Pacific Time zone support and configurable reporting thresholds
 - **Mobile Optimized**: Responsive glass-morphism UI design, cross-browser compatible (including Safari)
 - **Production Security**: CSRF protection, rate limiting, CSP headers, SQL injection prevention
-- **Remote MCP Integration**: Zero-installation Claude Desktop/Cursor integration with enterprise security
+- **MCP Integration**: Local bridge for Claude Desktop/Cursor/Claude Code with secure stdio protocol
 
 ## Recent Updates (July 30, 2025)
-- **🌐 Remote MCP Server**: Converted to Streamable HTTP remote server - no Python installation required for users
-- **🚀 Zero-Installation Setup**: Users only need URL + token - eliminated complex local server setup
-- **🤖 LLM-Optimized**: Enhanced tool descriptions with examples and usage hints for better AI understanding
-- **🧹 Legacy Cleanup**: Removed `/mcp/rpc` endpoint, archived local Python MCP server files
-- **🛡️ Security Review**: Comprehensive security audit completed - B+ grade, production ready for 150+ users
-- **📚 Simplified Distribution**: Updated all documentation for streamlined remote MCP approach
+- **🌉 Local MCP Bridge**: Secure stdio MCP server that proxies to our API via Bearer tokens
+- **🔒 Security-First Design**: Environment variable token handling, masked UI display, comprehensive security review
+- **🎛️ All-in-One Setup Page**: User-friendly setup with multi-client support and one-click downloads
+- **🤖 Full MCP Compliance**: Standards-compliant stdio MCP protocol for Claude Desktop, Cursor, and Claude Code
+- **🛡️ Production Security**: B+ security grade with token exposure vulnerabilities fixed
+- **📱 Simple User Experience**: Download script + configure environment variable - works in 2 minutes
 
 ## Previous Security Updates (July 29, 2025)
 - **🔒 Input Validation**: Comprehensive backend validation prevents type confusion and SQL injection attacks
@@ -329,89 +329,78 @@ node test-mcp.js --test-server
 node test-mcp.js
 ```
 
-### Claude Code Integration
+### MCP Integration
 
-#### **Quick Start for Claude Code Users**
-```python
-import requests
-import json
-from datetime import datetime
+#### **Easy Setup for Any AI Client**
 
-# Replace with your MCP token
-STEP_TOKEN = "mcp_12345678-abcd-..."
+**🎯 All-in-One Setup Page**: https://step-app-4x-yhw.fly.dev/mcp-setup
 
-def call_step_api(method, params=None):
-    if params is None:
-        params = {}
-    
-    payload = {
-        "jsonrpc": "2.0",
-        "method": method,
-        "params": {**params, "token": STEP_TOKEN},
-        "id": 1
-    }
-    
-    response = requests.post("https://step-app-4x-yhw.fly.dev/mcp", json=payload)
-    return response.json()
+1. **Login** with your Step Challenge magic link
+2. **Visit setup page** - shows your token and downloads
+3. **Download bridge script** - one-click download
+4. **Follow instructions** - copy-paste configurations provided
 
-# Add steps for today
-today = datetime.now().strftime("%Y-%m-%d")
-result = call_step_api("add_steps", {"date": today, "count": 12000})
-print(json.dumps(result, indent=2))
+#### **Supported AI Clients**
+- ✅ **Claude Desktop** - Full MCP stdio support
+- ✅ **Cursor** - Full MCP stdio support  
+- ✅ **Claude Code CLI** - Full MCP stdio support
+- ✅ **ChatGPT Desktop** - MCP stdio support (if available)
+
+#### **What Users Get**
+```bash
+# Simple setup process:
+1. Download: step_bridge.py (one-click from setup page)
+2. Install: pip install aiohttp
+3. Configure: STEP_TOKEN=your_token python step_bridge.py
+4. Add to AI client config (instructions provided)
 ```
 
-#### **Remote MCP Server for Claude Desktop/Cursor**
-For persistent integration with Claude Desktop or Cursor:
+#### **Available MCP Tools**
+- `get_user_profile` - View profile, team, and current challenge
+- `get_steps` - Retrieve step history with date filtering  
+- `add_steps` - Record daily step counts with overwrite protection
 
-1. **Get MCP token**: Contact your administrator or use `python get_mcp_token.py --interactive`
-2. **Add remote server** to your AI client settings:
-   - **URL**: `https://step-app-4x-yhw.fly.dev/mcp`
-   - **Transport**: `Streamable HTTP`
-   - **Token**: Your MCP token
-3. **Restart Claude Desktop/Cursor**
+### Admin Distribution
 
-See `USER_SETUP_GUIDE.md` for detailed instructions.
+For distributing MCP access to users:
 
-### End User Distribution
-
-For distributing remote MCP access to Claude Desktop/Cursor users:
-
-#### **Information to Provide:**
-- **Server URL**: `https://step-app-4x-yhw.fly.dev/mcp`
-- **User's personal MCP token**
-- **Setup instructions**: `USER_SETUP_GUIDE.md` or `README_DISTRIBUTION.md`
+#### **Simple Process:**
+1. **Create MCP token** for user via admin panel
+2. **Share setup page URL**: https://step-app-4x-yhw.fly.dev/mcp-setup
+3. **User self-service setup** - complete instructions provided on setup page
+4. **No IT support needed** - users can configure their own AI clients
 
 #### **Admin Workflow:**
-1. Create tokens: `python get_mcp_token.py --interactive`
-2. Provide users with server URL + their personal token
-3. Users add remote server to their AI client settings (2-minute setup)
-4. Users can then ask Claude: *"Add 12,000 steps for today"*
+1. **Create tokens** via admin panel MCP token management
+2. **Share setup page** - users handle their own setup  
+3. **Monitor usage** via admin audit logs
 
-See `ADMIN_DISTRIBUTION_GUIDE.md` for complete distribution workflow.
+Users add stdio bridge to their AI client settings (2-minute setup), then can ask Claude: *"Add 12,000 steps for today"*
+
+See `ADMIN_DISTRIBUTION_GUIDE.md` for complete workflow.
 
 ## MCP Integration Files
 
 ### **Core MCP Implementation:**
-- `mcp-server.js` - MCP JSON-RPC 2.0 server implementation with security hardening
-- `server.js` - Express server with MCP endpoints and admin API
-- `database.js` - Database schema including MCP tables
+- `mcp-server.js` - Bearer token API with JSON-RPC 2.0 MCP protocol support
+- `server.js` - Express server with MCP endpoints, setup page, and bridge download
+- `step_bridge.py` - Local stdio MCP bridge script for AI clients
+- `views/mcp-setup.html` - All-in-one setup page with secure token handling
 
-### **Testing & Development:**
-- `test_mcp_python.py` - Comprehensive Python testing suite with interactive mode
-- `get_mcp_token.py` - Admin tool for creating and managing MCP tokens
-- `test-mcp.js` - JavaScript testing script (legacy)
-- `mcp_demo_claude_code.py` - Direct API demo for LLM environments
+### **User Experience:**
+- `/mcp-setup` - Authenticated setup page with multi-client configuration examples
+- `/download/step_bridge.py` - Public bridge script download with security headers
+- `/api/user/mcp-tokens` - API for users to retrieve their tokens securely
 
-### **Claude Code Integration:**
-- `claude_code_integration.py` - Ready-to-use API client with helper functions
-- `CLAUDE_CODE_SETUP.md` - Complete setup guide for direct API usage
+### **Admin Tools:**
+- `get_mcp_token.py` - Admin CLI tool for creating and managing MCP tokens
+- Admin panel MCP token management with web UI
+- Comprehensive audit logging and usage monitoring
 
-### **End User Distribution:**
-- `USER_SETUP_GUIDE.md` - Remote MCP server setup instructions
-- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing remote MCP access
-- `README_DISTRIBUTION.md` - Zero-installation setup guide for all AI clients
-- `MCP_TESTING_GUIDE.md` - Comprehensive testing and integration guide
-- `archive/local-mcp-server/` - Legacy local installation files (archived)
+### **Documentation:**
+- `USER_SETUP_GUIDE.md` - Bridge setup instructions for end users
+- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing MCP access
+- `MCP_TESTING_GUIDE.md` - Testing and troubleshooting guide
 
 ### **Dependencies:**
 - `requirements.txt` - Python dependencies for testing and admin tools

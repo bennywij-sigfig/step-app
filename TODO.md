@@ -1,36 +1,39 @@
 # Step Challenge App - TODO List
 
-## 🚀 Current Status: PRODUCTION DEPLOYED WITH COMPLIANT MCP SERVER ✅
+## 🚀 Current Status: PRODUCTION DEPLOYED WITH SECURE MCP BRIDGE ✅
 **Deployment:** Live on Fly.io at https://step-app-4x-yhw.fly.dev/  
 **Core functionality:** Step tracking, ranked/unranked leaderboards, admin theme system, mobile-responsive UI  
-**MCP Protocol:** Fully compliant with Anthropic MCP 2025-03-26 specification  
-**MCP Integration:** Standards-compliant remote server ready for Claude Desktop/Cursor/Claude Code  
-**Security status:** Comprehensive security headers, rate limiting, CSRF protection, admin protection  
-**Infrastructure:** Environment validation, optimal deployment config, Docker deployment, SQLite persistence  
-**Last deployed:** July 30, 2025 (MCP protocol compliance + standards implementation)
+**MCP Integration:** Local stdio bridge with secure Bearer token authentication  
+**Setup Experience:** All-in-one setup page with multi-client support and one-click downloads  
+**Security status:** B+ security grade with token exposure vulnerabilities fixed  
+**Client Support:** Claude Desktop, Cursor, Claude Code CLI, ChatGPT Desktop  
+**Last deployed:** July 30, 2025 (Secure MCP bridge architecture implementation)
 
 ---
 
 ## 🎉 RECENTLY COMPLETED (July 30, 2025) ✅
 
-### MCP Protocol Compliance Implementation (Production Ready)
-- [x] **Anthropic MCP Specification Compliance** - Complete rewrite to follow official MCP protocol standards 
-- [x] **Standard MCP Methods** - Implemented `initialize`, `tools/list`, `tools/call` per MCP 2025-03-26 specification
-- [x] **Protocol Handshake** - Proper MCP initialization with protocol version negotiation
-- [x] **Tools Discovery** - Standard `tools/list` method returns JSON schema definitions for all tools
-- [x] **MCP Content Format** - Tool results now wrapped in proper MCP content format (text/image/audio)
-- [x] **Authentication Integration** - Token-based auth moved to tool arguments as per MCP standards
-- [x] **Backwards Compatibility Maintained** - All existing functionality preserved during protocol conversion
+### Secure MCP Bridge Architecture Implementation (Production Ready)
+- [x] **Local MCP Bridge Script** - Created `step_bridge.py` with secure stdio MCP protocol implementation
+- [x] **Environment Variable Authentication** - Fixed token exposure via process lists using STEP_TOKEN env var
+- [x] **All-in-One Setup Page** - Built `/mcp-setup` with authenticated access and multi-client configuration
+- [x] **Secure Token Handling** - Implemented token masking with explicit reveal mechanism
+- [x] **Bridge Script Download** - Added `/download/step_bridge.py` endpoint with proper security headers
+- [x] **Multi-Client Support** - Configuration examples for Claude Desktop, Cursor, Claude Code CLI
 
-### Remote MCP Server Implementation (Production Ready)  
-- [x] **Streamable HTTP Transport** - Converted to `/mcp` endpoint for remote MCP server connectivity
-- [x] **Zero-Installation Architecture** - Eliminated Python installation requirements for end users
-- [x] **LLM-Optimized Tools** - Enhanced tool descriptions with examples and usage hints
-- [x] **Legacy Cleanup** - Removed `/mcp/rpc` endpoint, archived local Python MCP server files
-- [x] **Security Review** - Comprehensive Gemini security audit: B+ grade, production ready for 150+ users
-- [x] **Documentation Overhaul** - Updated all guides for simplified remote-only approach
-- [x] **CORS Configuration** - Proper headers for Claude Desktop/Cursor remote access
-- [x] **Enhanced Capabilities** - Rich tool documentation with workflow guidance for LLMs
+### Security Enhancements (B+ Security Grade)
+- [x] **Token Exposure Fixes** - Eliminated command line and web interface token exposure vulnerabilities
+- [x] **Comprehensive Security Review** - Gemini security audit with critical vulnerability remediation
+- [x] **HTTPS Transport Security** - All bridge-to-API communication via secure Bearer token authentication
+- [x] **User Data Isolation** - Maintained existing token validation and user access controls
+- [x] **Audit Trail Preservation** - All existing security logging and monitoring functionality preserved
+
+### User Experience Improvements
+- [x] **2-Minute Setup Process** - Simplified from complex remote MCP to simple bridge download + config
+- [x] **Self-Service Setup** - Users handle their own configuration via setup page instructions
+- [x] **Copy-Paste Configurations** - Pre-filled configuration snippets for all supported AI clients
+- [x] **Visual Setup Guide** - Step-by-step instructions with troubleshooting section
+- [x] **Admin Distribution Simplification** - Admins just share setup page URL, users do the rest
 
 ### Major Security & Infrastructure Enhancements (July 29, 2025)
 - [x] **Enterprise MCP Integration** - JSON-RPC 2.0 API with comprehensive security controls
@@ -51,35 +54,33 @@
 
 ## 📊 MCP INTEGRATION STATUS (July 30, 2025)
 
-### ✅ **Standards Compliance - COMPLETE**
-- **MCP Protocol**: Fully implements Anthropic MCP 2025-03-26 specification
-- **Core Methods**: `initialize`, `tools/list`, `tools/call` all working perfectly
-- **API Verification**: All methods tested and verified via direct curl calls
-- **Tool Discovery**: Returns proper JSON schema definitions for 3 tools (add_steps, get_steps, get_user_profile)
-- **Content Format**: Results properly wrapped in MCP content format (text/image/audio)
-- **Authentication**: Token-based authentication integrated into tool arguments
+### ✅ **Local Bridge Implementation - PRODUCTION READY**
+- **Bridge Script**: `step_bridge.py` provides full stdio MCP protocol compliance
+- **Security Model**: Environment variable token passing (STEP_TOKEN) prevents process exposure
+- **API Integration**: Bridge proxies to secure Bearer token API at `/mcp` endpoint
+- **Error Handling**: Comprehensive error handling with proper MCP error responses
+- **Dependencies**: Only requires `aiohttp` - minimal installation footprint
 
-### ✅ **Server Implementation - PRODUCTION READY**
-- **Endpoint**: Single `/mcp` endpoint handles all MCP protocol methods
-- **Transport**: HTTP transport with proper CORS headers
-- **Error Handling**: Standard JSON-RPC 2.0 error responses
-- **Security**: Enterprise-grade token validation and user isolation
-- **Performance**: Rate limiting and audit logging integrated
+### ✅ **User Experience - SELF-SERVICE READY**
+- **Setup Page**: `/mcp-setup` provides authenticated access to setup instructions
+- **Multi-Client Support**: Configuration examples for Claude Desktop, Cursor, Claude Code CLI
+- **Token Security**: Masked display with explicit reveal mechanism
+- **Download System**: `/download/step_bridge.py` provides secure script distribution
+- **2-Minute Setup**: Complete setup process reduced to download + configure + add to client
 
-### ⚠️ **Client Integration Status**
-- **Direct API**: ✅ Working perfectly - all methods callable via HTTP POST
-- **Claude Desktop**: ✅ Should work with standard MCP configuration  
-- **Cursor**: ✅ Should work with standard MCP configuration
-- **Claude Code**: ⚠️ Shows "Failed to connect" but server is standards-compliant
-  - Server responds correctly to all MCP methods
-  - May require additional authentication handling in Claude Code's HTTP transport
-  - All functionality available via direct API approach
+### ✅ **Client Integration Status**
+- **Claude Desktop**: ✅ Working with stdio bridge configuration
+- **Cursor**: ✅ Working with stdio bridge configuration  
+- **Claude Code CLI**: ✅ Working with stdio bridge configuration
+- **ChatGPT Desktop**: ✅ Should work with stdio bridge (if MCP supported)
+- **Direct API**: ✅ Still available for custom integrations
 
-### 🎯 **Next Steps for Full Claude Code Integration**
-- [ ] Investigate Claude Code's HTTP MCP transport authentication expectations
-- [ ] Test with Claude Code's latest version for any transport improvements
-- [ ] Consider alternative authentication approaches if needed
-- [ ] Document fallback to direct API approach (currently working perfectly)
+### 🎯 **Architecture Benefits**
+- **No Remote MCP Complexity**: Bypassed OAuth 2.0 DCR requirements that Claude Code expects
+- **Standards Compliant**: Full stdio MCP protocol implementation
+- **Security Enhanced**: Fixed token exposure vulnerabilities from security review
+- **User Friendly**: Self-service setup with visual guides and copy-paste configurations
+- **Admin Simplified**: Just share setup page URL, users handle their own configuration
 
 ---
 
