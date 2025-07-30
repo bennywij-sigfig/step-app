@@ -196,16 +196,27 @@
                     </small>
                 </div>
 
+                <!-- Place Script -->
+                <div class="alert mb-4">
+                    <h5><span class="step-number">2</span> Place Script in Home Directory</h5>
+                    <p class="mb-2">Move the downloaded script to a convenient location:</p>
+                    <div class="config-code">mv ~/Downloads/step_bridge.py ~/step_bridge.py</div>
+                    <small class="d-block mt-2 text-light">
+                        <i class="fas fa-info-circle me-1"></i>
+                        This places the script in your home directory. Remember this path for step 4.
+                    </small>
+                </div>
+
                 <!-- Install Dependencies -->
                 <div class="alert mb-4">
-                    <h5><span class="step-number">2</span> Install Dependencies</h5>
+                    <h5><span class="step-number">3</span> Install Dependencies</h5>
                     <p class="mb-2">Install required Python package:</p>
                     <div class="config-code">pip install aiohttp</div>
                 </div>
 
                 <!-- Client-Specific Instructions -->
                 <div class="alert">
-                    <h5><span class="step-number">3</span> Configure Your AI Assistant</h5>
+                    <h5><span class="step-number">4</span> Configure Your AI Assistant</h5>
                     
                     <ul class="nav nav-tabs" id="clientTabs" role="tablist">
                         <li class="nav-item" role="presentation">
@@ -278,7 +289,7 @@
 
                 <!-- Final Steps -->
                 <div class="alert">
-                    <h5><span class="step-number">4</span> Test Your Connection</h5>
+                    <h5><span class="step-number">5</span> Test Your Connection</h5>
                     <p class="text-light mb-2">After configuration, test your connection:</p>
                     <ul class="text-light">
                         <li>Restart your AI assistant</li>
@@ -299,7 +310,7 @@
                     <div class="text-light">
                         <p><strong>Connection Issues:</strong></p>
                         <ul>
-                            <li>Ensure the bridge script is in the correct path</li>
+                            <li>Ensure the bridge script is in your home directory: <code>~/step_bridge.py</code></li>
                             <li>Check that aiohttp is installed: <code>pip install aiohttp</code></li>
                             <li>Verify your token is not expired</li>
                             <li>Make sure STEP_TOKEN environment variable is set correctly</li>
@@ -308,7 +319,7 @@
                         <p><strong>Need Help?</strong></p>
                         <ul>
                             <li>Check the console for error messages</li>
-                            <li>Test the bridge script directly: <code>STEP_TOKEN=your_token python /path/to/step_bridge.py</code></li>
+                            <li>Test the bridge script directly: <code>STEP_TOKEN=your_token python ~/step_bridge.py</code></li>
                             <li>Contact your Step Challenge administrator</li>
                         </ul>
                     </div>
@@ -423,7 +434,7 @@
         }
 
         function updateConfigurations() {
-            const bridgeScriptPath = "/path/to/step_bridge.py"; // User needs to update this
+            const bridgeScriptPath = "~/step_bridge.py"; // Home directory path from step 2
             const placeholderToken = "YOUR_TOKEN_HERE"; // Always use placeholder in examples
             
             // Claude Desktop configuration (Local Bridge)
