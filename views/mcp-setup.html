@@ -107,7 +107,7 @@
 
             <div class="alert" role="alert">
                 <i class="fas fa-info-circle me-2"></i>
-                <strong>What is MCP?</strong> Model Context Protocol allows AI assistants like Claude Desktop and Cursor to interact with your Step Challenge data securely.
+                <strong>What is MCP?</strong> Model Context Protocol allows AI assistants like Claude Desktop and Cursor to interact with your Step Challenge data securely via a local bridge script.
             </div>
 
             <!-- Token Section -->
@@ -246,6 +246,7 @@
                         <li>Restart your AI assistant</li>
                         <li>Ask: "What are my recent step counts?"</li>
                         <li>Try: "Add 8000 steps for today"</li>
+                        <li>Check: "Show me the team leaderboard"</li>
                     </ul>
                 </div>
             </div>
@@ -263,11 +264,13 @@
                             <li>Ensure the bridge script is in the correct path</li>
                             <li>Check that aiohttp is installed: <code>pip install aiohttp</code></li>
                             <li>Verify your token is not expired</li>
+                            <li>Make sure STEP_TOKEN environment variable is set correctly</li>
                         </ul>
                         
                         <p><strong>Need Help?</strong></p>
                         <ul>
                             <li>Check the console for error messages</li>
+                            <li>Test the bridge script directly: <code>STEP_TOKEN=your_token python /path/to/step_bridge.py</code></li>
                             <li>Contact your Step Challenge administrator</li>
                         </ul>
                     </div>
@@ -373,35 +376,34 @@
         }
 
         function updateConfigurations() {
-            if (!currentToken) return;
-
             const bridgeScriptPath = "/path/to/step_bridge.py"; // User needs to update this
+            const token = currentToken || "YOUR_TOKEN_HERE";
             
-            // Claude Desktop configuration
+            // Claude Desktop configuration (Local Bridge)
             document.getElementById('claudeDesktopConfig').textContent = JSON.stringify({
                 "mcpServers": {
                     "step-challenge": {
                         "command": "python",
                         "args": [bridgeScriptPath],
                         "env": {
-                            "STEP_TOKEN": currentToken
+                            "STEP_TOKEN": token
                         }
                     }
                 }
             }, null, 2);
 
-            // Cursor configuration  
+            // Cursor configuration (Local Bridge)
             document.getElementById('cursorConfig').textContent = JSON.stringify({
                 "step-challenge": {
                     "command": "python",
                     "args": [bridgeScriptPath],
                     "env": {
-                        "STEP_TOKEN": currentToken
+                        "STEP_TOKEN": token
                     }
                 }
             }, null, 2);
 
-            // Claude Code configuration
+            // Claude Code configuration (Local Bridge)
             document.getElementById('claudeCodeConfig').textContent = JSON.stringify({
                 "mcp_servers": [
                     {
@@ -410,7 +412,7 @@
                         "command": "python",
                         "args": [bridgeScriptPath],
                         "env": {
-                            "STEP_TOKEN": currentToken
+                            "STEP_TOKEN": token
                         }
                     }
                 ]
@@ -440,7 +442,11 @@
         }
 
         // Load tokens when page loads
-        document.addEventListener('DOMContentLoaded', loadTokens);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTokens();
+            // Always show configurations, even without tokens
+            updateConfigurations();
+        });
     </script>
 </body>
 </html>
