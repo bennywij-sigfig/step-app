@@ -70,6 +70,18 @@ STEP_CHALLENGE_TOKEN=YOUR_TOKEN node mcp-server.js
 echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=YOUR_TOKEN node mcp-server.js
 ```
 
+### **AI Validation & Review**
+```bash
+# Gemini CLI Integration (Available for technical validation)
+gemini -p "Analyze this repository structure"                    # Basic analysis
+echo "Technical question" | gemini                               # Pipe questions to Gemini
+gemini --all-files -p "Provide comprehensive assessment"         # Full codebase analysis
+gemini --debug -p "Technical query"                              # Debug mode for detailed insights
+
+# Repository reorganization validation (tested and confirmed)
+echo "Reorganization plan details" | gemini -p "Analyze from production safety perspective"
+```
+
 ## Recent Updates (July 30, 2025)
 
 ### 🌐 **Local Stdio MCP Server Implementation**

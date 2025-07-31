@@ -16,6 +16,18 @@ fly-*.log
 *.sqlite
 *.sqlite3
 *.db-journal
+*.db-shm
+*.db-wal
+
+# Archive directory
+.archive/
+
+# Test results and development artifacts
+test-results/
+load-test-results/
+playwright-report/
+screenshots/
+backups/
 
 # OS generated files
 Thumbs.db
