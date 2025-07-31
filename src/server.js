@@ -1105,9 +1105,10 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
         const startDate = new Date(challenge.start_date + 'T00:00:00');
         const endDate = new Date(challenge.end_date + 'T23:59:59');
         
-        if (stepDate < startDate || stepDate > endDate) {
+        // Only block dates before challenge start - allow historical entries within challenge period
+        if (stepDate < startDate) {
           return res.status(400).json({ 
-            error: `Step logging is only allowed during the active challenge period (${challenge.start_date} to ${challenge.end_date})`,
+            error: `Step logging is only allowed from the challenge start date onwards (${challenge.start_date} to ${challenge.end_date})`,
             challenge_period: {
               start_date: challenge.start_date,
               end_date: challenge.end_date,

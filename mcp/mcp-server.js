@@ -109,7 +109,8 @@ const securityUtils = {
     };
 
     // Check for date range errors and provide descriptive messages
-    if (error.message.includes('Step logging is only allowed during the active challenge period')) {
+    if (error.message.includes('Step logging is only allowed during the active challenge period') || 
+        error.message.includes('Step logging is only allowed from the challenge start date onwards')) {
       return {
         code: -32000,
         message: 'Date outside challenge period',
@@ -431,10 +432,16 @@ const stepTools = {
         const startDate = new Date(challenge.start_date + 'T00:00:00');
         const endDate = new Date(challenge.end_date + 'T23:59:59');
 
-        if (stepDate < startDate || stepDate > endDate) {
-          throw new Error(`Step logging is only allowed during the active challenge period (${challenge.start_date} to ${challenge.end_date})`);
+        // Only block dates before challenge start - allow historical entries within challenge period
+        if (stepDate < startDate) {
+          throw new Error(`Step logging is only allowed from the challenge start date onwards (${challenge.start_date} to ${challenge.end_date})`);
         }
-        challengeId = challenge.id;
+        
+        // Allow dates within challenge period even if challenge has ended in real time
+        // This enables catch-up entries after challenge completion
+        if (stepDate >= startDate && stepDate <= endDate) {
+          challengeId = challenge.id;
+        }
       }
 
       // Save steps

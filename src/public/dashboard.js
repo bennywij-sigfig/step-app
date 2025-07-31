@@ -159,8 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 challengeInfo.innerHTML = `
                     <h3>${challenge.name}</h3>
                     <p><strong>Challenge Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
-                    <p style="color: #666; font-size: 14px; margin-top: 8px;">You can only log steps for dates within this period</p>
-                    ${!isWithinPeriod ? '<p style="color: #d63384; font-weight: 500;">Step logging is only allowed during the challenge period.</p>' : ''}
+                    <p style="color: #666; font-size: 14px; margin-top: 8px;">You can log steps from the start date onwards, including catch-up entries</p>
+                    ${!isWithinPeriod ? '<p style="color: #d63384; font-weight: 500;">You can still log steps for dates during this challenge period.</p>' : ''}
                 `;
                 
                 challengeInfo.className = isWithinPeriod ? 'challenge-info active' : 'challenge-info inactive';
@@ -222,10 +222,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Use noon to avoid timezone edge cases (cross-browser compatibility)
+            // Use specific times for inclusive date range (cross-browser compatibility)
             const stepDate = new Date(date + 'T12:00:00');
-            const startDate = new Date(challenge.start_date + 'T12:00:00');
-            const endDate = new Date(challenge.end_date + 'T12:00:00');
+            const startDate = new Date(challenge.start_date + 'T00:00:00');
+            const endDate = new Date(challenge.end_date + 'T23:59:59');
             
             // Check if date parsing was successful
             if (isNaN(stepDate.getTime())) {
@@ -248,10 +248,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Use getTime() for reliable cross-browser date comparison
-            if (stepDate.getTime() < startDate.getTime() || stepDate.getTime() > endDate.getTime()) {
+            // Only block dates before challenge start - allow historical catch-up entries within challenge period
+            if (stepDate.getTime() < startDate.getTime()) {
                 dateInput.style.borderColor = '#dc3545';
                 dateInput.style.backgroundColor = '#fff5f5';
-                messageDiv.innerHTML = `<div class="message error">Date must be between ${formatDate(challenge.start_date)} and ${formatDate(challenge.end_date)}</div>`;
+                messageDiv.innerHTML = `<div class="message error">Date must be on or after the challenge start date (${formatDate(challenge.start_date)})</div>`;
             } else {
                 dateInput.style.borderColor = '#667eea';
                 dateInput.style.backgroundColor = '#f8fff8';
@@ -516,10 +517,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Parse dates carefully to avoid timezone issues
+                // Parse dates carefully for inclusive date range
                 const stepDate = new Date(date + 'T12:00:00'); // Use noon to avoid timezone edge cases
-                const startDate = new Date(challenge.start_date + 'T12:00:00');
-                const endDate = new Date(challenge.end_date + 'T12:00:00');
+                const startDate = new Date(challenge.start_date + 'T00:00:00');
+                const endDate = new Date(challenge.end_date + 'T23:59:59');
                 
                 // Check if date parsing was successful
                 if (isNaN(stepDate.getTime())) {
@@ -538,8 +539,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Compare dates using getTime() for cross-browser compatibility
-                if (stepDate.getTime() < startDate.getTime() || stepDate.getTime() > endDate.getTime()) {
-                    messageDiv.innerHTML = `<div class="message error">Step logging is only allowed during the active challenge period (${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}).</div>`;
+                // Only block dates before challenge start - allow historical catch-up entries within challenge period
+                if (stepDate.getTime() < startDate.getTime()) {
+                    messageDiv.innerHTML = `<div class="message error">Step logging is only allowed from the challenge start date onwards (${formatDate(challenge.start_date)}).</div>`;
                     return;
                 }
             }
