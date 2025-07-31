@@ -8,7 +8,7 @@ const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const rateLimit = require('express-rate-limit');
 const db = require('./database');
-const { mcpUtils, handleMCPRequest, getMCPCapabilities } = require('./mcp-server');
+const { mcpUtils, handleMCPRequest, getMCPCapabilities } = require('../mcp/mcp-server');
 
 // Load environment variables
 require('dotenv').config();
@@ -119,7 +119,7 @@ app.use(session({
     sameSite: 'lax'
   }
 }));
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Rate limiting configuration
 const magicLinkLimiter = rateLimit({
@@ -699,7 +699,7 @@ app.get('/health', async (req, res) => {
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
-      version: require('./package.json').version,
+      version: require('../package.json').version,
       environment: process.env.NODE_ENV || 'development',
       database: {
         status: 'unknown',

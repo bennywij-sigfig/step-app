@@ -1,4 +1,4 @@
-const db = require('./database');
+const db = require('../src/database');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 
