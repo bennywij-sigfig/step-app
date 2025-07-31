@@ -162,7 +162,7 @@ const apiLimiter = rateLimit({
 
 const adminApiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // limit each session to 50 requests per windowMs for admin endpoints
+  max: 200, // limit each session to 200 requests per windowMs for admin endpoints
   message: {
     error: 'Too many admin API requests, please try again in an hour.',
     retryAfter: 3600
