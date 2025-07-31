@@ -108,6 +108,31 @@ const securityUtils = {
       'Steps already exist': 'Data conflict - use allow_overwrite to replace'
     };
 
+    // Check for date range errors and provide descriptive messages
+    if (error.message.includes('Step logging is only allowed during the active challenge period')) {
+      return {
+        code: -32000,
+        message: 'Date outside challenge period',
+        data: error.message
+      };
+    }
+
+    if (error.message.includes('Cannot enter steps for future dates')) {
+      return {
+        code: -32000,
+        message: 'Future date not allowed',
+        data: error.message
+      };
+    }
+
+    if (error.message.includes('Invalid date format')) {
+      return {
+        code: -32000,
+        message: 'Invalid date format',
+        data: error.message
+      };
+    }
+
     // In production, use safe error messages
     const message = !isDevMode && safeErrors[error.message] 
       ? safeErrors[error.message] 
@@ -800,13 +825,10 @@ const handleMCPRequest = async (body, ipAddress, userAgent, authHeader = null) =
       };
     } catch (error) {
       console.error('MCP tool call error:', error);
+      const errorResponse = securityUtils.createSafeErrorResponse(error, false);
       return {
         jsonrpc: '2.0',
-        error: {
-          code: -32000,
-          message: 'Server error',
-          data: error.message
-        },
+        error: errorResponse,
         id: body.id || null
       };
     }
