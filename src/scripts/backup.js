@@ -27,7 +27,7 @@ async function createApplicationBackup() {
     // For production, run via SSH
     if (process.env.NODE_ENV === 'production' || process.argv.includes('--production')) {
       // Use a simpler SSH command approach to avoid quote escaping issues
-      const command = 'fly ssh console --command "node -e \"const db = require(\'./database.js\'); db.utils.createBackup().then(r => { console.log(\'✅ Backup created:\', r.path); console.log(\'📊 Size:\', r.size, \'bytes\'); process.exit(0); }).catch(e => { console.error(\'❌ Backup failed:\', e.message); process.exit(1); })\""';
+      const command = 'fly ssh console --command "node -e \\"const db = require(\'./src/database.js\'); db.utils.createBackup().then(r => { console.log(\'✅ Backup created:\', r.path); console.log(\'📊 Size:\', r.size, \'bytes\'); process.exit(0); }).catch(e => { console.error(\'❌ Backup failed:\', e.message); process.exit(1); })\\"';
       execSync(command, { stdio: 'inherit' });
     } else {
       // For local development
@@ -74,7 +74,7 @@ async function cleanupOldBackups() {
     
     if (process.env.NODE_ENV === 'production' || process.argv.includes('--production')) {
       // Use a simpler SSH command approach to avoid quote escaping issues
-      const command = 'fly ssh console --command "node -e \"const db = require(\'./database.js\'); db.utils.cleanupOldBackups(10).then(r => { console.log(\'🗑️ Cleaned:\', r.cleaned, \'backups\'); console.log(\'📁 Kept:\', r.kept, \'backups\'); process.exit(0); }).catch(e => { console.error(\'❌ Cleanup failed:\', e.message); process.exit(1); })\""';
+      const command = 'fly ssh console --command "node -e \\"const db = require(\'./src/database.js\'); db.utils.cleanupOldBackups(10).then(r => { console.log(\'🗑️ Cleaned:\', r.cleaned, \'backups\'); console.log(\'📁 Kept:\', r.kept, \'backups\'); process.exit(0); }).catch(e => { console.error(\'❌ Cleanup failed:\', e.message); process.exit(1); })\\"';
       execSync(command, { stdio: 'inherit' });
     } else {
       const db = require('../database.js');

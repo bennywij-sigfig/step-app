@@ -48,7 +48,7 @@ npm run deploy:skip-backup
 ### **Production Backup Commands:**
 ```bash
 # Create backup via SSH
-node scripts/backup.js --production
+node src/scripts/backup.js --production
 
 # Create volume snapshot
 fly volumes snapshots create vol_rny0lp9ye2nkzz84
@@ -113,7 +113,7 @@ fly ssh console
 ls -la /data/backups/
 
 # Via script
-node scripts/backup.js --cleanup --production
+node src/scripts/backup.js --cleanup --production
 ```
 
 ## 🕒 Backup Schedule
