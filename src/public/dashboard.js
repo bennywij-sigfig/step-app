@@ -159,8 +159,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 challengeInfo.innerHTML = `
                     <h3>${challenge.name}</h3>
                     <p><strong>Challenge Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
-                    <p style="color: #666; font-size: 14px; margin-top: 8px;">You can log steps from the start date onwards, including catch-up entries</p>
-                    ${!isWithinPeriod ? '<p style="color: #d63384; font-weight: 500;">You can still log steps for dates during this challenge period.</p>' : ''}
+                    <p style="color: #666; font-size: 14px; margin-top: 8px;">You can log steps from the start date onwards, including catch-up entries.</p>
+                    ${!isWithinPeriod ? '<p style="color: #666; font-size: 14px; margin-top: 4px;">You can still log steps for dates during this challenge period.</p>' : ''}
                 `;
                 
                 challengeInfo.className = isWithinPeriod ? 'challenge-info active' : 'challenge-info inactive';
