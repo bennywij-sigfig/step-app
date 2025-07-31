@@ -12,6 +12,96 @@ function applyTheme(themeName) {
     document.documentElement.setAttribute('data-theme', themeName === 'default' ? '' : themeName);
 }
 
+// Confetti animation system
+function createConfetti() {
+    const canvas = document.getElementById('confettiCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.display = 'block';
+    
+    const confettiPieces = [];
+    const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF'];
+    
+    // Create confetti pieces
+    for (let i = 0; i < 150; i++) {
+        confettiPieces.push({
+            x: Math.random() * canvas.width,
+            y: -10,
+            vx: (Math.random() - 0.5) * 6,
+            vy: Math.random() * 3 + 2,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            size: Math.random() * 4 + 2,
+            rotation: Math.random() * 360,
+            rotationSpeed: (Math.random() - 0.5) * 10
+        });
+    }
+    
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        for (let i = confettiPieces.length - 1; i >= 0; i--) {
+            const piece = confettiPieces[i];
+            
+            // Update position
+            piece.x += piece.vx;
+            piece.y += piece.vy;
+            piece.rotation += piece.rotationSpeed;
+            
+            // Apply gravity
+            piece.vy += 0.1;
+            
+            // Remove pieces that are off screen
+            if (piece.y > canvas.height + 10) {
+                confettiPieces.splice(i, 1);
+                continue;
+            }
+            
+            // Draw confetti piece
+            ctx.save();
+            ctx.translate(piece.x, piece.y);
+            ctx.rotate(piece.rotation * Math.PI / 180);
+            ctx.fillStyle = piece.color;
+            ctx.fillRect(-piece.size/2, -piece.size/2, piece.size, piece.size);
+            ctx.restore();
+        }
+        
+        if (confettiPieces.length > 0) {
+            requestAnimationFrame(animate);
+        } else {
+            // Hide canvas when animation is done
+            canvas.style.display = 'none';
+        }
+    }
+    
+    animate();
+}
+
+// Trigger confetti celebration
+function celebrateSteps(stepCount) {
+    if (stepCount >= 15000) {
+        createConfetti();
+        
+        // Add celebration message
+        setTimeout(() => {
+            const messageDiv = document.getElementById('stepsMessage');
+            const currentMessage = messageDiv.innerHTML;
+            messageDiv.innerHTML = currentMessage + '<div class="message success" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; animation: pulse 1s ease-in-out 3;">🎉 Amazing! 15,000+ steps celebration! 🎉</div>';
+        }, 500);
+    }
+}
+
+// Handle window resize for confetti canvas
+window.addEventListener('resize', function() {
+    const canvas = document.getElementById('confettiCanvas');
+    if (canvas && canvas.style.display !== 'none') {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize theme
     initializeTheme();
@@ -484,6 +574,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (response.ok) {
                     messageDiv.innerHTML = '<div class="message success">Steps saved successfully!</div>';
                     document.getElementById('steps').value = '';
+                    
+                    // Trigger confetti for high step counts
+                    celebrateSteps(steps);
+                    
                     loadSteps(); // Reload the steps list
                 } else if (response.status === 429) {
                     const retryAfter = Math.floor(data.retryAfter / 60) || 60; // Convert to minutes
