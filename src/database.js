@@ -254,10 +254,7 @@ db.serialize(() => {
   // Add constraint to prevent multiple active challenges (SQLite doesn't support partial unique indexes easily)
   // We'll handle this in application logic for now
 
-  // Insert sample teams
-  db.run(`INSERT OR IGNORE INTO teams (name) VALUES ('Team Alpha')`);
-  db.run(`INSERT OR IGNORE INTO teams (name) VALUES ('Team Beta')`);
-  db.run(`INSERT OR IGNORE INTO teams (name) VALUES ('Team Gamma')`);
+  // Sample teams removed - teams should be created by admins as needed
   
   // Create admin users
   db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('benny@sigfig.com', 'Benny', 1)`);
