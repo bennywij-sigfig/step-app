@@ -1578,34 +1578,53 @@ app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCS
     return res.status(400).json({ error: 'Team name is required' });
   }
   
-  db.run(
-    `UPDATE teams SET name = ? WHERE id = ?`,
-    [name.trim(), teamId],
-    function(err) {
+  // First, get the old team name before updating
+  db.get(
+    `SELECT name FROM teams WHERE id = ?`,
+    [teamId],
+    (err, oldTeam) => {
       if (err) {
-        if (err.code === 'SQLITE_CONSTRAINT') {
-          return res.status(400).json({ error: 'Team name already exists' });
-        }
-        console.error('Error updating team:', err);
+        console.error('Error fetching old team name:', err);
         return res.status(500).json({ error: 'Database error' });
       }
       
-      if (this.changes === 0) {
+      if (!oldTeam) {
         return res.status(404).json({ error: 'Team not found' });
       }
       
-      // Update all users with the old team name to the new team name
+      // Update the team name
       db.run(
-        `UPDATE users SET team = ? WHERE team = (SELECT name FROM teams WHERE id = ?)`,
+        `UPDATE teams SET name = ? WHERE id = ?`,
         [name.trim(), teamId],
-        (err) => {
+        function(err) {
           if (err) {
-            console.error('Error updating user teams:', err);
+            if (err.code === 'SQLITE_CONSTRAINT') {
+              return res.status(400).json({ error: 'Team name already exists' });
+            }
+            console.error('Error updating team:', err);
+            return res.status(500).json({ error: 'Database error' });
           }
+          
+          if (this.changes === 0) {
+            return res.status(404).json({ error: 'Team not found' });
+          }
+          
+          // Update all users with the old team name to the new team name
+          db.run(
+            `UPDATE users SET team = ? WHERE team = ?`,
+            [name.trim(), oldTeam.name],
+            (err) => {
+              if (err) {
+                console.error('Error updating user teams:', err);
+                return res.status(500).json({ error: 'Failed to update user team assignments' });
+              }
+              console.log(`✅ Updated user team assignments from "${oldTeam.name}" to "${name.trim()}"`);
+            }
+          );
+          
+          res.json({ message: 'Team updated successfully' });
         }
       );
-      
-      res.json({ message: 'Team updated successfully' });
     }
   );
 });
