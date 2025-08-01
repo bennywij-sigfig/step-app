@@ -1269,7 +1269,7 @@ app.options('/mcp', (req, res) => {
 // MCP Bridge Script Download (Public - no authentication required)
 app.get('/download/step_bridge.py', (req, res) => {
   try {
-    const scriptPath = path.join(__dirname, 'step_bridge.py');
+    const scriptPath = path.join(__dirname, '..', 'mcp', 'step_bridge.py');
     
     // Security: Set proper headers for script download
     res.setHeader('Content-Type', 'text/x-python');
