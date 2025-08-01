@@ -109,12 +109,12 @@ This provides a menu-driven interface to test all MCP functions:
 
 **Start the MCP server manually for testing:**
 ```bash
-STEP_CHALLENGE_TOKEN=your_mcp_token_here node mcp-server.js
+STEP_CHALLENGE_TOKEN=your_mcp_token_here node mcp/mcp-server.js
 ```
 
 **Test with a simple JSON-RPC call:**
 ```bash
-echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
 ```
 
 ### Claude Code Integration
@@ -166,7 +166,7 @@ print(json.dumps(history, indent=2))
   "mcpServers": {
     "step-challenge": {
       "command": "node",
-      "args": ["/path/to/step-challenge/mcp-server.js"],
+      "args": ["/path/to/step-challenge/mcp/mcp-server.js"],
       "env": {
         "STEP_CHALLENGE_TOKEN": "your_mcp_token_here"
       }
@@ -331,10 +331,10 @@ python test_mcp_python.py --token YOUR_TOKEN --test-all
 ### 2. Test Local MCP Server
 ```bash
 # Test server startup
-STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
 
 # Test with echo (in another terminal)
-echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
 ```
 
 ### 3. Test Claude Code Integration
@@ -358,9 +358,9 @@ claude
 6. **Deploy to additional users** by distributing server files and tokens
 
 **File Locations Summary:**
-- **MCP Server**: `mcp-server.js` (Node.js stdio MCP server)
-- **Token Creation**: `get_mcp_token.py` (admin tool)
-- **API Testing**: `test_mcp_python.py` (comprehensive test suite)
+- **MCP Server**: `mcp/mcp-server.js` (Node.js stdio MCP server)
+- **Token Creation**: `mcp/get_mcp_token.py` (admin tool)
+- **API Testing**: `mcp/test_mcp_python.py` (comprehensive test suite)
 - **Claude Code Config**: `claude.json` (project or user directory)
 - **Claude Desktop Config**: `claude_desktop_config.json` (app data directory)
 

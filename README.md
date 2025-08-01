@@ -184,7 +184,7 @@ X-CSRF-Token: [admin_csrf_token]
 ```
 
 #### 2. **Distribute MCP Server Files**
-- Provide users with `mcp-server.js` and setup instructions
+- Provide users with `mcp/mcp-server.js` and setup instructions
 - Include token in secure communication (email, secure chat)
 - Point users to `USER_SETUP_GUIDE.md` for configuration
 
@@ -211,7 +211,7 @@ GET /api/admin/mcp-tokens
   "mcpServers": {
     "step-challenge": {
       "command": "node",
-      "args": ["/path/to/step-challenge/mcp-server.js"],
+      "args": ["/path/to/step-challenge/mcp/mcp-server.js"],
       "env": {
         "STEP_CHALLENGE_TOKEN": "your_mcp_token_here"
       }
@@ -230,10 +230,10 @@ GET /api/admin/mcp-tokens
 #### **Testing the Setup**
 ```bash
 # Test server directly
-STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
 
 # Test with echo
-echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp-server.js
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
 ```
 
 #### **Usage Examples**
@@ -243,7 +243,7 @@ Once configured, ask your AI assistant:
 - "Check my step challenge profile"
 
 #### **Local MCP Server Details**
-- **Command**: `node mcp-server.js`
+- **Command**: `node mcp/mcp-server.js`
 - **Protocol**: Stdio-based JSON-RPC 2.0
 - **Authentication**: Environment variable `STEP_CHALLENGE_TOKEN`
 
@@ -431,15 +431,15 @@ See `ADMIN_DISTRIBUTION_GUIDE.md` for complete workflow.
 
 ### **🐍 Python Bridge (Primary):**
 - `step_bridge.py` - Single-file MCP bridge with rich tool descriptions
-- `views/mcp-setup.html` - Web-based setup page with one-click download
-- `server.js` - Download endpoint `/download/step_bridge.py`
+- `src/views/mcp-setup.html` - Web-based setup page with one-click download
+- `src/server.js` - Download endpoint `/download/step_bridge.py`
 
 ### **🔗 Node.js Stdio Server (Alternate):**
-- `mcp-server.js` - Full JSON-RPC 2.0 MCP protocol implementation
+- `mcp/mcp-server.js` - Full JSON-RPC 2.0 MCP protocol implementation
 - `USER_SETUP_GUIDE.md` - Setup instructions for Node.js approach
 
 ### **Shared Infrastructure:**
-- `server.js` - Express server with MCP endpoints and token validation
+- `src/server.js` - Express server with MCP endpoints and token validation
 
 ### **User Experience:**
 - `/mcp-setup` - Authenticated setup page with multi-client configuration examples

@@ -27,25 +27,25 @@ Production web application for tracking daily steps in company-wide challenges (
 ## Key Files
 
 ### **Core Application**
-- `server.js` - Main Express server with all API endpoints + MCP integration
-- `database.js` - SQLite schema and initialization + MCP tables
-- `views/dashboard.html` - Main user interface with leaderboard tabs
-- `views/admin.html` - Admin panel with theme picker and management
-- `public/dashboard.js` - Client-side logic for leaderboards and team disclosure
-- `public/admin.js` - Admin panel functionality and theme management
+- `src/server.js` - Main Express server with all API endpoints + MCP integration
+- `src/database.js` - SQLite schema and initialization + MCP tables
+- `src/views/dashboard.html` - Main user interface with leaderboard tabs
+- `src/views/admin.html` - Admin panel with theme picker and management
+- `src/public/dashboard.js` - Client-side logic for leaderboards and team disclosure
+- `src/public/admin.js` - Admin panel functionality and theme management
 - `fly.toml` - Optimal deployment configuration (avoids CLI crashes)
 
 ### **Local Stdio MCP Integration**
-- `mcp-server.js` - Secure stdio-based MCP server with JSON-RPC 2.0 support
-- `server.js` - Main server with `/mcp` endpoint for token validation
-- `get_mcp_token.py` - Admin tool for creating and managing MCP tokens
-- `test_mcp_python.py` - Comprehensive testing suite for API and MCP server testing
+- `mcp/mcp-server.js` - Secure stdio-based MCP server with JSON-RPC 2.0 support
+- `src/server.js` - Main server with `/mcp` endpoint for token validation
+- `mcp/get_mcp_token.py` - Admin tool for creating and managing MCP tokens
+- `mcp/test_mcp_python.py` - Comprehensive testing suite for API and MCP server testing
 
 ### **Documentation & Guides**
 - `README.md` - Complete project documentation with remote MCP integration
-- `USER_SETUP_GUIDE.md` - End user setup guide for remote MCP (no installation required)
-- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing remote MCP access
-- `MCP_TESTING_GUIDE.md` - Comprehensive testing and integration guide
+- `docs/USER_SETUP_GUIDE.md` - End user setup guide for remote MCP (no installation required)
+- `docs/ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing remote MCP access
+- `docs/MCP_TESTING_GUIDE.md` - Comprehensive testing and integration guide
 
 ## Commands
 

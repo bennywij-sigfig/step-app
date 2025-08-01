@@ -341,18 +341,18 @@ All remote MCP functionality is complete and deployed to production. Security-re
 
 ### **🐍 Python Bridge (Primary Approach):**
 - `step_bridge.py` - Single-file MCP bridge with rich tool descriptions
-- `views/mcp-setup.html` - Web-based setup page with one-click download
-- `server.js` - Download endpoint `/download/step_bridge.py`
+- `src/views/mcp-setup.html` - Web-based setup page with one-click download
+- `src/server.js` - Download endpoint `/download/step_bridge.py`
 
 ### **🔗 Node.js Stdio Server (Alternate Approach):**
-- `mcp-server.js` - Full JSON-RPC 2.0 MCP protocol implementation
+- `mcp/mcp-server.js` - Full JSON-RPC 2.0 MCP protocol implementation
 - `USER_SETUP_GUIDE.md` - Setup instructions for Node.js approach
 - `database.js` - Required dependency for Node.js approach
 
 ### **Shared Infrastructure:**
-- `server.js` - Express server with MCP endpoints and token validation
-- `database.js` - MCP token tables and audit logging
-- `views/mcp-setup.html` - Setup page supports both approaches
+- `src/server.js` - Express server with MCP endpoints and token validation
+- `src/database.js` - MCP token tables and audit logging
+- `src/views/mcp-setup.html` - Setup page supports both approaches
 
 ### **Documentation:**
 - `README.md` - Updated with dual-approach documentation

@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "permissions": {
     "allow": [
       "Bash(npm init:*)",
@@ -7,10 +8,10 @@
       "Bash(npm start)",
       "Bash(lsof:*)",
       "Bash(pkill:*)",
-      "Bash(node server.js)",
+      "Bash(node src/server.js)",
       "Bash(curl:*)",
       "Bash(node:*)",
-      "Bash(PORT=3001 node server.js)",
+      "Bash(PORT=3001 node src/server.js)",
       "Bash(sqlite3:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
@@ -19,7 +20,10 @@
       "mcp__playwright__browser_type",
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_take_screenshot",
-      "mcp__playwright__browser_console_messages"
+      "mcp__playwright__browser_console_messages",
+      "Bash(rm:*)",
+      "Bash(npm run dev:*)",
+      "Bash(timeout 5 curl -s http://localhost:3000/health)"
     ],
     "deny": []
   }
