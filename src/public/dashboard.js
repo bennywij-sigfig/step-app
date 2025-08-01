@@ -1,6 +1,29 @@
 // Team disclosure functionality - must be global
 let expandedTeams = new Set(); // Track expanded state
 
+// Mobile detection utility
+function isMobileViewport() {
+    return window.innerWidth <= 768; // Standard mobile breakpoint
+}
+
+// Format reporting and member count with conditional emoji/text
+function formatReportingRate(rate, color = '#28a745') {
+    const percentage = rate >= 1 ? Math.round(rate) : rate;
+    if (isMobileViewport()) {
+        return `<span style="color: ${color}; font-size: 0.7em; margin-left: 6px;">📋 ${percentage}%</span>`;
+    } else {
+        return `<span style="color: ${color}; font-size: 0.7em; margin-left: 6px;">📋 ${percentage}% reporting</span>`;
+    }
+}
+
+function formatMemberCount(count) {
+    if (isMobileViewport()) {
+        return `<span style="color: #888; font-size: 0.75em; margin-left: 6px;">👥 ${count}</span>`;
+    } else {
+        return `<span style="color: #888; font-size: 0.75em; margin-left: 6px;">👥 ${count} member${count !== 1 ? 's' : ''}</span>`;
+    }
+}
+
 // Theme functionality
 function initializeTheme() {
     // Load theme from localStorage
@@ -426,10 +449,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <span class="rank">#${index + 1}</span>
                                 <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #666;">(${user.team})</span>` : ''}
-                                <span style="color: #28a745; font-size: 0.8em;">
-                                    ${user.personal_reporting_rate >= 1 ? Math.round(user.personal_reporting_rate) : user.personal_reporting_rate}% reporting
-                                </span>
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
+                                ${formatReportingRate(user.personal_reporting_rate, '#28a745')}
                             </div>
                             <div>
                                 <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
@@ -454,10 +475,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <span class="rank">-</span>
                                 <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #666;">(${user.team})</span>` : ''}
-                                <span style="color: #ffc107; font-size: 0.8em;">
-                                    ${user.personal_reporting_rate >= 1 ? Math.round(user.personal_reporting_rate) : user.personal_reporting_rate}% reporting
-                                </span>
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
+                                ${formatReportingRate(user.personal_reporting_rate, '#ffc107')}
                             </div>
                             <div>
                                 <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
@@ -480,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <span class="rank">#${index + 1}</span>
                                 <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #666;">(${user.team})</span>` : ''}
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
                             </div>
                             <div>
                                 <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
@@ -490,6 +509,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                         </div>`;
                     }).join('');
+                }
+                
+                // Add explanatory footer if there's actual leaderboard content (Individual only shows reporting rate)
+                const hasContent = (data.data.ranked && data.data.ranked.length > 0) || (data.data.unranked && data.data.unranked.length > 0) || Array.isArray(data);
+                if (hasContent) {
+                    html += `<div class="leaderboard-footer" style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.8em; color: #666; text-align: center;">
+                        📋&nbsp;Reporting rate
+                    </div>`;
                 }
                 
                 leaderboardDiv.innerHTML = html;
@@ -639,10 +666,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="team-disclosure" data-team="${team.team}">▶</span>
                                 <span class="rank">#${index + 1}</span>
                                 <strong>${team.team}</strong>
-                                <span style="color: #666;">(${team.member_count} members)</span>
-                                <span style="color: #28a745; font-size: 0.8em;">
-                                    ${team.team_reporting_rate >= 1 ? Math.round(team.team_reporting_rate) : team.team_reporting_rate}% reporting
-                                </span>
+                                ${formatMemberCount(team.member_count)}
+                                ${formatReportingRate(team.team_reporting_rate, '#28a745')}
                             </div>
                             <div>
                                 <div><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
@@ -668,10 +693,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="team-disclosure" data-team="${team.team}">▶</span>
                                 <span class="rank">-</span>
                                 <strong>${team.team}</strong>
-                                <span style="color: #666;">(${team.member_count} members)</span>
-                                <span style="color: #ffc107; font-size: 0.8em;">
-                                    ${team.team_reporting_rate >= 1 ? Math.round(team.team_reporting_rate) : team.team_reporting_rate}% reporting
-                                </span>
+                                ${formatMemberCount(team.member_count)}
+                                ${formatReportingRate(team.team_reporting_rate, '#ffc107')}
                             </div>
                             <div>
                                 <div><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
@@ -698,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <span class="team-disclosure" data-team="${team.team}">▶</span>
                                     <span class="rank">#${index + 1}</span>
                                     <strong>${team.team}</strong>
-                                    <span style="color: #666;">(${team.member_count} members)</span>
+                                    ${formatMemberCount(team.member_count)}
                                 </div>
                                 <div>
                                     <div><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
@@ -709,6 +732,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>`;
                         }).join('');
                     }
+                }
+                
+                // Add explanatory footer if there's actual leaderboard content (Teams show both member count and reporting rate)
+                const hasTeamContent = (data.data && ((data.data.ranked && data.data.ranked.length > 0) || (data.data.unranked && data.data.unranked.length > 0))) || (Array.isArray(data) && data.length > 0);
+                if (hasTeamContent) {
+                    html += `<div class="leaderboard-footer" style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.8em; color: #666; text-align: center;">
+                        👥&nbsp;Member count • 📋&nbsp;Reporting rate
+                    </div>`;
                 }
                 
                 teamLeaderboard.innerHTML = html;
@@ -810,6 +841,19 @@ document.addEventListener('DOMContentLoaded', function() {
             membersList.innerHTML = membersHtml;
             return membersList;
         }
+
+        // Handle responsive leaderboard updates on window resize
+        window.addEventListener('resize', function() {
+            // Refresh leaderboards if they're currently displayed to update mobile/desktop formatting
+            const individualTab = document.getElementById('leaderboardBtn');
+            const teamTab = document.getElementById('teamLeaderboardBtn');
+            
+            if (individualTab && individualTab.classList.contains('active')) {
+                loadLeaderboard();
+            } else if (teamTab && teamTab.classList.contains('active')) {
+                loadTeamLeaderboard();
+            }
+        });
 
         // Load initial data
         loadCurrentUser().then(() => {
