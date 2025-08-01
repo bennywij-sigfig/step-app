@@ -3,7 +3,7 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: '.',
-  testMatch: 'test-step-app.js',
+  testMatch: ['test-step-app.js', 'test-admin-magic-links.js'],
   timeout: 60000,
   expect: {
     timeout: 10000,

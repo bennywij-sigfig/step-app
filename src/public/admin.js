@@ -152,6 +152,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <button class="action-btn save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled title="Save team assignment">
                                         💾
                                     </button>
+                                    <button class="action-btn magic-link-btn" data-user-id="${user.id}" data-user-name="${user.name}" data-user-email="${user.email}" title="Generate magic login link">
+                                        🔗
+                                    </button>
                                     <button class="action-btn clear-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Clear all steps for this user">
                                         🗑️
                                     </button>
@@ -529,6 +532,186 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Generate magic link for user (admin only) with enhanced security
+        async function generateMagicLink(userId, userName, userEmail) {
+            // First, show confirmation dialog as required by security review
+            const confirmed = confirm(
+                `⚠️ SECURITY WARNING ⚠️\n\n` +
+                `You are about to generate a temporary login link for:\n` +
+                `• User: ${userName} (${userEmail})\n\n` +
+                `This action will:\n` +
+                `• Create a direct login link that bypasses email authentication\n` +
+                `• Grant immediate access to the user's account\n` +
+                `• Be logged for security audit purposes\n\n` +
+                `Are you sure you want to proceed?`
+            );
+            
+            if (!confirmed) {
+                return;
+            }
+            
+            const messageDiv = document.getElementById('usersMessage');
+            messageDiv.innerHTML = '<div class="message info">Generating magic link...</div>';
+            
+            try {
+                // First call without confirmation to trigger security prompt
+                let response = await authenticatedFetch('/api/admin/generate-magic-link', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: userId })
+                });
+                
+                let data = await response.json();
+                
+                // If requires confirmation, make the confirmed call
+                if (data.requiresConfirmation) {
+                    response = await authenticatedFetch('/api/admin/generate-magic-link', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ userId: userId, confirmed: true })
+                    });
+                    
+                    data = await response.json();
+                }
+                
+                if (response.ok) {
+                    // Show success message
+                    messageDiv.innerHTML = '<div class="message success">Magic link generated successfully!</div>';
+                    
+                    // Show secure modal with magic link
+                    showMagicLinkModal(data);
+                    
+                    setTimeout(() => messageDiv.innerHTML = '', 5000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
+                }
+            } catch (error) {
+                console.error('Error generating magic link:', error);
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+            }
+        }
+
+        // Show magic link in secure modal with enhanced security features
+        function showMagicLinkModal(linkData) {
+            // Create modal HTML with security enhancements
+            const modalHTML = `
+                <div id="magicLinkModal" style="
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+                    background: rgba(0, 0, 0, 0.8); z-index: 10000; 
+                    display: flex; align-items: center; justify-content: center;
+                ">
+                    <div style="
+                        background: white; padding: 30px; border-radius: 15px; 
+                        max-width: 600px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                        position: relative;
+                    ">
+                        <h2 style="color: #d9534f; margin: 0 0 20px 0; display: flex; align-items: center;">
+                            🔗 Magic Link Generated
+                            <span style="
+                                background: #f8d7da; color: #721c24; font-size: 12px; 
+                                padding: 4px 8px; border-radius: 4px; margin-left: 10px;
+                            ">SECURITY SENSITIVE</span>
+                        </h2>
+                        
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <strong>Target User:</strong> ${linkData.targetUser.name} (${linkData.targetUser.email})<br>
+                            <strong>Expires:</strong> ${linkData.expiresAtLocal}<br>
+                            <strong>Token ID:</strong> ${linkData.maskedToken}
+                        </div>
+                        
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
+                            <strong>⚠️ Security Notice:</strong><br>
+                            ${linkData.securityNotice}
+                        </div>
+                        
+                        <div style="margin-bottom: 20px;">
+                            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Magic Link:</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="magicLinkInput" value="${linkData.magicLink}" 
+                                       style="flex: 1; padding: 12px; border: 2px solid #007bff; border-radius: 6px; font-family: monospace;" 
+                                       readonly>
+                                <button id="copyLinkBtn" style="
+                                    background: #007bff; color: white; border: none; padding: 12px 20px; 
+                                    border-radius: 6px; cursor: pointer; white-space: nowrap;
+                                ">📋 Copy</button>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                            <button id="closeMagicLinkModal" style="
+                                background: #6c757d; color: white; border: none; padding: 12px 20px; 
+                                border-radius: 6px; cursor: pointer;
+                            ">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Add modal to DOM
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+            
+            // Auto-select the link text for easy copying
+            const linkInput = document.getElementById('magicLinkInput');
+            linkInput.select();
+            linkInput.setSelectionRange(0, 99999); // For mobile devices
+            
+            // Copy button functionality with secure clipboard handling
+            document.getElementById('copyLinkBtn').addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(linkData.magicLink);
+                    
+                    // Show success feedback
+                    const copyBtn = document.getElementById('copyLinkBtn');
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = '✅ Copied!';
+                    copyBtn.style.background = '#28a745';
+                    
+                    // Auto-clear clipboard after 60 seconds for security
+                    setTimeout(async () => {
+                        try {
+                            await navigator.clipboard.writeText('');
+                            console.log('🔒 Clipboard cleared for security');
+                        } catch (e) {
+                            console.log('Could not clear clipboard automatically');
+                        }
+                    }, 60000);
+                    
+                    setTimeout(() => {
+                        if (document.getElementById('copyLinkBtn')) {
+                            copyBtn.textContent = originalText;
+                            copyBtn.style.background = '#007bff';
+                        }
+                    }, 2000);
+                } catch (err) {
+                    console.error('Could not copy to clipboard:', err);
+                    // Fallback: select text for manual copy
+                    linkInput.select();
+                    alert('Please copy the link manually (Ctrl+C or Cmd+C)');
+                }
+            });
+            
+            // Close modal functionality
+            document.getElementById('closeMagicLinkModal').addEventListener('click', () => {
+                document.getElementById('magicLinkModal').remove();
+            });
+            
+            // Close on background click
+            document.getElementById('magicLinkModal').addEventListener('click', (e) => {
+                if (e.target.id === 'magicLinkModal') {
+                    document.getElementById('magicLinkModal').remove();
+                }
+            });
+            
+            // Close on Escape key
+            const escapeHandler = (e) => {
+                if (e.key === 'Escape') {
+                    document.getElementById('magicLinkModal').remove();
+                    document.removeEventListener('keydown', escapeHandler);
+                }
+            };
+            document.addEventListener('keydown', escapeHandler);
+        }
+
         // Export CSV function
         async function exportCSV() {
             try {
@@ -860,6 +1043,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 const userId = e.target.dataset.userId;
                 const userName = e.target.dataset.userName;
                 deleteUser(parseInt(userId), userName);
+            }
+            
+            // Generate magic link buttons
+            if (e.target.classList.contains('magic-link-btn')) {
+                const userId = e.target.dataset.userId;
+                const userName = e.target.dataset.userName;
+                const userEmail = e.target.dataset.userEmail;
+                generateMagicLink(parseInt(userId), userName, userEmail);
             }
             
             // Save team name buttons
