@@ -7,6 +7,7 @@ const axios = require('axios');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = require('express-rate-limit');
 const db = require('./database');
 const { mcpUtils, handleMCPRequest, getMCPCapabilities } = require('../mcp/mcp-server');
 
@@ -150,7 +151,10 @@ const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Use default IP-based key generator
+  // Use session-based key generator for authenticated users, IP-based for anonymous
+  keyGenerator: (req) => {
+    return req.session?.userId ? `api_user_${req.session.userId}` : `api_ip_${ipKeyGenerator(req)}`;
+  },
   handler: (req, res) => {
     console.log(`API rate limit exceeded for user: ${req.session?.userId || 'anonymous'} from IP: ${req.ip}`);
     res.status(429).json({
@@ -169,7 +173,10 @@ const adminApiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Use default IP-based key generator
+  // Use session-based key generator for authenticated users, IP-based for anonymous
+  keyGenerator: (req) => {
+    return req.session?.userId ? `admin_user_${req.session.userId}` : `admin_ip_${ipKeyGenerator(req)}`;
+  },
   handler: (req, res) => {
     console.log(`Admin API rate limit exceeded for user: ${req.session?.userId || 'anonymous'} from IP: ${req.ip}`);
     res.status(429).json({
