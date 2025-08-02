@@ -161,6 +161,8 @@ function createMegaConfetti() {
         colors: ['#FF1493', '#FFD700', '#00FF00', '#FF4500', '#FF69B4', '#00BFFF', '#FF6347', '#7FFF00', '#FF00FF', '#FFA500'],
         lastTime: 0,
         accelerometer: { x: 0, y: 0, z: 0 },
+        accelerometerBaseline: { x: 0, y: 0, z: 0 },
+        baselineCalibrated: false,
         mousePos: { x: 0, y: 0 },
         mousePressed: false,
         shakeThreshold: 15,
@@ -231,6 +233,20 @@ async function setupDeviceMotion() {
             megaConfettiSystem.accelerometer.y = acceleration.y || 0;
             megaConfettiSystem.accelerometer.z = acceleration.z || 0;
             
+            // Calibrate baseline on first reading (device's current orientation)
+            if (!megaConfettiSystem.baselineCalibrated) {
+                megaConfettiSystem.accelerometerBaseline.x = acceleration.x || 0;
+                megaConfettiSystem.accelerometerBaseline.y = acceleration.y || 0;
+                megaConfettiSystem.accelerometerBaseline.z = acceleration.z || 0;
+                megaConfettiSystem.baselineCalibrated = true;
+                return; // Skip applying forces on calibration frame
+            }
+            
+            // Calculate delta from baseline (changes in tilt from initial orientation)
+            const deltaX = (acceleration.x || 0) - megaConfettiSystem.accelerometerBaseline.x;
+            const deltaY = (acceleration.y || 0) - megaConfettiSystem.accelerometerBaseline.y;
+            const deltaZ = (acceleration.z || 0) - megaConfettiSystem.accelerometerBaseline.z;
+            
             // Calculate shake intensity for gentle disturbance only
             const shakeIntensity = Math.sqrt(
                 Math.pow(acceleration.x || 0, 2) + 
@@ -238,16 +254,16 @@ async function setupDeviceMotion() {
                 Math.pow(acceleration.z || 0, 2)
             );
             
-            // Apply gentle tilt forces based on device orientation
+            // Apply gentle tilt forces based on delta changes from baseline
             const tiltSensitivity = parseFloat(localStorage.getItem('confettiTiltSensitivity') || '0.3');
             const maxTiltForce = parseFloat(localStorage.getItem('confettiMaxTiltForce') || '2.0');
             
             megaConfettiSystem.particles.forEach(particle => {
                 // Apply continuous tilt forces to all particles, especially settled ones
                 if (particle.settled || Math.abs(particle.vy) < 2) {
-                    // Horizontal tilt creates lateral force
-                    const tiltX = (acceleration.x || 0) * tiltSensitivity;
-                    const tiltY = (acceleration.y || 0) * tiltSensitivity;
+                    // Use delta changes from baseline instead of absolute values
+                    const tiltX = deltaX * tiltSensitivity;
+                    const tiltY = deltaY * tiltSensitivity;
                     
                     // Clamp tilt forces to prevent excessive movement
                     const clampedTiltX = Math.max(-maxTiltForce, Math.min(maxTiltForce, tiltX));
@@ -263,8 +279,8 @@ async function setupDeviceMotion() {
                 }
                 // Also apply reduced tilt to moving particles for more responsive feel
                 else {
-                    particle.vx += (acceleration.x || 0) * tiltSensitivity * 0.3;
-                    particle.vy += (acceleration.y || 0) * tiltSensitivity * 0.3;
+                    particle.vx += deltaX * tiltSensitivity * 0.3;
+                    particle.vy += deltaY * tiltSensitivity * 0.3;
                 }
             });
             
