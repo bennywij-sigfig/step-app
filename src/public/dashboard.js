@@ -166,12 +166,13 @@ function createMegaConfetti() {
         shakeThreshold: 15,
         strongShakeThreshold: 25,
         startTime: Date.now(),
-        fadeStartTime: 8000, // Start fading after 8 seconds
+        fadeStartTime: parseInt(localStorage.getItem('confettiLifetime') || '10000', 10), // Start fading after configured seconds
         fadeDuration: 3000   // Fade out over 3 seconds
     };
     
     // Create MORE confetti particles for mega celebration
-    for (let i = 0; i < 300; i++) {
+    const particleCount = parseInt(localStorage.getItem('confettiParticleCount') || '600', 10);
+    for (let i = 0; i < particleCount; i++) {
         createMegaParticle(canvas.width / 2 + (Math.random() - 0.5) * 200, -10);
     }
     
@@ -246,15 +247,45 @@ async function setupDeviceMotion() {
                     particle.settled = false;
                 });
             }
-            // Gentle shake - disturb settled particles
-            else if (shakeIntensity > megaConfettiSystem.shakeThreshold) {
+            // Gentle tilt - shift the particle pile based on device orientation
+            else {
+                const tiltSensitivity = parseFloat(localStorage.getItem('confettiTiltSensitivity') || '0.3');
+                const maxTiltForce = parseFloat(localStorage.getItem('confettiMaxTiltForce') || '2.0');
+                
                 megaConfettiSystem.particles.forEach(particle => {
-                    if (particle.settled) {
-                        particle.vx += (acceleration.x || 0) * 0.1;
-                        particle.vy += (acceleration.y || 0) * 0.1;
-                        if (Math.abs(particle.vx) > 0.5 || Math.abs(particle.vy) > 0.5) {
+                    // Apply continuous tilt forces to all particles, especially settled ones
+                    if (particle.settled || Math.abs(particle.vy) < 2) {
+                        // Horizontal tilt creates lateral force
+                        const tiltX = (acceleration.x || 0) * tiltSensitivity;
+                        const tiltY = (acceleration.y || 0) * tiltSensitivity;
+                        
+                        // Clamp tilt forces to prevent excessive movement
+                        const clampedTiltX = Math.max(-maxTiltForce, Math.min(maxTiltForce, tiltX));
+                        const clampedTiltY = Math.max(-maxTiltForce, Math.min(maxTiltForce, tiltY));
+                        
+                        particle.vx += clampedTiltX;
+                        particle.vy += clampedTiltY;
+                        
+                        // Unsettle particles if forces are significant
+                        if (Math.abs(clampedTiltX) > 0.5 || Math.abs(clampedTiltY) > 0.5) {
                             particle.settled = false;
                         }
+                    }
+                    // Also apply reduced tilt to moving particles for more responsive feel
+                    else {
+                        particle.vx += (acceleration.x || 0) * tiltSensitivity * 0.3;
+                        particle.vy += (acceleration.y || 0) * tiltSensitivity * 0.3;
+                    }
+                });
+            }
+            
+            // Additional gentle shake detection for pile disturbance
+            if (shakeIntensity > megaConfettiSystem.shakeThreshold && shakeIntensity <= megaConfettiSystem.strongShakeThreshold) {
+                megaConfettiSystem.particles.forEach(particle => {
+                    if (particle.settled) {
+                        particle.vx += (Math.random() - 0.5) * 3;
+                        particle.vy -= Math.random() * 2;
+                        particle.settled = false;
                     }
                 });
             }

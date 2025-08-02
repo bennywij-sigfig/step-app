@@ -1499,6 +1499,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     showExtrasMessage('⚠️ Enable Epic Confetti first to test it!', 'error');
                 }
             });
+
+            // Add physics controls functionality
+            setupPhysicsControls();
         }
         
         // Test confetti functions
@@ -1623,6 +1626,86 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => {
                 messageDiv.innerHTML = '';
             }, 3000);
+        }
+
+        function setupPhysicsControls() {
+            // Initialize values from localStorage
+            const particleCountSlider = document.getElementById('particleCountSlider');
+            const particleCountValue = document.getElementById('particleCountValue');
+            const lifetimeSlider = document.getElementById('lifetimeSlider');
+            const lifetimeValue = document.getElementById('lifetimeValue');
+            const tiltSensitivitySlider = document.getElementById('tiltSensitivitySlider');
+            const tiltSensitivityValue = document.getElementById('tiltSensitivityValue');
+            const maxTiltForceSlider = document.getElementById('maxTiltForceSlider');
+            const maxTiltForceValue = document.getElementById('maxTiltForceValue');
+
+            // Load saved values or use defaults
+            particleCountSlider.value = localStorage.getItem('confettiParticleCount') || '600';
+            particleCountValue.textContent = particleCountSlider.value;
+            
+            lifetimeSlider.value = localStorage.getItem('confettiLifetime') || '10000';
+            lifetimeValue.textContent = (lifetimeSlider.value / 1000) + 's';
+            
+            tiltSensitivitySlider.value = localStorage.getItem('confettiTiltSensitivity') || '0.3';
+            tiltSensitivityValue.textContent = tiltSensitivitySlider.value;
+            
+            maxTiltForceSlider.value = localStorage.getItem('confettiMaxTiltForce') || '2.0';
+            maxTiltForceValue.textContent = maxTiltForceSlider.value;
+
+            // Add event listeners for real-time updates
+            particleCountSlider.addEventListener('input', function() {
+                particleCountValue.textContent = this.value;
+                localStorage.setItem('confettiParticleCount', this.value);
+            });
+
+            lifetimeSlider.addEventListener('input', function() {
+                lifetimeValue.textContent = (this.value / 1000) + 's';
+                localStorage.setItem('confettiLifetime', this.value);
+            });
+
+            tiltSensitivitySlider.addEventListener('input', function() {
+                tiltSensitivityValue.textContent = this.value;
+                localStorage.setItem('confettiTiltSensitivity', this.value);
+            });
+
+            maxTiltForceSlider.addEventListener('input', function() {
+                maxTiltForceValue.textContent = this.value;
+                localStorage.setItem('confettiMaxTiltForce', this.value);
+            });
+
+            // Reset to defaults button
+            document.getElementById('resetPhysicsBtn').addEventListener('click', function() {
+                particleCountSlider.value = '600';
+                particleCountValue.textContent = '600';
+                localStorage.setItem('confettiParticleCount', '600');
+
+                lifetimeSlider.value = '10000';
+                lifetimeValue.textContent = '10s';
+                localStorage.setItem('confettiLifetime', '10000');
+
+                tiltSensitivitySlider.value = '0.3';
+                tiltSensitivityValue.textContent = '0.3';
+                localStorage.setItem('confettiTiltSensitivity', '0.3');
+
+                maxTiltForceSlider.value = '2.0';
+                maxTiltForceValue.textContent = '2.0';
+                localStorage.setItem('confettiMaxTiltForce', '2.0');
+
+                showExtrasMessage('🔄 Physics settings reset to defaults!', 'success');
+            });
+
+            // Test current settings button
+            document.getElementById('testPhysicsBtn').addEventListener('click', function() {
+                const megaConfettiEnabled = localStorage.getItem('megaConfettiEnabled') === 'true';
+                if (megaConfettiEnabled) {
+                    testMegaConfetti();
+                    const particles = localStorage.getItem('confettiParticleCount') || '600';
+                    const lifetime = (localStorage.getItem('confettiLifetime') || '10000') / 1000;
+                    showExtrasMessage(`🧪 Testing: ${particles} particles, ${lifetime}s lifetime!`, 'success');
+                } else {
+                    showExtrasMessage('⚠️ Enable Epic Confetti first to test physics!', 'error');
+                }
+            });
         }
 
         // Initialize themes
