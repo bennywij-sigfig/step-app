@@ -136,6 +136,7 @@ function celebrateSteps(stepCount) {
 
 // Physics-based mega confetti system
 let megaConfettiSystem = null;
+let deviceMotionPermissionStatus = null; // Cache iOS permission status
 
 function createMegaConfetti() {
     // Don't create if already running
@@ -168,7 +169,12 @@ function createMegaConfetti() {
         shakeThreshold: 15,
         startTime: Date.now(),
         fadeStartTime: parseInt(localStorage.getItem('confettiLifetime') || '10000', 10), // Start fading after configured seconds
-        fadeDuration: 3000   // Fade out over 3 seconds
+        fadeDuration: 3000,   // Fade out over 3 seconds
+        orientation: {
+            angle: 0,              // Current rotation angle (0, 90, 180, 270)
+            gravityX: 0,           // Gravity X component based on orientation
+            gravityY: 0.3,         // Gravity Y component based on orientation
+        }
     };
     
     // Create MORE confetti particles for mega celebration
@@ -176,6 +182,9 @@ function createMegaConfetti() {
     for (let i = 0; i < particleCount; i++) {
         createMegaParticle(canvas.width / 2 + (Math.random() - 0.5) * 200, -10);
     }
+    
+    // Set up orientation detection for proper physics
+    setupOrientationDetection();
     
     // Set up device motion for mobile
     setupDeviceMotion();
@@ -206,62 +215,199 @@ function createMegaParticle(x, y) {
     megaConfettiSystem.particles.push(particle);
 }
 
+// Orientation detection and physics transformation
+let orientationUpdateTimeout;
+
+function setupOrientationDetection() {
+    // Get initial orientation
+    updateOrientationPhysics();
+    
+    // Listen for orientation changes
+    if (screen.orientation) {
+        screen.orientation.addEventListener('change', debouncedOrientationUpdate);
+    }
+    
+    // Fallback for older browsers
+    window.addEventListener('orientationchange', debouncedOrientationUpdate);
+}
+
+function debouncedOrientationUpdate() {
+    clearTimeout(orientationUpdateTimeout);
+    orientationUpdateTimeout = setTimeout(updateOrientationPhysics, 150);
+}
+
+function updateOrientationPhysics() {
+    if (!megaConfettiSystem) return;
+    
+    // Get current orientation angle
+    const angle = screen.orientation ? screen.orientation.angle : (window.orientation || 0);
+    megaConfettiSystem.orientation.angle = angle;
+    
+    // Calculate gravity direction based on orientation
+    switch (angle) {
+        case 0:   // Portrait
+            megaConfettiSystem.orientation.gravityX = 0;
+            megaConfettiSystem.orientation.gravityY = 0.3;
+            break;
+        case 90:  // Landscape left
+            megaConfettiSystem.orientation.gravityX = 0.3;
+            megaConfettiSystem.orientation.gravityY = 0;
+            break;
+        case 180: // Portrait upside down
+            megaConfettiSystem.orientation.gravityX = 0;
+            megaConfettiSystem.orientation.gravityY = -0.3;
+            break;
+        case 270: // Landscape right
+            megaConfettiSystem.orientation.gravityX = -0.3;
+            megaConfettiSystem.orientation.gravityY = 0;
+            break;
+        default:  // Fallback to portrait
+            megaConfettiSystem.orientation.gravityX = 0;
+            megaConfettiSystem.orientation.gravityY = 0.3;
+    }
+    
+    // Recalibrate accelerometer baseline after orientation change
+    if (megaConfettiSystem.baselineCalibrated) {
+        megaConfettiSystem.baselineCalibrated = false;
+    }
+}
+
+function transformAccelerometerData(acceleration) {
+    const angle = megaConfettiSystem.orientation.angle;
+    const x = acceleration.x || 0;
+    const y = acceleration.y || 0;
+    
+    // Transform accelerometer data based on device orientation
+    let transformedX, transformedY;
+    
+    switch (angle) {
+        case 0:   // Portrait
+            transformedX = x;
+            transformedY = y;
+            break;
+        case 90:  // Landscape left (rotated 90° counterclockwise)
+            transformedX = -y;
+            transformedY = x;
+            break;
+        case 180: // Portrait upside down (rotated 180°)
+            transformedX = -x;
+            transformedY = -y;
+            break;
+        case 270: // Landscape right (rotated 90° clockwise)
+            transformedX = y;
+            transformedY = -x;
+            break;
+        default:
+            transformedX = x;
+            transformedY = y;
+    }
+    
+    return { x: transformedX, y: transformedY };
+}
+
+function getOrientationAwareBoundaries(canvas) {
+    const angle = megaConfettiSystem.orientation.angle;
+    
+    // Calculate where particles should settle based on gravity direction
+    let gravityFloor, gravityCeiling;
+    
+    switch (angle) {
+        case 0:   // Portrait - gravity pulls down
+            gravityFloor = canvas.height;
+            gravityCeiling = 0;
+            break;
+        case 90:  // Landscape left - gravity pulls right
+            gravityFloor = canvas.width;
+            gravityCeiling = 0;
+            break;
+        case 180: // Portrait upside down - gravity pulls up  
+            gravityFloor = 0;
+            gravityCeiling = canvas.height;
+            break;
+        case 270: // Landscape right - gravity pulls left
+            gravityFloor = 0;
+            gravityCeiling = canvas.width;
+            break;
+        default:  // Fallback to portrait
+            gravityFloor = canvas.height;
+            gravityCeiling = 0;
+    }
+    
+    return {
+        left: 0,
+        right: canvas.width,
+        top: 0,
+        bottom: canvas.height,
+        gravityFloor: gravityFloor,
+        gravityCeiling: gravityCeiling,
+        isVerticalGravity: angle === 0 || angle === 180,
+        isHorizontalGravity: angle === 90 || angle === 270
+    };
+}
+
 async function setupDeviceMotion() {
     if (!window.DeviceMotionEvent) return;
     
-    // Request permission for iOS 13+
+    // Request permission for iOS 13+ (with caching to prevent multiple requests)
     if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        try {
-            const permission = await DeviceMotionEvent.requestPermission();
-            if (permission !== 'granted') {
-                console.log('Device motion permission denied - falling back to touch/mouse interaction only');
-                return;
+        if (deviceMotionPermissionStatus === null) {
+            try {
+                const permission = await DeviceMotionEvent.requestPermission();
+                deviceMotionPermissionStatus = (permission === 'granted');
+            } catch (error) {
+                console.log('Device motion permission request failed:', error);
+                deviceMotionPermissionStatus = false;
             }
-        } catch (error) {
-            console.log('Device motion not supported or permission request failed');
+        }
+        
+        if (!deviceMotionPermissionStatus) {
+            console.log('Device motion permission denied - falling back to touch/mouse interaction only');
             return;
         }
     }
     
-    // Add motion event listener
+    // Add motion event listener with orientation-aware coordinate transformation
     window.addEventListener('devicemotion', function(event) {
         if (!megaConfettiSystem) return;
         
         const acceleration = event.accelerationIncludingGravity;
         if (acceleration) {
-            megaConfettiSystem.accelerometer.x = acceleration.x || 0;
-            megaConfettiSystem.accelerometer.y = acceleration.y || 0;
+            // Transform accelerometer data for current orientation
+            const transformed = transformAccelerometerData(acceleration);
+            
+            megaConfettiSystem.accelerometer.x = transformed.x;
+            megaConfettiSystem.accelerometer.y = transformed.y;
             megaConfettiSystem.accelerometer.z = acceleration.z || 0;
             
             // Calibrate baseline on first reading (device's current orientation)
             if (!megaConfettiSystem.baselineCalibrated) {
-                megaConfettiSystem.accelerometerBaseline.x = acceleration.x || 0;
-                megaConfettiSystem.accelerometerBaseline.y = acceleration.y || 0;
+                megaConfettiSystem.accelerometerBaseline.x = transformed.x;
+                megaConfettiSystem.accelerometerBaseline.y = transformed.y;
                 megaConfettiSystem.accelerometerBaseline.z = acceleration.z || 0;
                 megaConfettiSystem.baselineCalibrated = true;
                 return; // Skip applying forces on calibration frame
             }
             
             // Calculate delta from baseline (changes in tilt from initial orientation)
-            const deltaX = (acceleration.x || 0) - megaConfettiSystem.accelerometerBaseline.x;
-            const deltaY = (acceleration.y || 0) - megaConfettiSystem.accelerometerBaseline.y;
+            const deltaX = transformed.x - megaConfettiSystem.accelerometerBaseline.x;
+            const deltaY = transformed.y - megaConfettiSystem.accelerometerBaseline.y;
             const deltaZ = (acceleration.z || 0) - megaConfettiSystem.accelerometerBaseline.z;
             
-            // Calculate shake intensity for gentle disturbance only
+            // Calculate shake intensity using delta changes instead of absolute values
             const shakeIntensity = Math.sqrt(
-                Math.pow(acceleration.x || 0, 2) + 
-                Math.pow(acceleration.y || 0, 2) + 
-                Math.pow(acceleration.z || 0, 2)
+                Math.pow(deltaX, 2) + 
+                Math.pow(deltaY, 2) + 
+                Math.pow(deltaZ, 2)
             );
             
-            // Apply gentle tilt forces based on delta changes from baseline
+            // Apply gentle tilt forces based on delta changes from baseline (now properly oriented)
             const tiltSensitivity = parseFloat(localStorage.getItem('confettiTiltSensitivity') || '0.3');
             const maxTiltForce = parseFloat(localStorage.getItem('confettiMaxTiltForce') || '2.0');
             
             megaConfettiSystem.particles.forEach(particle => {
                 // Apply continuous tilt forces to all particles, especially settled ones
                 if (particle.settled || Math.abs(particle.vy) < 2) {
-                    // Use delta changes from baseline instead of absolute values
+                    // Screen-relative tilt forces (now properly transformed)
                     const tiltX = deltaX * tiltSensitivity;
                     const tiltY = deltaY * tiltSensitivity;
                     
@@ -329,7 +475,7 @@ function setupMouseInteraction(canvas) {
                 const dy = particle.y - newY;
                 const distance = Math.sqrt(dx * dx + dy * dy);
                 
-                if (distance < 50) {
+                if (distance < 50 && distance > 0.1) {
                     const forceMultiplier = (50 - distance) / 50;
                     particle.vx += deltaX * forceMultiplier * 0.3;
                     particle.vy += deltaY * forceMultiplier * 0.3;
@@ -374,7 +520,7 @@ function setupMouseInteraction(canvas) {
             const dy = particle.y - newY;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance < 60) {
+            if (distance < 60 && distance > 0.1) {
                 const deltaX = newX - megaConfettiSystem.mousePos.x;
                 const deltaY = newY - megaConfettiSystem.mousePos.y;
                 const forceMultiplier = (60 - distance) / 60;
@@ -425,8 +571,9 @@ function animateMegaConfetti() {
         
         // Update physics if not settled
         if (!particle.settled) {
-            // Apply gravity
-            particle.vy += megaConfettiSystem.gravity;
+            // Apply orientation-aware gravity
+            particle.vx += megaConfettiSystem.orientation.gravityX;
+            particle.vy += megaConfettiSystem.orientation.gravityY;
             
             // Update position
             particle.x += particle.vx;
@@ -436,25 +583,107 @@ function animateMegaConfetti() {
             particle.vx *= megaConfettiSystem.friction;
             particle.vy *= megaConfettiSystem.friction;
             
-            // Bounce off walls
-            if (particle.x <= particle.size) {
-                particle.x = particle.size;
-                particle.vx *= -megaConfettiSystem.restitution;
-            }
-            if (particle.x >= canvas.width - particle.size) {
-                particle.x = canvas.width - particle.size;
-                particle.vx *= -megaConfettiSystem.restitution;
+            // Get orientation-aware boundaries
+            const boundaries = getOrientationAwareBoundaries(canvas);
+            
+            // Handle boundary collisions based on gravity direction
+            if (boundaries.isHorizontalGravity) {
+                // Horizontal gravity - allow settling on left/right, bounce on top/bottom
+                if (particle.x <= particle.size) {
+                    particle.x = particle.size;
+                    if (boundaries.gravityFloor === 0) {
+                        // Settling on left edge - reduce velocity for settling
+                        particle.vx *= 0.3;
+                    } else {
+                        // Bouncing off left wall
+                        particle.vx *= -megaConfettiSystem.restitution;
+                    }
+                }
+                if (particle.x >= boundaries.right - particle.size) {
+                    particle.x = boundaries.right - particle.size;
+                    if (boundaries.gravityFloor === canvas.width) {
+                        // Settling on right edge - reduce velocity for settling
+                        particle.vx *= 0.3;
+                    } else {
+                        // Bouncing off right wall
+                        particle.vx *= -megaConfettiSystem.restitution;
+                    }
+                }
+                
+                // Always bounce off top/bottom in horizontal gravity
+                if (particle.y <= particle.size) {
+                    particle.y = particle.size;
+                    particle.vy *= -megaConfettiSystem.restitution;
+                }
+                if (particle.y >= boundaries.bottom - particle.size) {
+                    particle.y = boundaries.bottom - particle.size;
+                    particle.vy *= -megaConfettiSystem.restitution;
+                }
+            } else {
+                // Vertical gravity - allow settling on top/bottom, bounce on left/right
+                if (particle.y <= particle.size) {
+                    particle.y = particle.size;
+                    if (boundaries.gravityFloor === 0) {
+                        // Settling on top edge - reduce velocity for settling
+                        particle.vy *= 0.3;
+                    } else {
+                        // Bouncing off top wall
+                        particle.vy *= -megaConfettiSystem.restitution;
+                    }
+                }
+                if (particle.y >= boundaries.bottom - particle.size) {
+                    particle.y = boundaries.bottom - particle.size;
+                    if (boundaries.gravityFloor === canvas.height) {
+                        // Settling on bottom edge - reduce velocity for settling
+                        particle.vy *= 0.3;
+                    } else {
+                        // Bouncing off bottom wall
+                        particle.vy *= -megaConfettiSystem.restitution;
+                    }
+                }
+                
+                // Always bounce off left/right in vertical gravity
+                if (particle.x <= particle.size) {
+                    particle.x = particle.size;
+                    particle.vx *= -megaConfettiSystem.restitution;
+                }
+                if (particle.x >= boundaries.right - particle.size) {
+                    particle.x = boundaries.right - particle.size;
+                    particle.vx *= -megaConfettiSystem.restitution;
+                }
             }
             
-            // Settle on ground
-            if (particle.y >= canvas.height - particle.size) {
-                particle.y = canvas.height - particle.size;
-                particle.vy *= -megaConfettiSystem.restitution;
-                
+            // Settle based on gravity direction
+            let isAtFloor = false;
+            
+            if (boundaries.isVerticalGravity) {
+                // Vertical gravity - settle on top or bottom
+                if (boundaries.gravityFloor === canvas.height) {
+                    // Normal gravity - settle at bottom
+                    isAtFloor = particle.y >= canvas.height - particle.size;
+                } else {
+                    // Upside down - settle at top
+                    isAtFloor = particle.y <= particle.size;
+                }
+            } else if (boundaries.isHorizontalGravity) {
+                // Horizontal gravity - settle on left or right
+                if (boundaries.gravityFloor === canvas.width) {
+                    // Gravity pulls right - settle at right edge
+                    isAtFloor = particle.x >= canvas.width - particle.size;
+                } else {
+                    // Gravity pulls left - settle at left edge
+                    isAtFloor = particle.x <= particle.size;
+                }
+            }
+            
+            // Check if particle should settle
+            if (isAtFloor) {
                 // Stop if moving slowly enough
-                if (Math.abs(particle.vy) < 1 && Math.abs(particle.vx) < 0.5) {
+                const totalVelocity = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+                if (totalVelocity < 1.5) {
                     particle.settled = true;
-                    particle.vy = 0;
+                    particle.vx *= 0.5; // Reduce velocity significantly
+                    particle.vy *= 0.5;
                     particle.restingY = particle.y;
                 }
             }
@@ -502,22 +731,29 @@ window.addEventListener('beforeunload', function() {
     }
 });
 
-// Handle window resize for confetti canvas
-window.addEventListener('resize', function() {
+// Handle window resize for confetti canvas (debounced for performance)
+let resizeTimeout;
+function handleCanvasResize() {
     const canvas = document.getElementById('confettiCanvas');
     if (canvas && canvas.style.display !== 'none') {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        // Add canvas size validation
+        canvas.width = Math.max(window.innerWidth || 800, 100);
+        canvas.height = Math.max(window.innerHeight || 600, 100);
         
         // Update mega confetti system if running
         if (megaConfettiSystem && megaConfettiSystem.running) {
             // Adjust particles that are now off-screen
             megaConfettiSystem.particles.forEach(particle => {
-                if (particle.x > canvas.width) particle.x = canvas.width - particle.size;
-                if (particle.y > canvas.height) particle.y = canvas.height - particle.size;
+                if (particle.x > canvas.width - particle.size) particle.x = canvas.width - particle.size;
+                if (particle.y > canvas.height - particle.size) particle.y = canvas.height - particle.size;
             });
         }
     }
+}
+
+window.addEventListener('resize', function() {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(handleCanvasResize, 150);
 });
 
 document.addEventListener('DOMContentLoaded', function() {
