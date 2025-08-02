@@ -1958,7 +1958,7 @@ app.post('/api/admin/get-my-magic-link', adminApiLimiter, requireApiAdmin, valid
       timestamp: new Date().toISOString()
     };
     
-    await logMCPAudit(admin.id, 'admin_self_magic_link_generated', JSON.stringify(auditData), req.ip, req.get('User-Agent'));
+    // TODO: Implement logMCPAudit function if detailed audit logging is needed
     
     console.log(`🔗 Admin self-service magic link generated for ${admin.email}`);
     
