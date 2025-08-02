@@ -111,11 +111,11 @@ function celebrateSteps(stepCount) {
             // Only do mega celebration for 20K+
             createMegaConfetti();
             
-            // Add mega celebration message with warp speed glow
+            // Add epic celebration message with warp speed glow
             setTimeout(() => {
                 const messageDiv = document.getElementById('stepsMessage');
                 const currentMessage = messageDiv.innerHTML;
-                messageDiv.innerHTML = currentMessage + '<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">🚀 MEGA CELEBRATION! 20,000+ STEPS! 🚀</div>';
+                messageDiv.innerHTML = currentMessage + '<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">🚀 EPIC ACHIEVEMENT! 20,000+ STEPS! 🚀</div>';
             }, 500);
             return; // Skip regular confetti for 20K+
         }

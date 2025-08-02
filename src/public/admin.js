@@ -1481,7 +1481,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 localStorage.setItem('megaConfettiEnabled', enabled.toString());
                 
                 // Show success message
-                showExtrasMessage(`Mega Confetti ${enabled ? 'enabled' : 'disabled'}! ${enabled ? '🎉' : '😔'}`, 'success');
+                showExtrasMessage(`Epic Confetti ${enabled ? 'enabled' : 'disabled'}! ${enabled ? '🎉' : '😔'}`, 'success');
             });
             
             // Add confetti testing buttons
@@ -1494,9 +1494,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const megaConfettiEnabled = localStorage.getItem('megaConfettiEnabled') === 'true';
                 if (megaConfettiEnabled) {
                     testMegaConfetti();
-                    showExtrasMessage('🚀 Mega confetti test triggered!', 'success');
+                    showExtrasMessage('🚀 Epic confetti test triggered!', 'success');
                 } else {
-                    showExtrasMessage('⚠️ Enable Mega Confetti first to test it!', 'error');
+                    showExtrasMessage('⚠️ Enable Epic Confetti first to test it!', 'error');
                 }
             });
         }
@@ -1611,7 +1611,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.createMegaConfetti();
                 } else {
                     // Fallback to basic implementation
-                    showExtrasMessage('⚠️ Mega confetti requires dashboard context. Try testing from the main app.', 'error');
+                    showExtrasMessage('⚠️ Epic confetti requires dashboard context. Try testing from the main app.', 'error');
                 }
             };
             document.head.appendChild(script);
