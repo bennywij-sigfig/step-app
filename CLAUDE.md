@@ -3,9 +3,10 @@
 ## Overview
 Production web application for tracking daily steps in company-wide challenges (~150 users).
 
-## Status: Production Deployed with Remote MCP Server ✅
+## Status: Production Deployed with Repository Reorganization Complete ✅
 - **URL**: https://step-app-4x-yhw.fly.dev/
-- **Last Deploy**: July 30, 2025 (Remote MCP Server + Streamable HTTP support)
+- **Last Deploy**: August 1, 2025 (Repository reorganization + all documentation paths updated)
+- **Repository Structure**: Complete directory reorganization with src/, mcp/, docs/, tests/, config/
 - **Remote MCP API**: Fully operational Streamable HTTP endpoint at `/mcp`
 - **MCP Admin Panel**: Complete token management interface with creation, revocation, and monitoring
 - **Claude Integration**: Ready for Claude Desktop/Cursor/Claude Code with zero-installation setup
@@ -58,16 +59,16 @@ npm run dev        # Development mode with auto-restart
 ### **Local Stdio MCP Integration**
 ```bash
 # Admin: Create MCP tokens for users
-python get_mcp_token.py --interactive
+python mcp/get_mcp_token.py --interactive
 
 # Testing: Test API and local MCP server
-python test_mcp_python.py --token YOUR_TOKEN --test-all
+python mcp/test_mcp_python.py --token YOUR_TOKEN --test-all
 
 # Test local MCP server directly
-STEP_CHALLENGE_TOKEN=YOUR_TOKEN node mcp-server.js
+STEP_CHALLENGE_TOKEN=YOUR_TOKEN node mcp/mcp-server.js
 
 # Test with Claude Code
-echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=YOUR_TOKEN node mcp-server.js
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=YOUR_TOKEN node mcp/mcp-server.js
 ```
 
 ### **AI Validation & Review**
@@ -82,7 +83,13 @@ gemini --debug -p "Technical query"                              # Debug mode fo
 echo "Reorganization plan details" | gemini -p "Analyze from production safety perspective"
 ```
 
-## Recent Updates (July 30, 2025)
+## Recent Updates (August 1, 2025)
+
+### 🗂️ **Repository Reorganization Complete**
+- **Directory Structure**: Complete reorganization with src/, mcp/, docs/, tests/, config/ directories
+- **Path Fixes**: All require() statements, documentation, and deployment configurations updated
+- **Production Deployment**: Successfully deployed and verified working with new structure
+- **Documentation Sync**: All file path references updated across README, CLAUDE.md, and docs/
 
 ### 🌐 **Local Stdio MCP Server Implementation**
 - **Stdio Protocol Support**: Full MCP stdio protocol compliance for local integration
@@ -147,13 +154,334 @@ echo "Reorganization plan details" | gemini -p "Analyze from production safety p
 - **Local MCP API**: Stdio protocol with token-based auth, user isolation, and comprehensive audit logging
 - **AI Integration**: Native Claude Desktop/Cursor/Claude Code support via local stdio MCP server
 
+## Claude Code Best Practices for This Repository
+
+### 🧪 **Testing Workflow - Local First, Then Production**
+
+#### **1. Local Development Testing**
+```bash
+# Start local server with monitoring
+npm run dev
+
+# Test basic functionality
+curl http://localhost:3000/health
+curl http://localhost:3000/
+curl -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com"}' http://localhost:3000/auth/send-link
+```
+
+#### **2. Frontend Testing (All Pages)**
+Use Playwright MCP integration for comprehensive browser testing:
+```bash
+# Test all frontend pages systematically
+# Dashboard: http://localhost:3000
+# Admin panel: http://localhost:3000/admin  
+# MCP setup: http://localhost:3000/mcp-setup
+# Login flow: Magic link generation and validation
+```
+
+#### **3. API Endpoint Testing**
+```bash
+# Health and system status
+curl http://localhost:3000/health
+
+# MCP capabilities 
+curl http://localhost:3000/mcp/capabilities
+
+# Authentication endpoints
+curl -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com"}' http://localhost:3000/auth/send-link
+
+# Admin API (requires auth)
+curl http://localhost:3000/api/csrf-token
+
+# File downloads
+curl http://localhost:3000/download/step_bridge.py
+```
+
+#### **4. MCP Integration Testing**
+```bash
+# Test remote MCP API
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' http://localhost:3000/mcp
+
+# Test local MCP server (requires token)
+STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
+
+# Test comprehensive MCP functionality
+python mcp/test_mcp_python.py --token YOUR_TOKEN --test-all
+```
+
+#### **5. Production Testing**
+After local validation, test production:
+```bash
+# Production health check
+curl https://step-app-4x-yhw.fly.dev/health
+
+# Production frontend pages
+curl https://step-app-4x-yhw.fly.dev/
+curl https://step-app-4x-yhw.fly.dev/download/step_bridge.py
+
+# Production MCP endpoints
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' https://step-app-4x-yhw.fly.dev/mcp
+
+# Production magic link testing
+curl -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com"}' https://step-app-4x-yhw.fly.dev/auth/send-link
+```
+
+### 🔐 **Manual Magic Link Provision**
+
+When email delivery fails or for testing purposes:
+
+#### **Console Method (Development)**
+```bash
+# Magic links appear in console when MAILGUN_API_KEY not configured
+# Look for: "Magic link (email not configured): http://localhost:3000/auth/verify?token=..."
+npm run dev
+# Send magic link request
+curl -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com"}' http://localhost:3000/auth/send-link
+# Check server console for magic link URL
+```
+
+#### **Database Method (Production)**
+```bash
+# Connect to production database and retrieve magic link token
+fly ssh console -a step-app-4x-yhw
+sqlite3 /data/steps.db
+SELECT token, email, expires_at FROM auth_tokens ORDER BY created_at DESC LIMIT 5;
+# Construct URL: https://step-app-4x-yhw.fly.dev/auth/verify?token=TOKEN_VALUE
+```
+
+#### **Admin Panel Method (Preferred)**
+```bash
+# Use admin magic link generation feature
+# 1. Access admin panel: https://step-app-4x-yhw.fly.dev/admin
+# 2. Navigate to "Generate Magic Link" section
+# 3. Enter user email and generate secure magic link
+# 4. Copy link and provide to user directly
+```
+
+### 🖥️ **Playwright MCP Integration for Browser Testing**
+
+Leverage the Playwright MCP server for comprehensive UI testing:
+
+#### **Browser Testing Workflow**
+```bash
+# Use Claude Code with Playwright MCP to:
+# 1. Navigate to application pages
+# 2. Take screenshots for visual validation
+# 3. Test user interactions (login, dashboard navigation, admin functions)
+# 4. Validate responsive design across different viewport sizes
+# 5. Test MCP setup page functionality
+```
+
+#### **Key Pages to Test**
+- **Dashboard** (`/`): Leaderboards, team disclosure, theme switching
+- **Admin Panel** (`/admin`): User management, challenge creation, MCP token management
+- **MCP Setup** (`/mcp-setup`): Download functionality, configuration examples
+- **Login Flow**: Magic link generation, token validation, session management
+
+### 📊 **Database Management via Claude Code**
+
+#### **SQLite Status Monitoring**
+```bash
+# Check database health
+curl http://localhost:3000/health | jq '.database'
+
+# Production database status  
+curl https://step-app-4x-yhw.fly.dev/health | jq '.database'
+
+# Database schema validation
+sqlite3 src/steps.db ".schema"
+```
+
+#### **Common Database Operations**
+```bash
+# User management
+sqlite3 src/steps.db "SELECT id, email, name, team_id, is_admin FROM users;"
+
+# Step data analysis
+sqlite3 src/steps.db "SELECT date, count FROM steps ORDER BY date DESC LIMIT 10;"
+
+# MCP token status
+sqlite3 src/steps.db "SELECT token, user_id, expires_at FROM mcp_tokens WHERE expires_at > datetime('now');"
+
+# Challenge status
+sqlite3 src/steps.db "SELECT name, start_date, end_date, reporting_threshold FROM challenges ORDER BY created_at DESC;"
+```
+
+### 🚀 **Deployment and Monitoring**
+
+#### **Deployment Workflow**
+```bash
+# Pre-deployment checks
+npm run dev  # Ensure local functionality
+fly deploy   # Deploy to production
+curl https://step-app-4x-yhw.fly.dev/health  # Verify deployment
+
+# Post-deployment validation
+fly logs -a step-app-4x-yhw  # Monitor startup logs
+fly status -a step-app-4x-yhw  # Check app status
+```
+
+#### **Production Monitoring**
+```bash
+# Application health monitoring
+curl https://step-app-4x-yhw.fly.dev/health
+
+# Database performance
+curl https://step-app-4x-yhw.fly.dev/health | jq '.database'
+
+# MCP endpoint availability
+curl -X POST -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' https://step-app-4x-yhw.fly.dev/mcp
+
+# Log monitoring for errors
+fly logs -a step-app-4x-yhw --follow
+```
+
+### ⚡ **Load Testing and Performance Validation**
+
+#### **Using Built-in Test Suites**
+```bash
+# Comprehensive load testing
+node tests/load-test.js
+
+# MCP API load testing
+node tests/mcp-api-load-test.js
+
+# Authenticated user flow testing
+node tests/authenticated-load-test.js
+
+# Security validation testing
+node tests/test-input-validation.js
+```
+
+#### **Security Testing Workflows**
+```bash
+# Input validation testing
+node tests/test-string-attack.js
+
+# Rate limiting validation
+node tests/test-validation-direct.js
+
+# Admin magic link security testing  
+node tests/test-admin-magic-links.js
+```
+
+### 🔍 **MCP Integration Debugging**
+
+#### **Python Bridge Testing**
+```bash
+# Download and test Python bridge
+curl https://step-app-4x-yhw.fly.dev/download/step_bridge.py -o step_bridge.py
+pip install aiohttp
+STEP_TOKEN=your_token python step_bridge.py
+
+# Test specific MCP functions
+python mcp/test_mcp_python.py --token YOUR_TOKEN --test-profile
+python mcp/test_mcp_python.py --token YOUR_TOKEN --test-steps
+```
+
+#### **Node.js MCP Server Testing**
+```bash
+# Test local stdio MCP server
+STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
+
+# Test JSON-RPC protocol compliance
+echo '{"jsonrpc":"2.0","method":"initialize","params":{},"id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
+echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
+```
+
+#### **Claude Desktop/Cursor Integration Testing**
+```bash
+# Validate claude.json configuration
+cat claude.json
+
+# Test MCP server accessibility
+STEP_CHALLENGE_TOKEN=your_token node mcp/mcp-server.js
+
+# Monitor MCP usage via admin panel
+curl https://step-app-4x-yhw.fly.dev/api/admin/mcp-audit
+```
+
+### 📋 **Comprehensive Testing Checklist**
+
+When working on this repository, systematically validate:
+
+#### **Frontend Testing**
+- [ ] Dashboard loads and displays leaderboards correctly
+- [ ] Admin panel accessible and functional (user/team/challenge management)
+- [ ] MCP setup page provides correct download and configuration instructions
+- [ ] Theme switching works across all admin pages
+- [ ] Mobile responsiveness validated across viewport sizes
+- [ ] Cross-browser compatibility (Chrome, Firefox, Safari)
+
+#### **Backend API Testing**
+- [ ] Health endpoint returns database status and application metrics
+- [ ] Authentication endpoints handle magic link generation and validation
+- [ ] CSRF protection active on admin endpoints
+- [ ] Rate limiting enforced (10/hour magic links, 100/hour API, 50/hour admin)
+- [ ] MCP endpoints respond correctly to JSON-RPC calls
+- [ ] File download endpoints serve correct content with security headers
+
+#### **MCP Integration Testing**
+- [ ] Remote MCP API returns correct tool definitions and capabilities
+- [ ] Python bridge downloads successfully and connects to API
+- [ ] Node.js MCP server starts and responds to stdio protocol
+- [ ] Token-based authentication validates correctly
+- [ ] User data isolation enforced (users only access own data)
+- [ ] Audit logging captures all MCP actions with IP addresses
+
+#### **Database and Security Testing**
+- [ ] SQLite database integrity check passes
+- [ ] Input validation prevents SQL injection and XSS attacks
+- [ ] Session management secure with proper token expiration
+- [ ] User permissions enforced (admin vs regular user access)
+- [ ] Data backup and recovery procedures validated
+
+#### **Production Deployment Testing**
+- [ ] Fly.io deployment completes without errors
+- [ ] Health checks pass post-deployment
+- [ ] All endpoints accessible via HTTPS
+- [ ] Database migrations apply successfully
+- [ ] Static file serving works correctly
+- [ ] Email delivery functional (or console fallback working)
+
+### 🎯 **Repository-Specific Tips**
+
+#### **Quick Development Setup**
+```bash
+# One-command development start
+npm run dev
+
+# Admin user creation (set in database)
+sqlite3 src/steps.db "UPDATE users SET is_admin = 1 WHERE email = 'your-email@example.com';"
+
+# MCP token creation for testing
+python mcp/get_mcp_token.py --interactive
+```
+
+#### **Common Debugging Scenarios**
+- **Magic links not working**: Check console output in development, verify Mailgun configuration in production
+- **Admin panel not accessible**: Verify `is_admin = 1` in users table for your user account
+- **MCP integration failing**: Validate token with `python mcp/test_mcp_python.py --token YOUR_TOKEN`
+- **Database issues**: Run health check and examine `database.accessible` and `database.integrity` fields
+- **Frontend not loading**: Check static file serving configuration and network tab in browser developer tools
+
+#### **Performance Optimization**
+- Monitor database size and consider implementing backup rotation
+- Use browser developer tools to validate CSS/JS loading times
+- Monitor memory usage during load testing
+- Validate rate limiting effectiveness under stress testing
+
+This comprehensive testing and development workflow ensures reliability, security, and optimal performance of the Step Challenge application across all components and integration points.
+
 ## Security & Infrastructure Status
 
-### ✅ **COMPLETED Security Fixes (Ready for 50+ Users)**
-1. **Backend Input Validation** - Comprehensive validation prevents type confusion, SQL injection, and data corruption attacks
-2. **Rate Limiting Enhancement** - Increased magic link limit from 5→10 per hour per IP for VPN users
-3. **Production Security Testing** - Full penetration testing completed, all attack vectors blocked
-4. **CSRF Protection Assessment** - Current 24-hour session-based tokens deemed secure for use case
+### ✅ **COMPLETED Security Fixes (Ready for 150+ Users)**
+1. **Repository Reorganization** - Complete directory restructure with proper separation of concerns
+2. **Backend Input Validation** - Comprehensive validation prevents type confusion, SQL injection, and data corruption attacks
+3. **Rate Limiting Enhancement** - Increased magic link limit from 5→10 per hour per IP for VPN users
+4. **Production Security Testing** - Full penetration testing completed, all attack vectors blocked
+5. **CSRF Protection Assessment** - Current 24-hour session-based tokens deemed secure for use case
+6. **Documentation Sync** - All file paths and references updated for new repository structure
 
 ### ⚠️ **CRITICAL Next Steps (Before scaling to 150+ users)**
 1. **Database Backup Strategy** - Implement automated backups (no backup system currently)
@@ -165,6 +493,8 @@ echo "Reorganization plan details" | gemini -p "Analyze from production safety p
 - **Magic Links**: URLs appear in console when email not configured
 - **Admin Access**: Set `is_admin=1` in users table for admin panel access
 - **Playwright**: Browser automation testing configured for production validation
+- **Load Testing**: Comprehensive test suites in `/tests/` directory
+- **MCP Testing**: Python and Node.js testing tools for integration validation
 
 ## Database Schema
 - `users` - Profiles, team assignments, admin flags
@@ -173,10 +503,19 @@ echo "Reorganization plan details" | gemini -p "Analyze from production safety p
 - `challenges` - Time periods with thresholds
 - `auth_tokens` - Magic link tokens
 - `sessions` - User session management
+- `mcp_tokens` - MCP authentication tokens
+- `mcp_audit_log` - MCP action tracking
 
 ## Current Todo Status
 
 ### ✅ **COMPLETED (Production Ready for 150+ Users)**
+
+#### **Repository Organization**
+- [x] Complete directory reorganization with src/, mcp/, docs/, tests/, config/ structure
+- [x] Update all file path references in documentation and configuration
+- [x] Fix all require() statements and import paths
+- [x] Deploy reorganized structure to production and verify functionality
+- [x] Update package.json, Dockerfile, and deployment configurations
 
 #### **Core Application**
 - [x] Test production API endpoints (auth, steps, leaderboards, admin)

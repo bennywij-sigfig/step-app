@@ -561,18 +561,8 @@
         <button id="challengesBtn">Manage Challenges</button>
         <button id="mcpTokensBtn">MCP Tokens</button>
         <button id="overviewBtn">Overview</button>
+        <button id="extrasBtn">Extras</button>
         <button id="exportBtn" style="background: #28a745; color: white;">Export CSV</button>
-        
-        <div class="theme-picker" style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
-            <label style="color: white; font-size: 12px; font-weight: 500;">Theme:</label>
-            <select id="themeSelector" style="padding: 8px 12px; border: none; border-radius: 8px; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); font-size: 12px; cursor: pointer; min-width: 120px;">
-                <option value="default">Ocean Blue</option>
-                <option value="sunset">Sunset Orange</option>
-                <option value="forest">Forest Green</option>
-                <option value="lavender">Lavender Purple</option>
-                <option value="monochrome">Monochrome</option>
-            </select>
-        </div>
     </div>
 
     <div id="overviewView" class="card hidden">
@@ -595,6 +585,71 @@
                 <div class="stat-label">Active Users</div>
             </div>
         </div>
+    </div>
+
+    <div id="extrasView" class="card hidden">
+        <h2>Extras & Customization</h2>
+        <p>Fun features and visual customizations</p>
+        
+        <!-- Theme Picker -->
+        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
+            <h3>Theme Selection</h3>
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <label style="font-weight: 500; color: #555; min-width: 60px;">Theme:</label>
+                <select id="themeSelector" style="padding: 12px 16px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; cursor: pointer; min-width: 180px; transition: all 0.3s ease;">
+                    <option value="default">Ocean Blue</option>
+                    <option value="sunset">Sunset Orange</option>
+                    <option value="forest">Forest Green</option>
+                    <option value="lavender">Lavender Purple</option>
+                    <option value="monochrome">Monochrome</option>
+                </select>
+            </div>
+            <div style="font-size: 12px; color: #666; margin-top: 10px;">
+                Choose a theme that will be applied across all admin pages. Changes are saved automatically.
+            </div>
+        </div>
+
+        <!-- Mega Confetti Feature -->
+        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
+            <h3>🎉 Mega Confetti Celebration</h3>
+            <div style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                <label style="font-weight: 500; color: #555; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    <input type="checkbox" id="megaConfettiEnabled" style="width: 18px; height: 18px; accent-color: var(--primary-color);">
+                    Enable Mega Confetti for 20,000+ step days
+                </label>
+            </div>
+            <div style="background: rgba(255, 193, 7, 0.1); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 193, 7, 0.2);">
+                <div style="color: #856404; font-size: 14px; line-height: 1.5;">
+                    <strong>🚀 Super Special Feature:</strong><br>
+                    When enabled, users who log 20,000+ steps get an epic physics-based confetti celebration! 
+                    Confetti particles accumulate at the bottom of the screen and can be disturbed by:
+                    <ul style="margin: 8px 0; padding-left: 20px;">
+                        <li><strong>Mobile:</strong> Tilt and shake your device (accelerometer)</li>
+                        <li><strong>Desktop:</strong> Drag your mouse through the pile</li>
+                        <li><strong>Hard shake:</strong> Makes all confetti fly off the screen</li>
+                    </ul>
+                    <em>Note: This is in addition to the regular 15,000+ step confetti celebration.</em>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confetti Testing -->
+        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
+            <h3>🧪 Confetti Testing</h3>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                <button id="testRegularConfetti" style="padding: 12px 20px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
+                    🎉 Test Regular Confetti (15K+)
+                </button>
+                <button id="testMegaConfetti" style="padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
+                    🚀 Test Mega Confetti (20K+)
+                </button>
+            </div>
+            <div style="background: rgba(52, 144, 220, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; font-size: 14px; color: #1976d2; border: 1px solid rgba(52, 144, 220, 0.2);">
+                <strong>Testing Note:</strong> These buttons simulate the confetti effects without affecting user data. Mega confetti will only work if the feature is enabled above.
+            </div>
+        </div>
+
+        <div id="extrasMessage"></div>
     </div>
 
     <div id="usersView" class="card">

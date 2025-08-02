@@ -79,6 +79,11 @@ document.addEventListener('DOMContentLoaded', function() {
             loadOverview();
         });
         
+        document.getElementById('extrasBtn').addEventListener('click', () => {
+            showView('extras');
+            loadExtras();
+        });
+        
         document.getElementById('exportBtn').addEventListener('click', () => {
             exportCSV();
         });
@@ -1462,6 +1467,162 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 row.style.display = (userMatch && methodMatch) ? '' : 'none';
             });
+        }
+
+        // Load Extras functionality
+        function loadExtras() {
+            // Load current mega confetti setting
+            const megaConfettiEnabled = localStorage.getItem('megaConfettiEnabled') === 'true';
+            document.getElementById('megaConfettiEnabled').checked = megaConfettiEnabled;
+            
+            // Add event listener for mega confetti toggle
+            document.getElementById('megaConfettiEnabled').addEventListener('change', function() {
+                const enabled = this.checked;
+                localStorage.setItem('megaConfettiEnabled', enabled.toString());
+                
+                // Show success message
+                showExtrasMessage(`Mega Confetti ${enabled ? 'enabled' : 'disabled'}! ${enabled ? '🎉' : '😔'}`, 'success');
+            });
+            
+            // Add confetti testing buttons
+            document.getElementById('testRegularConfetti').addEventListener('click', function() {
+                testRegularConfetti();
+                showExtrasMessage('🎉 Regular confetti test triggered!', 'success');
+            });
+            
+            document.getElementById('testMegaConfetti').addEventListener('click', function() {
+                const megaConfettiEnabled = localStorage.getItem('megaConfettiEnabled') === 'true';
+                if (megaConfettiEnabled) {
+                    testMegaConfetti();
+                    showExtrasMessage('🚀 Mega confetti test triggered!', 'success');
+                } else {
+                    showExtrasMessage('⚠️ Enable Mega Confetti first to test it!', 'error');
+                }
+            });
+        }
+        
+        // Test confetti functions
+        function testRegularConfetti() {
+            // Import the confetti function from dashboard context if available
+            if (typeof createConfetti === 'function') {
+                createConfetti();
+            } else {
+                // Create a temporary canvas and run basic confetti
+                createTestCanvas();
+                createBasicConfetti();
+            }
+        }
+        
+        function testMegaConfetti() {
+            // Import the mega confetti function from dashboard context if available
+            if (typeof createMegaConfetti === 'function') {
+                createMegaConfetti();
+            } else {
+                // Create a temporary canvas and run test mega confetti
+                createTestCanvas();
+                createTestMegaConfetti();
+            }
+        }
+        
+        function createTestCanvas() {
+            // Create canvas if it doesn't exist
+            let canvas = document.getElementById('confettiCanvas');
+            if (!canvas) {
+                canvas = document.createElement('canvas');
+                canvas.id = 'confettiCanvas';
+                canvas.style.position = 'fixed';
+                canvas.style.top = '0';
+                canvas.style.left = '0';
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                canvas.style.pointerEvents = 'none';
+                canvas.style.zIndex = '10000';
+                canvas.style.display = 'none';
+                document.body.appendChild(canvas);
+            }
+        }
+        
+        function createBasicConfetti() {
+            const canvas = document.getElementById('confettiCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            canvas.style.display = 'block';
+            
+            const confettiPieces = [];
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57', '#FF9FF3', '#54A0FF'];
+            
+            // Create confetti pieces
+            for (let i = 0; i < 150; i++) {
+                confettiPieces.push({
+                    x: Math.random() * canvas.width,
+                    y: -10,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: Math.random() * 3 + 2,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    size: Math.random() * 4 + 2,
+                    rotation: Math.random() * 360,
+                    rotationSpeed: (Math.random() - 0.5) * 10
+                });
+            }
+            
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                for (let i = confettiPieces.length - 1; i >= 0; i--) {
+                    const piece = confettiPieces[i];
+                    
+                    piece.x += piece.vx;
+                    piece.y += piece.vy;
+                    piece.rotation += piece.rotationSpeed;
+                    piece.vy += 0.1; // gravity
+                    
+                    if (piece.y > canvas.height + 10) {
+                        confettiPieces.splice(i, 1);
+                        continue;
+                    }
+                    
+                    ctx.save();
+                    ctx.translate(piece.x, piece.y);
+                    ctx.rotate(piece.rotation * Math.PI / 180);
+                    ctx.fillStyle = piece.color;
+                    ctx.fillRect(-piece.size/2, -piece.size/2, piece.size, piece.size);
+                    ctx.restore();
+                }
+                
+                if (confettiPieces.length > 0) {
+                    requestAnimationFrame(animate);
+                } else {
+                    canvas.style.display = 'none';
+                }
+            }
+            
+            animate();
+        }
+        
+        function createTestMegaConfetti() {
+            // Load the dashboard script dynamically to access mega confetti
+            const script = document.createElement('script');
+            script.src = '/dashboard.js';
+            script.onload = function() {
+                // Try to call the mega confetti function
+                if (typeof window.createMegaConfetti === 'function') {
+                    window.createMegaConfetti();
+                } else {
+                    // Fallback to basic implementation
+                    showExtrasMessage('⚠️ Mega confetti requires dashboard context. Try testing from the main app.', 'error');
+                }
+            };
+            document.head.appendChild(script);
+        }
+        
+        function showExtrasMessage(message, type) {
+            const messageDiv = document.getElementById('extrasMessage');
+            messageDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 3000);
         }
 
         // Initialize themes

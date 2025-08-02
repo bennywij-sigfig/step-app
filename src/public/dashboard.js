@@ -104,6 +104,24 @@ function createConfetti() {
 
 // Trigger confetti celebration
 function celebrateSteps(stepCount) {
+    // Check for mega confetti first (20K+ steps)
+    if (stepCount >= 20000) {
+        const megaConfettiEnabled = localStorage.getItem('megaConfettiEnabled') === 'true';
+        if (megaConfettiEnabled) {
+            // Only do mega celebration for 20K+
+            createMegaConfetti();
+            
+            // Add mega celebration message with warp speed glow
+            setTimeout(() => {
+                const messageDiv = document.getElementById('stepsMessage');
+                const currentMessage = messageDiv.innerHTML;
+                messageDiv.innerHTML = currentMessage + '<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">🚀 MEGA CELEBRATION! 20,000+ STEPS! 🚀</div>';
+            }, 500);
+            return; // Skip regular confetti for 20K+
+        }
+    }
+    
+    // Regular confetti for 15K+ (only if not 20K+ with mega enabled)
     if (stepCount >= 15000) {
         createConfetti();
         
@@ -116,12 +134,353 @@ function celebrateSteps(stepCount) {
     }
 }
 
+// Physics-based mega confetti system
+let megaConfettiSystem = null;
+
+function createMegaConfetti() {
+    // Don't create if already running
+    if (megaConfettiSystem && megaConfettiSystem.running) {
+        return;
+    }
+    
+    const canvas = document.getElementById('confettiCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.display = 'block';
+    canvas.style.zIndex = '10000';
+    
+    megaConfettiSystem = {
+        running: true,
+        particles: [],
+        gravity: 0.3,
+        friction: 0.98,
+        restitution: 0.7,
+        colors: ['#FF1493', '#FFD700', '#00FF00', '#FF4500', '#FF69B4', '#00BFFF', '#FF6347', '#7FFF00', '#FF00FF', '#FFA500'],
+        lastTime: 0,
+        accelerometer: { x: 0, y: 0, z: 0 },
+        mousePos: { x: 0, y: 0 },
+        mousePressed: false,
+        shakeThreshold: 15,
+        strongShakeThreshold: 25,
+        startTime: Date.now(),
+        fadeStartTime: 8000, // Start fading after 8 seconds
+        fadeDuration: 3000   // Fade out over 3 seconds
+    };
+    
+    // Create MORE confetti particles for mega celebration
+    for (let i = 0; i < 300; i++) {
+        createMegaParticle(canvas.width / 2 + (Math.random() - 0.5) * 200, -10);
+    }
+    
+    // Set up device motion for mobile
+    setupDeviceMotion();
+    
+    // Set up mouse interaction for desktop
+    setupMouseInteraction(canvas);
+    
+    // Start animation
+    animateMegaConfetti();
+}
+
+function createMegaParticle(x, y) {
+    const particle = {
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 12,
+        vy: Math.random() * 5 + 3,
+        size: Math.random() * 6 + 3,
+        color: megaConfettiSystem.colors[Math.floor(Math.random() * megaConfettiSystem.colors.length)],
+        rotation: Math.random() * 360,
+        rotationSpeed: (Math.random() - 0.5) * 15,
+        settled: false,
+        restingY: 0,
+        shape: Math.random() > 0.5 ? 'square' : 'circle',
+        opacity: 1.0
+    };
+    
+    megaConfettiSystem.particles.push(particle);
+}
+
+async function setupDeviceMotion() {
+    if (!window.DeviceMotionEvent) return;
+    
+    // Request permission for iOS 13+
+    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        try {
+            const permission = await DeviceMotionEvent.requestPermission();
+            if (permission !== 'granted') {
+                console.log('Device motion permission denied - falling back to touch/mouse interaction only');
+                return;
+            }
+        } catch (error) {
+            console.log('Device motion not supported or permission request failed');
+            return;
+        }
+    }
+    
+    // Add motion event listener
+    window.addEventListener('devicemotion', function(event) {
+        if (!megaConfettiSystem) return;
+        
+        const acceleration = event.accelerationIncludingGravity;
+        if (acceleration) {
+            megaConfettiSystem.accelerometer.x = acceleration.x || 0;
+            megaConfettiSystem.accelerometer.y = acceleration.y || 0;
+            megaConfettiSystem.accelerometer.z = acceleration.z || 0;
+            
+            // Calculate shake intensity
+            const shakeIntensity = Math.sqrt(
+                Math.pow(acceleration.x || 0, 2) + 
+                Math.pow(acceleration.y || 0, 2) + 
+                Math.pow(acceleration.z || 0, 2)
+            );
+            
+            // Strong shake - make confetti fly away
+            if (shakeIntensity > megaConfettiSystem.strongShakeThreshold) {
+                megaConfettiSystem.particles.forEach(particle => {
+                    particle.vx += (Math.random() - 0.5) * 20;
+                    particle.vy -= Math.random() * 15 + 10;
+                    particle.settled = false;
+                });
+            }
+            // Gentle shake - disturb settled particles
+            else if (shakeIntensity > megaConfettiSystem.shakeThreshold) {
+                megaConfettiSystem.particles.forEach(particle => {
+                    if (particle.settled) {
+                        particle.vx += (acceleration.x || 0) * 0.1;
+                        particle.vy += (acceleration.y || 0) * 0.1;
+                        if (Math.abs(particle.vx) > 0.5 || Math.abs(particle.vy) > 0.5) {
+                            particle.settled = false;
+                        }
+                    }
+                });
+            }
+        }
+    });
+}
+
+function setupMouseInteraction(canvas) {
+    let lastMouseX = 0;
+    let lastMouseY = 0;
+    
+    canvas.addEventListener('mousedown', function(e) {
+        if (!megaConfettiSystem) return;
+        megaConfettiSystem.mousePressed = true;
+        const rect = canvas.getBoundingClientRect();
+        megaConfettiSystem.mousePos.x = e.clientX - rect.left;
+        megaConfettiSystem.mousePos.y = e.clientY - rect.top;
+        lastMouseX = megaConfettiSystem.mousePos.x;
+        lastMouseY = megaConfettiSystem.mousePos.y;
+    });
+    
+    canvas.addEventListener('mousemove', function(e) {
+        if (!megaConfettiSystem) return;
+        const rect = canvas.getBoundingClientRect();
+        const newX = e.clientX - rect.left;
+        const newY = e.clientY - rect.top;
+        
+        if (megaConfettiSystem.mousePressed) {
+            const deltaX = newX - lastMouseX;
+            const deltaY = newY - lastMouseY;
+            const force = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+            
+            // Disturb particles near mouse
+            megaConfettiSystem.particles.forEach(particle => {
+                const dx = particle.x - newX;
+                const dy = particle.y - newY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 50) {
+                    const forceMultiplier = (50 - distance) / 50;
+                    particle.vx += deltaX * forceMultiplier * 0.3;
+                    particle.vy += deltaY * forceMultiplier * 0.3;
+                    particle.settled = false;
+                }
+            });
+        }
+        
+        megaConfettiSystem.mousePos.x = newX;
+        megaConfettiSystem.mousePos.y = newY;
+        lastMouseX = newX;
+        lastMouseY = newY;
+    });
+    
+    canvas.addEventListener('mouseup', function() {
+        if (!megaConfettiSystem) return;
+        megaConfettiSystem.mousePressed = false;
+    });
+    
+    // Touch events for mobile
+    canvas.addEventListener('touchstart', function(e) {
+        if (!megaConfettiSystem) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        megaConfettiSystem.mousePos.x = touch.clientX - rect.left;
+        megaConfettiSystem.mousePos.y = touch.clientY - rect.top;
+        megaConfettiSystem.mousePressed = true;
+    });
+    
+    canvas.addEventListener('touchmove', function(e) {
+        if (!megaConfettiSystem) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const newX = touch.clientX - rect.left;
+        const newY = touch.clientY - rect.top;
+        
+        // Disturb particles near touch
+        megaConfettiSystem.particles.forEach(particle => {
+            const dx = particle.x - newX;
+            const dy = particle.y - newY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 60) {
+                const deltaX = newX - megaConfettiSystem.mousePos.x;
+                const deltaY = newY - megaConfettiSystem.mousePos.y;
+                const forceMultiplier = (60 - distance) / 60;
+                particle.vx += deltaX * forceMultiplier * 0.4;
+                particle.vy += deltaY * forceMultiplier * 0.4;
+                particle.settled = false;
+            }
+        });
+        
+        megaConfettiSystem.mousePos.x = newX;
+        megaConfettiSystem.mousePos.y = newY;
+    });
+    
+    canvas.addEventListener('touchend', function(e) {
+        if (!megaConfettiSystem) return;
+        e.preventDefault();
+        megaConfettiSystem.mousePressed = false;
+    });
+}
+
+function animateMegaConfetti() {
+    if (!megaConfettiSystem || !megaConfettiSystem.running) return;
+    
+    const canvas = document.getElementById('confettiCanvas');
+    const ctx = canvas.getContext('2d');
+    const currentTime = Date.now();
+    const elapsedTime = currentTime - megaConfettiSystem.startTime;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Calculate fade opacity
+    let globalOpacity = 1.0;
+    if (elapsedTime > megaConfettiSystem.fadeStartTime) {
+        const fadeProgress = (elapsedTime - megaConfettiSystem.fadeStartTime) / megaConfettiSystem.fadeDuration;
+        globalOpacity = Math.max(0, 1.0 - fadeProgress);
+        
+        // If fully faded, end animation
+        if (globalOpacity <= 0) {
+            canvas.style.display = 'none';
+            megaConfettiSystem.running = false;
+            megaConfettiSystem = null;
+            return;
+        }
+    }
+    
+    for (let i = megaConfettiSystem.particles.length - 1; i >= 0; i--) {
+        const particle = megaConfettiSystem.particles[i];
+        
+        // Update physics if not settled
+        if (!particle.settled) {
+            // Apply gravity
+            particle.vy += megaConfettiSystem.gravity;
+            
+            // Update position
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            
+            // Apply friction
+            particle.vx *= megaConfettiSystem.friction;
+            particle.vy *= megaConfettiSystem.friction;
+            
+            // Bounce off walls
+            if (particle.x <= particle.size) {
+                particle.x = particle.size;
+                particle.vx *= -megaConfettiSystem.restitution;
+            }
+            if (particle.x >= canvas.width - particle.size) {
+                particle.x = canvas.width - particle.size;
+                particle.vx *= -megaConfettiSystem.restitution;
+            }
+            
+            // Settle on ground
+            if (particle.y >= canvas.height - particle.size) {
+                particle.y = canvas.height - particle.size;
+                particle.vy *= -megaConfettiSystem.restitution;
+                
+                // Stop if moving slowly enough
+                if (Math.abs(particle.vy) < 1 && Math.abs(particle.vx) < 0.5) {
+                    particle.settled = true;
+                    particle.vy = 0;
+                    particle.restingY = particle.y;
+                }
+            }
+            
+            // Remove particles that fly too far off screen
+            if (particle.y < -100 || particle.x < -100 || particle.x > canvas.width + 100) {
+                megaConfettiSystem.particles.splice(i, 1);
+                continue;
+            }
+        }
+        
+        // Update rotation
+        particle.rotation += particle.rotationSpeed;
+        
+        // Update particle opacity with global fade
+        particle.opacity = globalOpacity;
+        
+        // Draw particle with opacity
+        ctx.save();
+        ctx.translate(particle.x, particle.y);
+        ctx.rotate(particle.rotation * Math.PI / 180);
+        ctx.globalAlpha = particle.opacity;
+        ctx.fillStyle = particle.color;
+        
+        if (particle.shape === 'circle') {
+            ctx.beginPath();
+            ctx.arc(0, 0, particle.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+        }
+        
+        ctx.restore();
+    }
+    
+    // Continue animation
+    requestAnimationFrame(animateMegaConfetti);
+}
+
+// Clean up mega confetti on page unload
+window.addEventListener('beforeunload', function() {
+    if (megaConfettiSystem) {
+        megaConfettiSystem.running = false;
+        megaConfettiSystem = null;
+    }
+});
+
 // Handle window resize for confetti canvas
 window.addEventListener('resize', function() {
     const canvas = document.getElementById('confettiCanvas');
     if (canvas && canvas.style.display !== 'none') {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+        
+        // Update mega confetti system if running
+        if (megaConfettiSystem && megaConfettiSystem.running) {
+            // Adjust particles that are now off-screen
+            megaConfettiSystem.particles.forEach(particle => {
+                if (particle.x > canvas.width) particle.x = canvas.width - particle.size;
+                if (particle.y > canvas.height) particle.y = canvas.height - particle.size;
+            });
+        }
     }
 });
 
@@ -859,4 +1218,9 @@ document.addEventListener('DOMContentLoaded', function() {
         loadCurrentUser().then(() => {
             loadSteps();
         });
+        
+        // Expose functions globally for admin panel testing
+        window.createMegaConfetti = createMegaConfetti;
+        window.createConfetti = createConfetti;
+        window.celebrateSteps = celebrateSteps;
 });

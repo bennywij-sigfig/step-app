@@ -13,20 +13,19 @@ A production-ready web application for tracking daily steps in company-wide chal
 - **Production Security**: CSRF protection, rate limiting, CSP headers, SQL injection prevention
 - **MCP Integration**: Python bridge script (primary) and Node.js stdio server (alternate) for Claude Desktop/Cursor/Claude Code
 
-## Recent Updates (July 30, 2025)
-- **🐍 Python MCP Bridge**: Primary approach - single Python file with rich tool descriptions for optimal LLM integration
-- **🔗 Node.js MCP Server**: Alternate approach - full stdio protocol implementation for advanced users
-- **🔒 Security-First Design**: Environment variable token handling with secure authentication
-- **📁 Configuration Management**: Clear documentation for `claude.json` and config file locations
-- **🛡️ Production Security**: B+ security grade with comprehensive token validation
-- **📱 Simple User Experience**: One-click download + token setup - works locally with full control
+## Recent Updates (August 1, 2025)
+- **Repository Reorganization**: Complete directory restructure with src/, mcp/, docs/, tests/, config/ organization
+- **Documentation Updates**: All path references updated for new structure
+- **Production Stability**: Repository reorganization deployed and verified working
+- **Enhanced Testing**: Comprehensive test suites for load testing, security validation, and browser automation
 
-## Previous Security Updates (July 29, 2025)
-- **🔒 Input Validation**: Comprehensive backend validation prevents type confusion and SQL injection attacks
-- **🚀 Penetration Testing**: Full security audit completed - all attack vectors successfully blocked
-- **🔧 Rate Limiting**: Increased magic link requests from 5→10 per hour per IP for VPN users
-- **🛡️ CSRF Protection**: Security assessment confirmed 24-hour session tokens adequate for use case
-- **📊 Data Validation**: Robust numeric validation with descriptive error messages and safe type conversion
+## Previous Updates (July 30, 2025)
+- **Python MCP Bridge**: Primary approach - single Python file with rich tool descriptions for optimal LLM integration
+- **Node.js MCP Server**: Alternate approach - full stdio protocol implementation for advanced users
+- **Security-First Design**: Environment variable token handling with secure authentication
+- **Configuration Management**: Clear documentation for claude.json and config file locations
+- **Production Security**: B+ security grade with comprehensive token validation
+- **Simple User Experience**: One-click download + token setup - works locally with full control
 
 ## Quick Start
 
@@ -62,7 +61,7 @@ A production-ready web application for tracking daily steps in company-wide chal
 - **Authentication**: Passwordless magic links with 30-minute expiry, session-based authentication
 - **Database**: SQLite with tables for users, steps, teams, challenges, auth_tokens, and sessions
 - **Ranking System**: Steps-per-day averages with ranked/unranked threshold system (default 70% reporting required)
-- **Security**: Multi-tier rate limiting (magic link: 5/hour, API: 100/hour, admin: 50/hour)
+- **Security**: Multi-tier rate limiting (magic link: 10/hour, API: 100/hour, admin: 50/hour)
 - **Deployment**: Fly.io with Docker, optimized configuration to avoid CLI deployment crashes
 
 ## Tech Stack
@@ -109,11 +108,12 @@ A production-ready web application for tracking daily steps in company-wide chal
 
 Currently deployed at: **https://step-app-4x-yhw.fly.dev/**
 
-**Status**: ✅ **Fully operational** with recent stability improvements
+**Status**: Fully operational with recent stability improvements
 - Challenge creation fully functional
 - Admin panel UI cleaned up 
 - Database migrations handle schema updates automatically
 - Enhanced error handling and validation
+- Repository reorganization deployed successfully
 
 ### Fly.io Configuration
 - Uses optimal `fly.toml` configuration that avoids CLI deployment crashes
@@ -122,8 +122,8 @@ Currently deployed at: **https://step-app-4x-yhw.fly.dev/**
 - Health monitoring and graceful shutdowns
 - Database schema migrations on startup ensure production compatibility
 
-### Critical Production Notes
-⚠️ **Before scaling to 150+ users, implement**:
+### Production Readiness
+**Before scaling to 150+ users, implement**:
 - Automated backup strategy for SQLite database
 - Pre-deployment backup scripts
 - Global error handlers and database reconnection logic
@@ -140,11 +140,11 @@ Currently deployed at: **https://step-app-4x-yhw.fly.dev/**
 
 The Step Challenge App provides two MCP integration approaches for Claude Desktop, Cursor, and Claude Code:
 
-### **🐍 Python Bridge (Primary - Recommended)**
-Single Python file that bridges AI clients to the Step Challenge API with rich tool descriptions for optimal LLM performance. **Users prefer this approach** due to simplicity and widespread Python availability.
+### **Python Bridge (Primary - Recommended)**
+Single Python file that bridges AI clients to the Step Challenge API with rich tool descriptions for optimal LLM performance. Users prefer this approach due to simplicity and widespread Python availability.
 
-### **🔗 Node.js Stdio Server (Alternate - Advanced)**  
-Full MCP protocol implementation for users who prefer Node.js or need advanced MCP features. See `USER_SETUP_GUIDE.md` for setup instructions.
+### **Node.js Stdio Server (Alternate - Advanced)**  
+Full MCP protocol implementation for users who prefer Node.js or need advanced MCP features. See `docs/USER_SETUP_GUIDE.md` for setup instructions.
 
 ### Overview
 
@@ -167,7 +167,7 @@ Both MCP approaches allow AI assistants to:
 #### 1. **Create MCP Tokens for Users**
 ```bash
 # Use the interactive token creation tool
-python get_mcp_token.py --interactive
+python mcp/get_mcp_token.py --interactive
 
 # Or create via admin API
 POST /api/admin/mcp-tokens
@@ -186,7 +186,7 @@ X-CSRF-Token: [admin_csrf_token]
 #### 2. **Distribute MCP Server Files**
 - Provide users with `mcp/mcp-server.js` and setup instructions
 - Include token in secure communication (email, secure chat)
-- Point users to `USER_SETUP_GUIDE.md` for configuration
+- Point users to `docs/USER_SETUP_GUIDE.md` for configuration
 
 #### 3. **Monitor Usage**
 ```bash
@@ -197,14 +197,14 @@ GET /api/admin/mcp-audit?page=1&limit=50
 GET /api/admin/mcp-tokens
 ```
 
-### End User Setup
+### User Setup Instructions
 
-#### **Configuration Files**
+#### **For Claude Desktop, Cursor, or Claude Code**
+Configure via `claude.json` or `claude_desktop_config.json`:
 
-**For Claude Code** - Create `claude.json` in:
-- **Project directory**: `./claude.json`
-- **User directory**: `~/.config/claude/claude.json` (macOS/Linux)
-- **User directory**: `%APPDATA%\claude\claude.json` (Windows)
+**Project Directory** (Claude Code): `./claude.json`
+**User Directory**: `~/.config/claude/claude.json` (macOS/Linux)
+**User Directory**: `%APPDATA%\claude\claude.json` (Windows)
 
 ```json
 {
@@ -220,7 +220,7 @@ GET /api/admin/mcp-tokens
 }
 ```
 
-**For Claude Desktop** - Edit `claude_desktop_config.json` in:
+**For Claude Desktop** - Config locations:
 - **macOS**: `~/Library/Application Support/Claude/`
 - **Windows**: `%APPDATA%\Claude\`
 - **Linux**: `~/.config/claude/`
@@ -252,163 +252,25 @@ All API calls require a valid MCP token provided in the `params.token` field.
 
 #### **Available Methods**
 
-##### 1. **add_steps** - Add or Update Daily Steps
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1,
-  "method": "add_steps",
-  "params": {
-    "token": "mcp_12345678-abcd-...",
-    "date": "2025-01-15",
-    "count": 12000,
-    "allow_overwrite": false
-  }
-}
-```
+**`get_user_profile`** - Get user information and current challenge details
+- **Purpose**: Retrieve user profile, team assignment, and active challenge information
+- **Parameters**: None (uses token's associated user)
 
-**Parameters:**
-- `token` (string, required): Your MCP authentication token
-- `date` (string, required): Date in YYYY-MM-DD format
-- `count` (number, required): Step count (0-70,000)
-- `allow_overwrite` (boolean, optional): Allow overwriting existing data (default: false)
+**`get_steps`** - Retrieve step history with optional date filtering
+- **Purpose**: Get step counts for analysis, reporting, or verification
+- **Parameters**:
+  - `start_date` (optional): YYYY-MM-DD format
+  - `end_date` (optional): YYYY-MM-DD format
 
-**Success Response:**
-```json
-{
-  "jsonrpc": "2.0",
-  "result": {
-    "success": true,
-    "message": "Steps saved for 2025-01-15: 12000",
-    "date": "2025-01-15",
-    "count": 12000,
-    "was_overwrite": false,
-    "old_count": null
-  },
-  "id": 1
-}
-```
+**`add_steps`** - Record daily step count with overwrite protection
+- **Purpose**: Add or update step count for a specific date
+- **Security**: Overwrite protection prevents accidental data loss
+- **Parameters**:
+  - `date` (required): YYYY-MM-DD format
+  - `count` (required): 0-70,000 steps
+  - `allow_overwrite` (optional): boolean, default false
 
-##### 2. **get_steps** - Retrieve Step History
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 2,
-  "method": "get_steps",
-  "params": {
-    "token": "mcp_12345678-abcd-...",
-    "start_date": "2025-01-01",
-    "end_date": "2025-01-31"
-  }
-}
-```
-
-**Parameters:**
-- `token` (string, required): Your MCP authentication token
-- `start_date` (string, optional): Start date filter in YYYY-MM-DD format
-- `end_date` (string, optional): End date filter in YYYY-MM-DD format
-
-##### 3. **get_user_profile** - Get User Information
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 3,
-  "method": "get_user_profile",
-  "params": {
-    "token": "mcp_12345678-abcd-..."
-  }
-}
-```
-
-#### **Error Responses**
-The API returns standard JSON-RPC 2.0 error responses:
-```json
-{
-  "jsonrpc": "2.0",
-  "error": {
-    "code": -32000,
-    "message": "Server error",
-    "data": "Steps already exist for 2025-01-15. Set allow_overwrite=true to replace."
-  },
-  "id": 1
-}
-```
-
-**Common Error Codes:**
-- `-32600`: Invalid Request (malformed JSON-RPC)
-- `-32601`: Method not found
-- `-32602`: Invalid params (missing required parameters)
-- `-32001`: Authentication failed (invalid/expired token)
-- `-32003`: Permission denied (insufficient token permissions)
-- `-32004`: Rate limit exceeded
-
-### Security Considerations
-
-- **User Isolation**: Tokens only allow access to the token owner's data
-- **Token Expiration**: Tokens have configurable expiration dates
-- **Rate Limiting**: Automatic throttling prevents API abuse
-- **Audit Logging**: All API actions are logged with IP addresses and user agents
-- **Scope Validation**: Token permissions are enforced for all operations
-- **Overwrite Protection**: Prevents accidental data loss unless explicitly allowed
-
-### Testing MCP Integration
-
-#### **Python Testing Suite** (Recommended)
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Get an MCP token (admin required)
-python get_mcp_token.py --interactive
-
-# Comprehensive testing
-python test_mcp_python.py --token YOUR_TOKEN --test-all
-
-# Interactive testing menu
-python test_mcp_python.py --interactive
-```
-
-#### **JavaScript Testing** (Legacy)
-```bash
-# Test MCP integration against running server
-node test-mcp.js --test-server
-
-# View usage examples
-node test-mcp.js
-```
-
-### MCP Integration
-
-#### **Easy Setup for Any AI Client**
-
-**🎯 All-in-One Setup Page**: https://step-app-4x-yhw.fly.dev/mcp-setup
-
-1. **Login** with your Step Challenge magic link
-2. **Visit setup page** - shows your token and downloads
-3. **Download bridge script** - one-click download
-4. **Follow instructions** - copy-paste configurations provided
-
-#### **Supported AI Clients**
-- ✅ **Claude Desktop** - Full MCP stdio support
-- ✅ **Cursor** - Full MCP stdio support  
-- ✅ **Claude Code CLI** - Full MCP stdio support
-- ✅ **ChatGPT Desktop** - MCP stdio support (if available)
-
-#### **What Users Get**
-```bash
-# Simple setup process:
-1. Download: step_bridge.py (one-click from setup page)
-2. Install: pip install aiohttp
-3. Configure: STEP_TOKEN=your_token python step_bridge.py
-4. Add to AI client config (instructions provided)
-```
-
-#### **Available MCP Tools**
-- `get_user_profile` - View profile, team, and current challenge
-- `get_steps` - Retrieve step history with date filtering  
-- `add_steps` - Record daily step counts with overwrite protection
-
-### Admin Distribution
+### Simple Distribution Process
 
 For distributing MCP access to users:
 
@@ -423,50 +285,53 @@ For distributing MCP access to users:
 2. **Share setup page** - users handle their own setup  
 3. **Monitor usage** via admin audit logs
 
-Users add stdio bridge to their AI client settings (2-minute setup), then can ask Claude: *"Add 12,000 steps for today"*
+```
+User Experience Flow:
+1. Download: mcp/step_bridge.py (one-click from setup page)
+2. Install: pip install aiohttp
+3. Configure: STEP_TOKEN=your_token python step_bridge.py
+4. Add to AI client config (instructions provided)
+```
 
-See `ADMIN_DISTRIBUTION_GUIDE.md` for complete workflow.
+#### **Available MCP Tools**
+- `get_user_profile` - View profile, team, and current challenge
+- `get_steps` - Retrieve step history with date filtering  
+- `add_steps` - Record daily step counts with overwrite protection
 
-## MCP Integration Files
+Users add stdio bridge to their AI client settings (2-minute setup), then can ask Claude: "Add 12,000 steps for today"
 
-### **🐍 Python Bridge (Primary):**
-- `step_bridge.py` - Single-file MCP bridge with rich tool descriptions
-- `src/views/mcp-setup.html` - Web-based setup page with one-click download
-- `src/server.js` - Download endpoint `/download/step_bridge.py`
+See `docs/ADMIN_DISTRIBUTION_GUIDE.md` for complete workflow.
 
-### **🔗 Node.js Stdio Server (Alternate):**
+## File Structure
+
+### **Core Application**
+- `src/server.js` - Main Express server with all API endpoints + MCP integration
+- `src/database.js` - SQLite schema and initialization + MCP tables
+- `src/views/` - HTML templates (dashboard, admin, MCP setup)
+- `src/public/` - Static assets (CSS, JavaScript, images)
+- `src/scripts/` - Backup and deployment scripts
+
+### **MCP Integration**
+- `mcp/step_bridge.py` - Single-file Python MCP bridge with rich tool descriptions
 - `mcp/mcp-server.js` - Full JSON-RPC 2.0 MCP protocol implementation
-- `USER_SETUP_GUIDE.md` - Setup instructions for Node.js approach
+- `mcp/get_mcp_token.py` - Admin CLI tool for creating and managing MCP tokens
+- `mcp/test_mcp_python.py` - Comprehensive testing suite for API and MCP server testing
 
-### **Shared Infrastructure:**
-- `src/server.js` - Express server with MCP endpoints and token validation
+### **Testing & Documentation**
+- `tests/` - Comprehensive test suites (load testing, security validation, browser automation)
+- `docs/` - Setup guides, admin workflows, and testing documentation
+- `config/` - Deployment configurations and environment templates
 
-### **User Experience:**
+### **User Experience**
 - `/mcp-setup` - Authenticated setup page with multi-client configuration examples
 - `/download/step_bridge.py` - Public bridge script download with security headers
 - `/api/user/mcp-tokens` - API for users to retrieve their tokens securely
 
-### **Admin Tools:**
-- `get_mcp_token.py` - Admin CLI tool for creating and managing MCP tokens
-- Admin panel MCP token management with web UI
-- Comprehensive audit logging and usage monitoring
+### **Admin Tools**
+- `mcp/get_mcp_token.py` - Admin CLI tool for creating and managing MCP tokens
+- Admin panel at `/admin` - Web-based token management and monitoring
+- MCP audit logging for usage tracking and security monitoring
 
-### **Documentation:**
-- `USER_SETUP_GUIDE.md` - Bridge setup instructions for end users
-- `ADMIN_DISTRIBUTION_GUIDE.md` - Admin workflow for distributing MCP access
-- `MCP_TESTING_GUIDE.md` - Testing and troubleshooting guide
+## Contributing
 
-### **Dependencies:**
-- `requirements.txt` - Python dependencies for testing and admin tools
-- `requirements-mcp.txt` - Legacy dependencies (archived)
-
-## Database Schema
-
-- `users` - User profiles, team assignments, admin flags
-- `steps` - Daily step counts with challenge associations
-- `teams` - Team definitions and metadata
-- `challenges` - Challenge periods with thresholds and dates
-- `auth_tokens` - Magic link tokens with expiry
-- `sessions` - User session management
-- `mcp_tokens` - MCP API tokens with permissions and scopes
-- `mcp_audit_log` - API action audit trail for security
+This application follows a security-first development approach with comprehensive testing at multiple levels. See `docs/` directory for detailed setup and testing guides.
