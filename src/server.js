@@ -257,7 +257,15 @@ async function sendEmail(to, subject, htmlBody, textBody) {
   if (!MAILGUN_API_KEY) {
     devLog('MAILGUN_API_KEY not configured. Login URL would be sent to:', to);
     devLog('Subject:', subject);
-    devLog('Body:', textBody);
+    
+    // Extract and log the magic link for localhost debugging (development only)
+    if (isDevelopment) {
+      const linkMatch = textBody.match(/https?:\/\/[^\s]+/);
+      if (linkMatch) {
+        console.log('🔗 Magic link (email not configured):', linkMatch[0]);
+      }
+    }
+    
     return { success: false, message: 'Email not configured' };
   }
 

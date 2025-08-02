@@ -1475,6 +1475,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const megaConfettiEnabled = localStorage.getItem('megaConfettiEnabled') === 'true';
             document.getElementById('megaConfettiEnabled').checked = megaConfettiEnabled;
             
+            // Load current reverse Y direction setting
+            const reverseYDirection = localStorage.getItem('reverseYDirection') === 'true';
+            document.getElementById('reverseYDirection').checked = reverseYDirection;
+            
             // Add event listener for mega confetti toggle
             document.getElementById('megaConfettiEnabled').addEventListener('change', function() {
                 const enabled = this.checked;
@@ -1482,6 +1486,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show success message
                 showExtrasMessage(`Epic Confetti ${enabled ? 'enabled' : 'disabled'}! ${enabled ? '🎉' : '😔'}`, 'success');
+            });
+            
+            // Add event listener for reverse Y direction toggle
+            document.getElementById('reverseYDirection').addEventListener('change', function() {
+                const enabled = this.checked;
+                localStorage.setItem('reverseYDirection', enabled.toString());
+                
+                // Show success message
+                showExtrasMessage(`Y Direction ${enabled ? 'reversed' : 'normal'}! Confetti will now fall ${enabled ? 'upward' : 'downward'} by default.`, 'success');
             });
             
             // Add confetti testing buttons
