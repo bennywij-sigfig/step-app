@@ -1,0 +1,75 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "email": "test@example.com",
+      "name": "Test User",
+      "team_id": 1,
+      "is_admin": false
+    },
+    {
+      "id": 2,
+      "email": "admin@example.com", 
+      "name": "Test Admin",
+      "team_id": 1,
+      "is_admin": true
+    },
+    {
+      "id": 3,
+      "email": "user2@example.com",
+      "name": "Test User 2",
+      "team_id": 2,
+      "is_admin": false
+    }
+  ],
+  "teams": [
+    {
+      "id": 1,
+      "name": "Team Alpha"
+    },
+    {
+      "id": 2,
+      "name": "Team Beta"
+    }
+  ],
+  "challenges": [
+    {
+      "id": 1,
+      "name": "August Challenge",
+      "start_date": "2025-08-01",
+      "end_date": "2025-08-31",
+      "reporting_threshold": 0.7
+    }
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "date": "2025-08-01",
+      "count": 8500,
+      "challenge_id": 1
+    },
+    {
+      "id": 2,
+      "user_id": 1,
+      "date": "2025-08-02",
+      "count": 12000,
+      "challenge_id": 1
+    },
+    {
+      "id": 3,
+      "user_id": 2,
+      "date": "2025-08-01",
+      "count": 15000,
+      "challenge_id": 1
+    }
+  ],
+  "mcp_tokens": [
+    {
+      "token": "mcp_test_token_123456789",
+      "user_id": 1,
+      "scopes": "steps:read,steps:write,profile:read",
+      "expires_at": "2025-12-31T23:59:59Z"
+    }
+  ]
+}

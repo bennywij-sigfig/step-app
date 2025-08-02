@@ -28,6 +28,8 @@ load-test-results/
 playwright-report/
 screenshots/
 backups/
+coverage/
+tests/test-databases/
 
 # OS generated files
 Thumbs.db
