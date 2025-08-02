@@ -83,6 +83,21 @@ gemini --debug -p "Technical query"                              # Debug mode fo
 echo "Reorganization plan details" | gemini -p "Analyze from production safety perspective"
 ```
 
+## Recent Updates (August 2, 2025)
+
+### 🎉 **Epic Confetti Physics Improvements**
+- **Removed Overly Sensitive Shake-to-Dismiss**: Eliminated aggressive strongShakeThreshold (25) that caused premature confetti dismissal on mobile
+- **Baseline Accelerometer Calibration**: Implemented baseline tracking to use delta changes from initial device orientation instead of absolute values
+- **Mobile-Friendly Behavior**: Confetti now works perfectly whether phone is flat on table or held at any angle
+- **Gentle Interaction**: Maintained all tilt and gentle shake effects for natural particle movement without unwanted dismissal
+- **Updated Documentation**: Admin panel reflects new gentler shake behavior
+
+### 🚦 **Rate Limiting Improvements**
+- **Increased Rate Limits**: Addressed UX issues from overly restrictive limits causing legitimate users to be blocked during normal browsing
+- **Environment Variable Configuration**: Made all rate limits configurable via environment variables for easier tuning
+- **Conservative Security Approach**: Following Gemini security analysis, increased limits reasonably while maintaining protection against abuse
+- **New Default Limits**: Magic Links: 50/hour (was 10), API: 300/hour (was 100), Admin API: 400/hour (was 200), MCP: 300/hour (was 60), MCP Burst: 75/min (was 15)
+
 ## Recent Updates (August 1, 2025)
 
 ### 🗂️ **Repository Reorganization Complete**

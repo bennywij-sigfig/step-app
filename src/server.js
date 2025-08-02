@@ -125,7 +125,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Rate limiting configuration
 const magicLinkLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // limit each IP to 10 requests per windowMs
+  max: parseInt(process.env.MAGIC_LINK_LIMIT_MAX) || 50, // increased from 10 to 50 per hour per IP
   message: {
     error: 'Too many login requests from this IP, please try again in an hour.',
     retryAfter: 3600
@@ -144,7 +144,7 @@ const magicLinkLimiter = rateLimit({
 
 const apiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 100, // limit each session to 100 requests per windowMs
+  max: parseInt(process.env.API_LIMIT_MAX) || 300, // increased from 100 to 300 per hour per session
   message: {
     error: 'Too many API requests, please try again in an hour.',
     retryAfter: 3600
@@ -166,7 +166,7 @@ const apiLimiter = rateLimit({
 
 const adminApiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 200, // limit each session to 200 requests per windowMs for admin endpoints
+  max: parseInt(process.env.ADMIN_API_LIMIT_MAX) || 400, // increased from 200 to 400 per hour per session
   message: {
     error: 'Too many admin API requests, please try again in an hour.',
     retryAfter: 3600
@@ -189,7 +189,7 @@ const adminApiLimiter = rateLimit({
 // MCP API rate limiter - token-based (hourly limit)
 const mcpApiLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 60, // limit each token to 60 requests per hour
+  max: parseInt(process.env.MCP_API_LIMIT_MAX) || 300, // increased from 60 to 300 per hour per token
   message: {
     error: 'Too many MCP API requests, please try again in an hour.',
     retryAfter: 3600
@@ -219,7 +219,7 @@ const mcpApiLimiter = rateLimit({
 // MCP API burst rate limiter - protect against rapid fire requests
 const mcpBurstLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 15, // limit each token to 15 requests per minute
+  max: parseInt(process.env.MCP_BURST_LIMIT_MAX) || 75, // increased from 15 to 75 per minute per token
   message: {
     error: 'Too many rapid MCP API requests, please slow down.',
     retryAfter: 60
