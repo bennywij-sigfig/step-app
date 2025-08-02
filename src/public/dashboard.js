@@ -137,11 +137,93 @@ function celebrateSteps(stepCount) {
 // Physics-based mega confetti system
 let megaConfettiSystem = null;
 let deviceMotionPermissionStatus = null; // Cache iOS permission status
+let megaConfettiSetupComplete = false; // Track if event listeners are already set up
+
+// Store event listener references for proper cleanup
+let confettiEventListeners = {
+    orientationChange: null,
+    orientationChangeFallback: null,
+    deviceMotion: null,
+    mouseDown: null,
+    mouseMove: null,
+    mouseUp: null,
+    touchStart: null,
+    touchMove: null,
+    touchEnd: null
+};
+
+function cleanupMegaConfetti() {
+    if (megaConfettiSystem) {
+        // Stop the animation loop
+        megaConfettiSystem.running = false;
+        
+        // Clear particles array to free memory
+        if (megaConfettiSystem.particles) {
+            megaConfettiSystem.particles.length = 0;
+        }
+        
+        // Hide canvas
+        const canvas = document.getElementById('confettiCanvas');
+        if (canvas) {
+            canvas.style.display = 'none';
+        }
+        
+        // Clear the system object
+        megaConfettiSystem = null;
+    }
+    
+    // Remove all event listeners to prevent memory leaks
+    if (megaConfettiSetupComplete) {
+        // Remove orientation listeners
+        if (confettiEventListeners.orientationChange && screen.orientation) {
+            screen.orientation.removeEventListener('change', confettiEventListeners.orientationChange);
+        }
+        if (confettiEventListeners.orientationChangeFallback) {
+            window.removeEventListener('orientationchange', confettiEventListeners.orientationChangeFallback);
+        }
+        
+        // Remove device motion listener
+        if (confettiEventListeners.deviceMotion) {
+            window.removeEventListener('devicemotion', confettiEventListeners.deviceMotion);
+        }
+        
+        // Remove canvas interaction listeners
+        const canvas = document.getElementById('confettiCanvas');
+        if (canvas) {
+            if (confettiEventListeners.mouseDown) {
+                canvas.removeEventListener('mousedown', confettiEventListeners.mouseDown);
+            }
+            if (confettiEventListeners.mouseMove) {
+                canvas.removeEventListener('mousemove', confettiEventListeners.mouseMove);
+            }
+            if (confettiEventListeners.mouseUp) {
+                canvas.removeEventListener('mouseup', confettiEventListeners.mouseUp);
+            }
+            if (confettiEventListeners.touchStart) {
+                canvas.removeEventListener('touchstart', confettiEventListeners.touchStart);
+            }
+            if (confettiEventListeners.touchMove) {
+                canvas.removeEventListener('touchmove', confettiEventListeners.touchMove);
+            }
+            if (confettiEventListeners.touchEnd) {
+                canvas.removeEventListener('touchend', confettiEventListeners.touchEnd);
+            }
+        }
+        
+        // Clear all listener references
+        for (let key in confettiEventListeners) {
+            confettiEventListeners[key] = null;
+        }
+        
+        // Reset setup flag so listeners can be added again if needed
+        megaConfettiSetupComplete = false;
+    }
+}
 
 function createMegaConfetti() {
-    // Don't create if already running
-    if (megaConfettiSystem && megaConfettiSystem.running) {
-        return;
+    // Properly clean up any existing system before creating new one
+    if (megaConfettiSystem) {
+        cleanupMegaConfetti();
     }
     
     const canvas = document.getElementById('confettiCanvas');
@@ -183,14 +265,13 @@ function createMegaConfetti() {
         createMegaParticle(canvas.width / 2 + (Math.random() - 0.5) * 200, -10);
     }
     
-    // Set up orientation detection for proper physics
-    setupOrientationDetection();
-    
-    // Set up device motion for mobile
-    setupDeviceMotion();
-    
-    // Set up mouse interaction for desktop
-    setupMouseInteraction(canvas);
+    // Set up event listeners only once to avoid duplicates
+    if (!megaConfettiSetupComplete) {
+        setupOrientationDetection();
+        setupDeviceMotion();
+        setupMouseInteraction(canvas);
+        megaConfettiSetupComplete = true;
+    }
     
     // Start animation
     animateMegaConfetti();
@@ -222,13 +303,17 @@ function setupOrientationDetection() {
     // Get initial orientation
     updateOrientationPhysics();
     
+    // Store references to event listeners for proper cleanup
+    confettiEventListeners.orientationChange = debouncedOrientationUpdate;
+    confettiEventListeners.orientationChangeFallback = debouncedOrientationUpdate;
+    
     // Listen for orientation changes
     if (screen.orientation) {
-        screen.orientation.addEventListener('change', debouncedOrientationUpdate);
+        screen.orientation.addEventListener('change', confettiEventListeners.orientationChange);
     }
     
     // Fallback for older browsers
-    window.addEventListener('orientationchange', debouncedOrientationUpdate);
+    window.addEventListener('orientationchange', confettiEventListeners.orientationChangeFallback);
 }
 
 function debouncedOrientationUpdate() {
@@ -243,27 +328,31 @@ function updateOrientationPhysics() {
     const angle = screen.orientation ? screen.orientation.angle : (window.orientation || 0);
     megaConfettiSystem.orientation.angle = angle;
     
+    // Check reverse Y direction setting
+    const reverseY = localStorage.getItem('reverseYDirection') === 'true';
+    const gravityMultiplier = reverseY ? -1 : 1;
+    
     // Calculate gravity direction based on orientation
     switch (angle) {
         case 0:   // Portrait
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = 0.3;
+            megaConfettiSystem.orientation.gravityY = 0.3 * gravityMultiplier;
             break;
         case 90:  // Landscape left
-            megaConfettiSystem.orientation.gravityX = 0.3;
+            megaConfettiSystem.orientation.gravityX = 0.3 * gravityMultiplier;
             megaConfettiSystem.orientation.gravityY = 0;
             break;
         case 180: // Portrait upside down
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = -0.3;
+            megaConfettiSystem.orientation.gravityY = -0.3 * gravityMultiplier;
             break;
         case 270: // Landscape right
-            megaConfettiSystem.orientation.gravityX = -0.3;
+            megaConfettiSystem.orientation.gravityX = -0.3 * gravityMultiplier;
             megaConfettiSystem.orientation.gravityY = 0;
             break;
         default:  // Fallback to portrait
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = 0.3;
+            megaConfettiSystem.orientation.gravityY = 0.3 * gravityMultiplier;
     }
     
     // Recalibrate accelerometer baseline after orientation change
@@ -366,8 +455,8 @@ async function setupDeviceMotion() {
         }
     }
     
-    // Add motion event listener with orientation-aware coordinate transformation
-    window.addEventListener('devicemotion', function(event) {
+    // Store device motion event listener for proper cleanup
+    confettiEventListeners.deviceMotion = function(event) {
         if (!megaConfettiSystem) return;
         
         const acceleration = event.accelerationIncludingGravity;
@@ -441,14 +530,18 @@ async function setupDeviceMotion() {
                 });
             }
         }
-    });
+    };
+    
+    // Add motion event listener with orientation-aware coordinate transformation
+    window.addEventListener('devicemotion', confettiEventListeners.deviceMotion);
 }
 
 function setupMouseInteraction(canvas) {
     let lastMouseX = 0;
     let lastMouseY = 0;
     
-    canvas.addEventListener('mousedown', function(e) {
+    // Store mouse event listeners for proper cleanup
+    confettiEventListeners.mouseDown = function(e) {
         if (!megaConfettiSystem) return;
         megaConfettiSystem.mousePressed = true;
         const rect = canvas.getBoundingClientRect();
@@ -456,9 +549,11 @@ function setupMouseInteraction(canvas) {
         megaConfettiSystem.mousePos.y = e.clientY - rect.top;
         lastMouseX = megaConfettiSystem.mousePos.x;
         lastMouseY = megaConfettiSystem.mousePos.y;
-    });
+    };
     
-    canvas.addEventListener('mousemove', function(e) {
+    canvas.addEventListener('mousedown', confettiEventListeners.mouseDown);
+    
+    confettiEventListeners.mouseMove = function(e) {
         if (!megaConfettiSystem) return;
         const rect = canvas.getBoundingClientRect();
         const newX = e.clientX - rect.left;
@@ -488,15 +583,19 @@ function setupMouseInteraction(canvas) {
         megaConfettiSystem.mousePos.y = newY;
         lastMouseX = newX;
         lastMouseY = newY;
-    });
+    };
     
-    canvas.addEventListener('mouseup', function() {
+    canvas.addEventListener('mousemove', confettiEventListeners.mouseMove);
+    
+    confettiEventListeners.mouseUp = function() {
         if (!megaConfettiSystem) return;
         megaConfettiSystem.mousePressed = false;
-    });
+    };
+    
+    canvas.addEventListener('mouseup', confettiEventListeners.mouseUp);
     
     // Touch events for mobile
-    canvas.addEventListener('touchstart', function(e) {
+    confettiEventListeners.touchStart = function(e) {
         if (!megaConfettiSystem) return;
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
@@ -504,9 +603,11 @@ function setupMouseInteraction(canvas) {
         megaConfettiSystem.mousePos.x = touch.clientX - rect.left;
         megaConfettiSystem.mousePos.y = touch.clientY - rect.top;
         megaConfettiSystem.mousePressed = true;
-    });
+    };
     
-    canvas.addEventListener('touchmove', function(e) {
+    canvas.addEventListener('touchstart', confettiEventListeners.touchStart);
+    
+    confettiEventListeners.touchMove = function(e) {
         if (!megaConfettiSystem) return;
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
@@ -532,13 +633,17 @@ function setupMouseInteraction(canvas) {
         
         megaConfettiSystem.mousePos.x = newX;
         megaConfettiSystem.mousePos.y = newY;
-    });
+    };
     
-    canvas.addEventListener('touchend', function(e) {
+    canvas.addEventListener('touchmove', confettiEventListeners.touchMove);
+    
+    confettiEventListeners.touchEnd = function(e) {
         if (!megaConfettiSystem) return;
         e.preventDefault();
         megaConfettiSystem.mousePressed = false;
-    });
+    };
+    
+    canvas.addEventListener('touchend', confettiEventListeners.touchEnd);
 }
 
 function animateMegaConfetti() {
@@ -559,9 +664,7 @@ function animateMegaConfetti() {
         
         // If fully faded, end animation
         if (globalOpacity <= 0) {
-            canvas.style.display = 'none';
-            megaConfettiSystem.running = false;
-            megaConfettiSystem = null;
+            cleanupMegaConfetti();
             return;
         }
     }
@@ -725,10 +828,7 @@ function animateMegaConfetti() {
 
 // Clean up mega confetti on page unload
 window.addEventListener('beforeunload', function() {
-    if (megaConfettiSystem) {
-        megaConfettiSystem.running = false;
-        megaConfettiSystem = null;
-    }
+    cleanupMegaConfetti();
 });
 
 // Handle window resize for confetti canvas (debounced for performance)
