@@ -250,6 +250,9 @@ function createMegaConfetti() {
         mousePressed: false,
         shakeThreshold: 15,
         startTime: Date.now(),
+        phase: 'dropping', // 'dropping' or 'interactive'
+        settlingTimeThreshold: 1500, // 1.5 seconds for fast delight
+        settledParticles: 0, // Count of particles that have settled at bottom
         fadeStartTime: parseInt(localStorage.getItem('confettiLifetime') || '10000', 10), // Start fading after configured seconds
         fadeDuration: 3000,   // Fade out over 3 seconds
         orientation: {
@@ -489,20 +492,22 @@ async function setupDeviceMotion() {
                 Math.pow(deltaZ, 2)
             );
             
-            // Apply gentle tilt forces based on delta changes from baseline (now properly oriented)
-            const tiltSensitivity = parseFloat(localStorage.getItem('confettiTiltSensitivity') || '0.3');
-            const maxTiltForce = parseFloat(localStorage.getItem('confettiMaxTiltForce') || '2.0');
-            
-            megaConfettiSystem.particles.forEach(particle => {
-                // Apply continuous tilt forces to all particles, especially settled ones
-                if (particle.settled || Math.abs(particle.vy) < 2) {
-                    // Screen-relative tilt forces (now properly transformed)
-                    const tiltX = deltaX * tiltSensitivity;
-                    const tiltY = deltaY * tiltSensitivity;
-                    
-                    // Clamp tilt forces to prevent excessive movement
-                    const clampedTiltX = Math.max(-maxTiltForce, Math.min(maxTiltForce, tiltX));
-                    const clampedTiltY = Math.max(-maxTiltForce, Math.min(maxTiltForce, tiltY));
+            // Only apply tilt forces during interactive phase (after particles have settled)
+            if (megaConfettiSystem.phase === 'interactive') {
+                // Apply gentle tilt forces based on delta changes from baseline (now properly oriented)
+                const tiltSensitivity = parseFloat(localStorage.getItem('confettiTiltSensitivity') || '0.3');
+                const maxTiltForce = parseFloat(localStorage.getItem('confettiMaxTiltForce') || '2.0');
+                
+                megaConfettiSystem.particles.forEach(particle => {
+                    // Apply continuous tilt forces to all particles, especially settled ones
+                    if (particle.settled || Math.abs(particle.vy) < 2) {
+                        // Screen-relative tilt forces (now properly transformed)
+                        const tiltX = deltaX * tiltSensitivity;
+                        const tiltY = deltaY * tiltSensitivity;
+                        
+                        // Clamp tilt forces to prevent excessive movement
+                        const clampedTiltX = Math.max(-maxTiltForce, Math.min(maxTiltForce, tiltX));
+                        const clampedTiltY = Math.max(-maxTiltForce, Math.min(maxTiltForce, tiltY));
                     
                     particle.vx += clampedTiltX;
                     particle.vy += clampedTiltY;
@@ -511,23 +516,24 @@ async function setupDeviceMotion() {
                     if (Math.abs(clampedTiltX) > 0.5 || Math.abs(clampedTiltY) > 0.5) {
                         particle.settled = false;
                     }
-                }
-                // Also apply reduced tilt to moving particles for more responsive feel
-                else {
-                    particle.vx += deltaX * tiltSensitivity * 0.3;
-                    particle.vy += deltaY * tiltSensitivity * 0.3;
-                }
-            });
-            
-            // Gentle shake detection for pile disturbance (no aggressive dismiss behavior)
-            if (shakeIntensity > megaConfettiSystem.shakeThreshold) {
-                megaConfettiSystem.particles.forEach(particle => {
-                    if (particle.settled) {
-                        particle.vx += (Math.random() - 0.5) * 3;
-                        particle.vy -= Math.random() * 2;
-                        particle.settled = false;
+                    }
+                    // Also apply reduced tilt to moving particles for more responsive feel
+                    else {
+                        particle.vx += deltaX * tiltSensitivity * 0.3;
+                        particle.vy += deltaY * tiltSensitivity * 0.3;
                     }
                 });
+                
+                // Gentle shake detection for pile disturbance (no aggressive dismiss behavior)
+                if (shakeIntensity > megaConfettiSystem.shakeThreshold) {
+                    megaConfettiSystem.particles.forEach(particle => {
+                        if (particle.settled) {
+                            particle.vx += (Math.random() - 0.5) * 3;
+                            particle.vy -= Math.random() * 2;
+                            particle.settled = false;
+                        }
+                    });
+                }
             }
         }
     };
@@ -820,6 +826,23 @@ function animateMegaConfetti() {
         }
         
         ctx.restore();
+    }
+    
+    // Check for phase transition from dropping to interactive
+    if (megaConfettiSystem.phase === 'dropping') {
+        // Count settled particles
+        const settledCount = megaConfettiSystem.particles.filter(p => p.settled).length;
+        const totalParticles = megaConfettiSystem.particles.length;
+        const settledRatio = settledCount / Math.max(totalParticles, 1);
+        
+        // Transition to interactive phase when most particles have settled OR enough time has passed
+        const hasSettled = settledRatio > 0.6; // 60% of particles settled
+        const timeElapsed = elapsedTime > megaConfettiSystem.settlingTimeThreshold;
+        
+        if (hasSettled || timeElapsed) {
+            megaConfettiSystem.phase = 'interactive';
+            console.log('🎊 Confetti phase: Interactive physics enabled!');
+        }
     }
     
     // Continue animation
