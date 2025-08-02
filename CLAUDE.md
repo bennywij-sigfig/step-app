@@ -255,12 +255,12 @@ When email delivery fails or for testing purposes:
 
 #### **Console Method (Development)**
 ```bash
-# Magic links appear in console when MAILGUN_API_KEY not configured
-# Look for: "🔗 Magic link (email not configured): http://localhost:3000/auth/login?token=..."
+# Magic links ALWAYS appear in console in development mode (regardless of MAILGUN_API_KEY)
+# Look for: "🔗 Magic link (development mode): http://localhost:3000/auth/login?token=..."
 npm run dev
 # Send magic link request
 curl -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com"}' http://localhost:3000/auth/send-link
-# Check server console for magic link URL (development mode only)
+# Magic link will appear in server console immediately (localhost only)
 ```
 
 #### **Database Method (Production)**
@@ -274,11 +274,19 @@ SELECT token, email, expires_at FROM auth_tokens ORDER BY created_at DESC LIMIT 
 
 #### **Admin Panel Method (Preferred)**
 ```bash
-# Use admin magic link generation feature
+# Use admin self-service magic link generation feature
 # 1. Access admin panel: https://step-app-4x-yhw.fly.dev/admin
-# 2. Navigate to "Generate Magic Link" section
-# 3. Enter user email and generate secure magic link
-# 4. Copy link and provide to user directly
+# 2. Navigate to Extras tab → "Magic Link Testing" section
+# 3. Click "Generate My Magic Link" for your admin account
+# 4. Secure masked display with copy/show controls
+# 5. Full audit logging and CSRF protection
+```
+
+#### **Development Debug Method (Localhost)**
+```bash
+# Direct API endpoint for development testing (localhost only)
+curl -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com"}' http://localhost:3000/dev/get-magic-link
+# Returns magic link directly in JSON response (development mode only)
 ```
 
 ### 🖥️ **Playwright MCP Integration for Browser Testing**
@@ -575,7 +583,7 @@ This comprehensive testing and development workflow ensures reliability, securit
 - [x] Documentation updated with stdio MCP integration guides
 - [x] Ready for enterprise distribution with local MCP server files
 
-#### **Confetti Physics System**
+#### **Confetti Physics System & Controls**
 - [x] Analyze and identify confetti physics bugs (tilt direction, rotation, auto-rotate)
 - [x] Implement comprehensive orientation detection system (0°, 90°, 180°, 270°)
 - [x] Fix accelerometer coordinate transformation for proper tilt handling
@@ -585,6 +593,9 @@ This comprehensive testing and development workflow ensures reliability, securit
 - [x] Add performance optimizations (debounced resize, canvas validation)
 - [x] Comprehensive Gemini code review and bug fixes (11 critical issues)
 - [x] Deploy enhanced confetti physics to production for mobile testing
+- [x] Add "Reverse Y Direction" admin setting for global confetti physics control
+- [x] Fix confetti memory leaks with proper cleanup and duplicate event listener prevention
+- [x] Implement secure development magic link logging (localhost only)
 
 ### 🔄 **Future Enhancements (Post-Launch)**
 - [ ] Consider migrating from ORD to Singapore (sin) region for better global latency

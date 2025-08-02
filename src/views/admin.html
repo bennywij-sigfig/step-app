@@ -733,6 +733,37 @@
             </div>
         </div>
 
+        <!-- Admin Magic Link Testing -->
+        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
+            <h3>🔐 Magic Link Testing (Production Safe)</h3>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                <button id="getMyMagicLink" style="padding: 12px 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
+                    🔗 Generate My Magic Link
+                </button>
+            </div>
+            <div id="magicLinkResult" style="display: none; background: rgba(40, 167, 69, 0.1); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; border: 1px solid rgba(40, 167, 69, 0.2); margin-top: 15px;">
+                <div style="color: #155724; font-size: 14px; line-height: 1.5;">
+                    <strong>🔗 Your Magic Link:</strong><br>
+                    <div style="display: flex; align-items: center; gap: 10px; margin: 8px 0;">
+                        <span id="magicLinkMasked" style="color: #0066cc; font-family: monospace; font-size: 13px; flex: 1;"></span>
+                        <button id="copyMagicLink" style="padding: 6px 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;">
+                            📋 Copy
+                        </button>
+                        <button id="showFullLink" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;">
+                            👁️ Show
+                        </button>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                        <strong>Expires:</strong> <span id="magicLinkExpiry"></span> • 
+                        <strong>Email:</strong> <span id="magicLinkEmail"></span>
+                    </div>
+                </div>
+            </div>
+            <div style="background: rgba(52, 144, 220, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; font-size: 14px; color: #1976d2; border: 1px solid rgba(52, 144, 220, 0.2);">
+                <strong>Security Note:</strong> This generates a magic link for your admin account only. Fully audited and secure for production testing.
+            </div>
+        </div>
+
         <div id="extrasMessage"></div>
     </div>
 

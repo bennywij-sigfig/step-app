@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const axios = require('axios');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
@@ -62,6 +63,15 @@ if (isDevelopment) {
   console.log('MAILGUN_API_KEY:', process.env.MAILGUN_API_KEY ? 'SET' : 'NOT SET');
 } else {
   console.log('🚀 Production mode - starting Step Challenge App');
+}
+
+// Secure token management (security enhancement)
+function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+function generateSecureToken() {
+  return uuidv4();
 }
 
 const app = express();
@@ -254,18 +264,17 @@ const MAILGUN_API_URL = `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`;
 
 // Email sending function using Mailgun
 async function sendEmail(to, subject, htmlBody, textBody) {
+  // Always log magic links in development mode for easy testing (localhost only)
+  if (isDevelopment) {
+    const linkMatch = textBody.match(/https?:\/\/[^\s]+/);
+    if (linkMatch) {
+      console.log('🔗 Magic link (development mode):', linkMatch[0]);
+    }
+  }
+  
   if (!MAILGUN_API_KEY) {
     devLog('MAILGUN_API_KEY not configured. Login URL would be sent to:', to);
     devLog('Subject:', subject);
-    
-    // Extract and log the magic link for localhost debugging (development only)
-    if (isDevelopment) {
-      const linkMatch = textBody.match(/https?:\/\/[^\s]+/);
-      if (linkMatch) {
-        console.log('🔗 Magic link (email not configured):', linkMatch[0]);
-      }
-    }
-    
     return { success: false, message: 'Email not configured' };
   }
 
@@ -789,13 +798,14 @@ app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
   }
 
   try {
-    const token = uuidv4();
+    const token = generateSecureToken();
+    const hashedToken = hashToken(token);
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
     
-    // Store token in database
+    // Store hashed token in database (security enhancement)
     db.run(
       `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
-      [token, email, expiresAt.toISOString()],
+      [hashedToken, email, expiresAt.toISOString()],
       function(err) {
         if (err) {
           console.error('Error storing token:', err);
@@ -899,6 +909,51 @@ End of Message`;
   }
 });
 
+// Development-only: Get magic link directly (localhost only)
+if (isDevelopment) {
+  app.post('/dev/get-magic-link', magicLinkLimiter, async (req, res) => {
+    const { email } = req.body;
+    
+    if (!email || !isValidEmail(email)) {
+      return res.status(400).json({ error: 'Valid email required' });
+    }
+
+    try {
+      const token = generateSecureToken();
+      const hashedToken = hashToken(token);
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+      
+      // Store hashed token in database (security enhancement)
+      db.run(
+        `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
+        [hashedToken, email, expiresAt.toISOString()],
+        function(err) {
+          if (err) {
+            console.error('Error storing token:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+        }
+      );
+
+      // Return the magic link directly (development only)
+      const loginUrl = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
+      
+      console.log('🔗 Development magic link generated:', loginUrl);
+      
+      res.json({ 
+        message: 'Magic link generated for development',
+        magicLink: loginUrl,
+        email: email,
+        expiresAt: expiresAt.toISOString(),
+        note: 'This endpoint only works in development mode'
+      });
+    } catch (error) {
+      console.error('Error generating development magic link:', error);
+      res.status(500).json({ error: 'Failed to generate magic link' });
+    }
+  });
+}
+
 // Login with token
 app.get('/auth/login', (req, res) => {
   const { token } = req.query;
@@ -910,10 +965,11 @@ app.get('/auth/login', (req, res) => {
     return res.status(400).send('Invalid login link');
   }
 
-  // Verify token
+  // Verify token (hash before comparison for security)
+  const hashedToken = hashToken(token);
   db.get(
     `SELECT * FROM auth_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')`,
-    [token],
+    [hashedToken],
     (err, row) => {
       if (err) {
         console.error('Token verification error:', err);
@@ -928,7 +984,7 @@ app.get('/auth/login', (req, res) => {
       devLog('Valid token found for email:', row.email);
       
       // Mark token as used
-      db.run(`UPDATE auth_tokens SET used = 1 WHERE token = ?`, [token]);
+      db.run(`UPDATE auth_tokens SET used = 1 WHERE token = ?`, [hashedToken]);
 
       // Create or get user and set session
       db.get(`SELECT * FROM users WHERE email = ?`, [row.email], (err, user) => {
@@ -1796,14 +1852,15 @@ app.post('/api/admin/generate-magic-link', adminApiLimiter, requireApiAdmin, val
     }
     
     // Generate secure token
-    const token = uuidv4();
+    const token = generateSecureToken();
+    const hashedToken = hashToken(token);
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
     
-    // Store token in database
+    // Store hashed token in database (security enhancement)
     await new Promise((resolve, reject) => {
       db.run(
         `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
-        [token, user.email, expiresAt.toISOString()],
+        [hashedToken, user.email, expiresAt.toISOString()],
         function(err) {
           if (err) reject(err);
           else resolve(this.lastID);
@@ -1849,6 +1906,73 @@ app.post('/api/admin/generate-magic-link', adminApiLimiter, requireApiAdmin, val
     
   } catch (error) {
     console.error('Error generating admin magic link:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Generate magic link for current admin user (self-service for testing)
+app.post('/api/admin/get-my-magic-link', adminApiLimiter, requireApiAdmin, validateCSRFToken, async (req, res) => {
+  try {
+    // Get current admin user
+    const admin = await new Promise((resolve, reject) => {
+      db.get(`SELECT id, email, name FROM users WHERE id = ?`, [req.session.userId], (err, user) => {
+        if (err) reject(err);
+        else resolve(user);
+      });
+    });
+    
+    if (!admin) {
+      return res.status(500).json({ error: 'Admin session error' });
+    }
+    
+    // Generate secure token
+    const token = generateSecureToken();
+    const hashedToken = hashToken(token);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    
+    // Store hashed token in database (security enhancement)
+    await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
+        [hashedToken, admin.email, expiresAt.toISOString()],
+        function(err) {
+          if (err) reject(err);
+          else resolve(this.lastID);
+        }
+      );
+    });
+    
+    // Create magic link
+    const magicLink = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
+    
+    // Audit logging
+    const auditData = {
+      action: 'admin_self_magic_link_generated',
+      admin_id: admin.id,
+      admin_email: admin.email,
+      admin_name: admin.name,
+      token_expires_at: expiresAt.toISOString(),
+      ip_address: req.ip,
+      user_agent: req.get('User-Agent'),
+      session_id: req.sessionID,
+      timestamp: new Date().toISOString()
+    };
+    
+    await logMCPAudit(admin.id, 'admin_self_magic_link_generated', JSON.stringify(auditData), req.ip, req.get('User-Agent'));
+    
+    console.log(`🔗 Admin self-service magic link generated for ${admin.email}`);
+    
+    res.json({
+      success: true,
+      message: 'Magic link generated successfully',
+      magicLink: magicLink,
+      email: admin.email,
+      expiresAt: expiresAt.toISOString(),
+      expiresIn: '30 minutes'
+    });
+    
+  } catch (error) {
+    console.error('Error generating admin self-service magic link:', error);
     res.status(500).json({ error: 'Database error' });
   }
 });

@@ -1513,6 +1513,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
+            // Add magic link generation functionality
+            document.getElementById('getMyMagicLink').addEventListener('click', async function() {
+                try {
+                    this.disabled = true;
+                    this.textContent = '⏳ Generating...';
+                    
+                    const token = await getCSRFToken();
+                    const response = await authenticatedFetch('/api/admin/get-my-magic-link', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            csrfToken: token
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        
+                        // Store full magic link securely (not in DOM)
+                        window._adminMagicLink = result.magicLink;
+                        
+                        // Show masked magic link for security
+                        const maskedLink = maskMagicLink(result.magicLink);
+                        document.getElementById('magicLinkMasked').textContent = maskedLink;
+                        document.getElementById('magicLinkExpiry').textContent = new Date(result.expiresAt).toLocaleString();
+                        document.getElementById('magicLinkEmail').textContent = result.email;
+                        document.getElementById('magicLinkResult').style.display = 'block';
+                        
+                        // Set up secure copy and show functionality
+                        setupMagicLinkControls();
+                        
+                        showExtrasMessage('🔗 Magic link generated successfully! Link shown below (masked for security).', 'success');
+                    } else {
+                        const error = await response.json();
+                        showExtrasMessage('❌ Failed to generate magic link: ' + (error.error || 'Unknown error'), 'error');
+                    }
+                } catch (error) {
+                    console.error('Error generating magic link:', error);
+                    showExtrasMessage('❌ Network error generating magic link', 'error');
+                } finally {
+                    this.disabled = false;
+                    this.textContent = '🔗 Generate My Magic Link';
+                }
+            });
+
             // Add physics controls functionality
             setupPhysicsControls();
         }
@@ -1719,6 +1766,60 @@ document.addEventListener('DOMContentLoaded', function() {
                     showExtrasMessage('⚠️ Enable Epic Confetti first to test physics!', 'error');
                 }
             });
+        }
+
+        // Magic link security helpers
+        function maskMagicLink(link) {
+            const url = new URL(link);
+            const token = url.searchParams.get('token');
+            if (token && token.length > 16) {
+                const maskedToken = token.substring(0, 8) + '...' + token.substring(token.length - 8);
+                return link.replace(token, maskedToken);
+            }
+            return link;
+        }
+
+        function setupMagicLinkControls() {
+            // Copy to clipboard functionality
+            document.getElementById('copyMagicLink').onclick = async function() {
+                try {
+                    await navigator.clipboard.writeText(window._adminMagicLink);
+                    this.textContent = '✅ Copied';
+                    this.style.background = '#28a745';
+                    setTimeout(() => {
+                        this.textContent = '📋 Copy';
+                        this.style.background = '#007bff';
+                    }, 2000);
+                } catch (error) {
+                    console.error('Copy failed:', error);
+                    showExtrasMessage('❌ Failed to copy to clipboard', 'error');
+                }
+            };
+
+            // Show/hide full link functionality  
+            document.getElementById('showFullLink').onclick = function() {
+                const maskedElement = document.getElementById('magicLinkMasked');
+                const isShowing = this.textContent.includes('Hide');
+                
+                if (isShowing) {
+                    maskedElement.textContent = maskMagicLink(window._adminMagicLink);
+                    this.textContent = '👁️ Show';
+                    this.style.background = '#6c757d';
+                } else {
+                    maskedElement.textContent = window._adminMagicLink;
+                    this.textContent = '🙈 Hide';
+                    this.style.background = '#dc3545';
+                    
+                    // Auto-hide after 10 seconds for security
+                    setTimeout(() => {
+                        if (this.textContent.includes('Hide')) {
+                            maskedElement.textContent = maskMagicLink(window._adminMagicLink);
+                            this.textContent = '👁️ Show';
+                            this.style.background = '#6c757d';
+                        }
+                    }, 10000);
+                }
+            };
         }
 
         // Initialize themes
