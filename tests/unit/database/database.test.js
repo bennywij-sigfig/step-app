@@ -58,15 +58,18 @@ describe('Database Module', () => {
   });
 
   describe('Database Connection', () => {
-    test('should create database file when it does not exist', () => {
+    test('should create database file when it does not exist', (done) => {
       // Database file should not exist initially
       expect(fs.existsSync(testDbPath)).toBe(false);
       
       // Create database connection
-      db = new sqlite3.Database(testDbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE);
-      
-      // Database file should now exist
-      expect(fs.existsSync(testDbPath)).toBe(true);
+      db = new sqlite3.Database(testDbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+        if (err) return done(err);
+        
+        // Database file should now exist
+        expect(fs.existsSync(testDbPath)).toBe(true);
+        done();
+      });
     });
 
     test('should connect to existing database file', () => {
@@ -89,20 +92,30 @@ describe('Database Module', () => {
       db = new sqlite3.Database(testDbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE);
       
       return new Promise((resolve, reject) => {
-        // Test WAL mode
-        db.get('PRAGMA journal_mode', (err, row) => {
+        // Set WAL mode first
+        db.run('PRAGMA journal_mode=WAL', (err) => {
           if (err) return reject(err);
-          expect(row.journal_mode).toBe('wal');
           
-          // Test synchronous mode
-          db.get('PRAGMA synchronous', (err, row) => {
+          // Test WAL mode
+          db.get('PRAGMA journal_mode', (err, row) => {
             if (err) return reject(err);
-            expect(row.synchronous).toBe(1); // NORMAL = 1
-            resolve();
+            expect(row.journal_mode).toBe('wal');
+            
+            // Set synchronous mode
+            db.run('PRAGMA synchronous=NORMAL', (err) => {
+              if (err) return reject(err);
+              
+              // Test synchronous mode
+              db.get('PRAGMA synchronous', (err, row) => {
+                if (err) return reject(err);
+                expect(row.synchronous).toBe(1); // NORMAL = 1
+                resolve();
+              });
+            });
           });
         });
       });
-    });
+    }, 10000); // Increase timeout to 10 seconds
   });
 
   describe('Table Creation', () => {

@@ -1516,6 +1516,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Add physics controls functionality
             setupPhysicsControls();
+            
+            // Add accelerometer debugging functionality
+            setupAccelerometerDebug();
         }
         
         // Test confetti functions
@@ -1720,6 +1723,162 @@ document.addEventListener('DOMContentLoaded', function() {
                     showExtrasMessage('⚠️ Enable Epic Confetti first to test physics!', 'error');
                 }
             });
+        }
+
+        // Accelerometer debugging functionality
+        function setupAccelerometerDebug() {
+            let accelDebugInterval = null;
+            let isDebugging = false;
+            
+            const startBtn = document.getElementById('startAccelDebug');
+            const stopBtn = document.getElementById('stopAccelDebug');
+            const debugDisplay = document.getElementById('accelDebugDisplay');
+            const accelData = document.getElementById('accelData');
+            
+            startBtn.addEventListener('click', async function() {
+                if (isDebugging) return;
+                
+                try {
+                    // Request device motion permission on iOS
+                    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                        const permission = await DeviceMotionEvent.requestPermission();
+                        if (permission !== 'granted') {
+                            showExtrasMessage('⚠️ Device motion permission denied. Enable accelerometer access in browser settings.', 'error');
+                            return;
+                        }
+                    }
+                    
+                    isDebugging = true;
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                    debugDisplay.style.display = 'block';
+                    
+                    let lastUpdate = Date.now();
+                    let frameCount = 0;
+                    
+                    function handleDeviceMotion(event) {
+                        const now = Date.now();
+                        frameCount++;
+                        
+                        // Update display at ~10Hz to avoid overwhelming
+                        if (now - lastUpdate < 100) return;
+                        lastUpdate = now;
+                        
+                        const accel = event.accelerationIncludingGravity;
+                        const rotationRate = event.rotationRate;
+                        
+                        // Get screen orientation
+                        const orientation = screen.orientation ? screen.orientation.angle : 0;
+                        
+                        // Calculate some physics values similar to confetti system
+                        const rawX = accel ? accel.x : 0;
+                        const rawY = accel ? accel.y : 0;
+                        const rawZ = accel ? accel.z : 0;
+                        
+                        // Apply coordinate transformation based on orientation
+                        let transformedX = rawX;
+                        let transformedY = rawY;
+                        
+                        switch(orientation) {
+                            case 90:  // rotated left
+                                transformedX = rawY;
+                                transformedY = -rawX;
+                                break;
+                            case 180: // upside down
+                                transformedX = -rawX;
+                                transformedY = -rawY;
+                                break;
+                            case 270: // rotated right
+                                transformedX = -rawY;
+                                transformedY = rawX;
+                                break;
+                        }
+                        
+                        const magnitude = Math.sqrt(rawX*rawX + rawY*rawY + rawZ*rawZ);
+                        const tiltForce = Math.min(Math.abs(transformedX) * 0.3, 2.0);
+                        
+                        accelData.innerHTML = `
+<strong>Raw Accelerometer:</strong>
+  X: ${rawX.toFixed(3)}  Y: ${rawY.toFixed(3)}  Z: ${rawZ.toFixed(3)}
+  Magnitude: ${magnitude.toFixed(3)}
+
+<strong>Device Info:</strong>
+  Orientation: ${orientation}° (${getOrientationName(orientation)})
+  User Agent: ${navigator.userAgent.includes('iPhone') ? 'iPhone' : navigator.userAgent.includes('Android') ? 'Android' : 'Desktop'}
+  
+<strong>Transformed Values (for physics):</strong>
+  X: ${transformedX.toFixed(3)}  Y: ${transformedY.toFixed(3)}
+  Calculated Tilt Force: ${tiltForce.toFixed(3)}
+
+<strong>Rotation Rate:</strong>
+  Alpha: ${rotationRate ? rotationRate.alpha?.toFixed(3) : 'N/A'}
+  Beta: ${rotationRate ? rotationRate.beta?.toFixed(3) : 'N/A'}  
+  Gamma: ${rotationRate ? rotationRate.gamma?.toFixed(3) : 'N/A'}
+
+<strong>Debug Stats:</strong>
+  Updates/sec: ${(frameCount / ((now - startBtn.clickTime) / 1000)).toFixed(1)}
+  Running: ${((now - startBtn.clickTime) / 1000).toFixed(1)}s
+                        `;
+                    }
+                    
+                    function handleOrientationChange() {
+                        // Update on orientation change
+                        setTimeout(() => {
+                            if (isDebugging) {
+                                const orientation = screen.orientation ? screen.orientation.angle : 0;
+                                showExtrasMessage(`📱 Orientation changed to ${orientation}° (${getOrientationName(orientation)})`, 'success');
+                            }
+                        }, 100);
+                    }
+                    
+                    startBtn.clickTime = Date.now();
+                    window.addEventListener('devicemotion', handleDeviceMotion);
+                    window.addEventListener('orientationchange', handleOrientationChange);
+                    
+                    // Store references for cleanup
+                    accelDebugInterval = {
+                        handleDeviceMotion,
+                        handleOrientationChange
+                    };
+                    
+                    showExtrasMessage('📊 Accelerometer debugging started! Tilt your device to see values change.', 'success');
+                    
+                } catch (error) {
+                    console.error('Accelerometer debug error:', error);
+                    showExtrasMessage('❌ Error starting accelerometer debug: ' + error.message, 'error');
+                    isDebugging = false;
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    debugDisplay.style.display = 'none';
+                }
+            });
+            
+            stopBtn.addEventListener('click', function() {
+                if (!isDebugging) return;
+                
+                isDebugging = false;
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                debugDisplay.style.display = 'none';
+                
+                if (accelDebugInterval) {
+                    window.removeEventListener('devicemotion', accelDebugInterval.handleDeviceMotion);
+                    window.removeEventListener('orientationchange', accelDebugInterval.handleOrientationChange);
+                    accelDebugInterval = null;
+                }
+                
+                showExtrasMessage('⏹️ Accelerometer debugging stopped.', 'success');
+            });
+            
+            function getOrientationName(angle) {
+                switch(angle) {
+                    case 0: return 'Portrait';
+                    case 90: return 'Landscape Left';
+                    case 180: return 'Portrait Upside Down';
+                    case 270: return 'Landscape Right';
+                    default: return 'Unknown';
+                }
+            }
         }
 
 

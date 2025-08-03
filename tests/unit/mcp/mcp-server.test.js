@@ -69,7 +69,8 @@ describe('MCP Server Unit Tests', () => {
           throw new Error('Date is required and must be a string');
         }
         
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const trimmedDate = date.trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
           throw new Error('Date must be in YYYY-MM-DD format');
         }
 
@@ -92,7 +93,7 @@ describe('MCP Server Unit Tests', () => {
         }
 
         return {
-          date: date.trim(),
+          date: trimmedDate,
           count: Math.floor(count),
           allow_overwrite: Boolean(allow_overwrite)
         };

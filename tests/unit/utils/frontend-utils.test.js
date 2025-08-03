@@ -80,11 +80,12 @@ describe('Frontend Utilities', () => {
         return '';
       }
       
-      // Remove HTML tags and dangerous characters
-      return input
-        .replace(/<[^>]*>/g, '') // Remove HTML tags
-        .replace(/[<>&"']/g, '') // Remove dangerous characters
-        .trim();
+      // Remove HTML tags completely
+      let cleaned = input.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ''); // Remove script tags
+      cleaned = cleaned.replace(/<[^>]*>/g, ''); // Remove all HTML tags
+      cleaned = cleaned.replace(/[<>&"']/g, ''); // Remove dangerous characters
+      
+      return cleaned.trim();
     },
 
     formatNumber: (num, locale = 'en-US') => {

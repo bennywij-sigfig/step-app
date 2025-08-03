@@ -62,7 +62,7 @@ describe('Input Validation Middleware', () => {
     };
 
     validateEmailInput = (email) => {
-      if (!email || typeof email !== 'string') {
+      if (typeof email !== 'string') {
         throw new Error('Email is required and must be a string');
       }
       
@@ -90,9 +90,20 @@ describe('Input Validation Middleware', () => {
         throw new Error('Date must be in YYYY-MM-DD format');
       }
       
-      // Validate it's a real date
+      // Validate it's a real date by checking if the date constructed equals the input
       const parsedDate = new Date(trimmedDate);
       if (isNaN(parsedDate.getTime())) {
+        throw new Error('Date must be a valid date');
+      }
+      
+      // Check if the constructed date matches the input (catches invalid dates like Feb 30)
+      // Use UTC to avoid timezone issues
+      const year = parsedDate.getUTCFullYear();
+      const month = String(parsedDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(parsedDate.getUTCDate()).padStart(2, '0');
+      const reconstructed = `${year}-${month}-${day}`;
+      
+      if (reconstructed !== trimmedDate) {
         throw new Error('Date must be a valid date');
       }
       

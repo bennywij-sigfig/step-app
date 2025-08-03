@@ -717,6 +717,28 @@
             </div>
         </div>
 
+        <!-- Accelerometer Debugging -->
+        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
+            <h3>📱 Accelerometer Debugging</h3>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                <button id="startAccelDebug" style="padding: 12px 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
+                    📊 Start Accelerometer Debug
+                </button>
+                <button id="stopAccelDebug" style="padding: 12px 20px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;" disabled>
+                    ⏹️ Stop Debug
+                </button>
+            </div>
+            
+            <div id="accelDebugDisplay" style="display: none; background: rgba(0, 0, 0, 0.8); color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; font-size: 13px; line-height: 1.4; margin-bottom: 15px;">
+                <div style="margin-bottom: 10px; color: #ffffff; font-weight: bold;">Real-time Accelerometer Data:</div>
+                <div id="accelData">Waiting for accelerometer data...</div>
+            </div>
+            
+            <div style="background: rgba(255, 193, 7, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; font-size: 14px; color: #856404; border: 1px solid rgba(255, 193, 7, 0.2);">
+                <strong>Debug Info:</strong> Shows raw accelerometer values, orientation, and calculated physics forces. Tilt your device in different directions to see how the values change. This helps debug confetti Y-axis behavior issues.
+            </div>
+        </div>
+
         <!-- Confetti Testing -->
         <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
             <h3>🧪 Confetti Testing</h3>
