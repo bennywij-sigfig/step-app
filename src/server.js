@@ -2069,6 +2069,98 @@ app.get('/api/admin/theme', adminApiLimiter, requireApiAdmin, (req, res) => {
   res.json({ theme: 'default' });
 });
 
+// Get confetti threshold settings
+app.get('/api/admin/confetti-thresholds', adminApiLimiter, requireApiAdmin, (req, res) => {
+  db.all(`SELECT key, value FROM settings WHERE key IN ('confetti_regular_threshold', 'confetti_epic_threshold')`, [], (err, rows) => {
+    if (err) {
+      console.error('Error fetching confetti thresholds:', err);
+      return res.status(500).json({ error: 'Failed to fetch settings' });
+    }
+    
+    // Convert to object format
+    const thresholds = {};
+    rows.forEach(row => {
+      if (row.key === 'confetti_regular_threshold') {
+        thresholds.regular = parseInt(row.value);
+      } else if (row.key === 'confetti_epic_threshold') {
+        thresholds.epic = parseInt(row.value);
+      }
+    });
+    
+    // Set defaults if not found
+    if (!thresholds.regular) thresholds.regular = 15000;
+    if (!thresholds.epic) thresholds.epic = 20000;
+    
+    res.json(thresholds);
+  });
+});
+
+// Update confetti threshold settings
+app.post('/api/admin/confetti-thresholds', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
+  const { regular, epic } = req.body;
+  
+  // Validate input
+  if (!regular || !epic || isNaN(regular) || isNaN(epic)) {
+    return res.status(400).json({ error: 'Both regular and epic thresholds must be valid numbers' });
+  }
+  
+  const regularThreshold = parseInt(regular);
+  const epicThreshold = parseInt(epic);
+  
+  if (regularThreshold < 1000 || regularThreshold > 50000 || epicThreshold < 1000 || epicThreshold > 50000) {
+    return res.status(400).json({ error: 'Thresholds must be between 1,000 and 50,000 steps' });
+  }
+  
+  if (epicThreshold <= regularThreshold) {
+    return res.status(400).json({ error: 'Epic threshold must be greater than regular threshold' });
+  }
+  
+  // Update both settings in a transaction
+  db.serialize(() => {
+    db.run(`INSERT OR REPLACE INTO settings (key, value, description, updated_at) VALUES 
+      ('confetti_regular_threshold', ?, 'Step count threshold for regular confetti celebration', CURRENT_TIMESTAMP)`, 
+      [regularThreshold.toString()]);
+    
+    db.run(`INSERT OR REPLACE INTO settings (key, value, description, updated_at) VALUES 
+      ('confetti_epic_threshold', ?, 'Step count threshold for epic/mega confetti celebration', CURRENT_TIMESTAMP)`, 
+      [epicThreshold.toString()], (err) => {
+      if (err) {
+        console.error('Error updating confetti thresholds:', err);
+        return res.status(500).json({ error: 'Failed to update settings' });
+      }
+      
+      console.log(`✅ Admin ${req.user.email} updated confetti thresholds: regular=${regularThreshold}, epic=${epicThreshold}`);
+      res.json({ success: true, regular: regularThreshold, epic: epicThreshold });
+    });
+  });
+});
+
+// Get confetti thresholds for dashboard (public API)
+app.get('/api/confetti-thresholds', apiLimiter, (req, res) => {
+  db.all(`SELECT key, value FROM settings WHERE key IN ('confetti_regular_threshold', 'confetti_epic_threshold')`, [], (err, rows) => {
+    if (err) {
+      console.error('Error fetching confetti thresholds:', err);
+      return res.status(500).json({ error: 'Failed to fetch settings' });
+    }
+    
+    // Convert to object format
+    const thresholds = {};
+    rows.forEach(row => {
+      if (row.key === 'confetti_regular_threshold') {
+        thresholds.regular = parseInt(row.value);
+      } else if (row.key === 'confetti_epic_threshold') {
+        thresholds.epic = parseInt(row.value);
+      }
+    });
+    
+    // Set defaults if not found
+    if (!thresholds.regular) thresholds.regular = 15000;
+    if (!thresholds.epic) thresholds.epic = 20000;
+    
+    res.json(thresholds);
+  });
+});
+
 // Get team members for disclosure (new endpoint)
 app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, res) => {
   try {

@@ -221,6 +221,16 @@ db.serialize(() => {
     FOREIGN KEY (user_id) REFERENCES users (id)
   )`);
 
+  // Settings table for configurable app settings
+  db.run(`CREATE TABLE IF NOT EXISTS settings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    value TEXT NOT NULL,
+    description TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   // Add critical performance indexes
   db.run(`CREATE INDEX IF NOT EXISTS idx_steps_challenge_date_user ON steps(challenge_id, date, user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_steps_user_challenge ON steps(user_id, challenge_id)`);
@@ -248,6 +258,17 @@ db.serialize(() => {
       console.error('Error updating default scopes:', err);
     } else {
       console.log('✅ Updated existing tokens with default scopes');
+    }
+  });
+  
+  // Initialize default confetti threshold settings
+  db.run(`INSERT OR IGNORE INTO settings (key, value, description) VALUES 
+    ('confetti_regular_threshold', '15000', 'Step count threshold for regular confetti celebration'),
+    ('confetti_epic_threshold', '20000', 'Step count threshold for epic/mega confetti celebration')`, (err) => {
+    if (err) {
+      console.error('Error initializing confetti threshold settings:', err);
+    } else {
+      console.log('✅ Initialized confetti threshold settings');
     }
   });
   

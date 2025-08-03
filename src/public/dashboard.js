@@ -1,6 +1,12 @@
 // Team disclosure functionality - must be global
 let expandedTeams = new Set(); // Track expanded state
 
+// Confetti thresholds - loaded from server
+let confettiThresholds = {
+    regular: 15000,
+    epic: 20000
+};
+
 // Mobile detection utility
 function isMobileViewport() {
     return window.innerWidth <= 768; // Standard mobile breakpoint
@@ -104,32 +110,34 @@ function createConfetti() {
 
 // Trigger confetti celebration
 function celebrateSteps(stepCount) {
-    // Check for mega confetti first (20K+ steps)
-    if (stepCount >= 20000) {
+    // Check for mega confetti first (epic threshold)
+    if (stepCount >= confettiThresholds.epic) {
         const megaConfettiEnabled = localStorage.getItem('megaConfettiEnabled') === 'true';
         if (megaConfettiEnabled) {
-            // Only do mega celebration for 20K+
+            // Only do mega celebration for epic threshold+
             createMegaConfetti();
             
             // Add epic celebration message with warp speed glow
             setTimeout(() => {
                 const messageDiv = document.getElementById('stepsMessage');
                 const currentMessage = messageDiv.innerHTML;
-                messageDiv.innerHTML = currentMessage + '<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">🚀 EPIC ACHIEVEMENT! 20,000+ STEPS! 🚀</div>';
+                const formattedThreshold = (confettiThresholds.epic / 1000).toFixed(0) + 'K';
+                messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">🚀 EPIC ACHIEVEMENT! ${formattedThreshold}+ STEPS! 🚀</div>`;
             }, 500);
-            return; // Skip regular confetti for 20K+
+            return; // Skip regular confetti for epic threshold+
         }
     }
     
-    // Regular confetti for 15K+ (only if not 20K+ with mega enabled)
-    if (stepCount >= 15000) {
+    // Regular confetti for regular threshold+ (only if not epic threshold+ with mega enabled)
+    if (stepCount >= confettiThresholds.regular) {
         createConfetti();
         
         // Add celebration message
         setTimeout(() => {
             const messageDiv = document.getElementById('stepsMessage');
             const currentMessage = messageDiv.innerHTML;
-            messageDiv.innerHTML = currentMessage + '<div class="message success" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; animation: pulse 1s ease-in-out 3;">🎉 Amazing! 15,000+ steps celebration! 🎉</div>';
+            const formattedThreshold = (confettiThresholds.regular / 1000).toFixed(0) + 'K';
+            messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; animation: pulse 1s ease-in-out 3;">🎉 Amazing! ${formattedThreshold}+ steps celebration! 🎉</div>`;
         }, 500);
     }
 }
@@ -881,9 +889,29 @@ window.addEventListener('resize', function() {
     resizeTimeout = setTimeout(handleCanvasResize, 150);
 });
 
+// Load confetti thresholds from server
+async function loadConfettiThresholds() {
+    try {
+        const response = await fetch('/api/confetti-thresholds');
+        if (response.ok) {
+            const thresholds = await response.json();
+            confettiThresholds.regular = thresholds.regular || 15000;
+            confettiThresholds.epic = thresholds.epic || 20000;
+            console.log('✅ Loaded confetti thresholds:', confettiThresholds);
+        } else {
+            console.warn('Failed to load confetti thresholds, using defaults');
+        }
+    } catch (error) {
+        console.warn('Error loading confetti thresholds, using defaults:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize theme
     initializeTheme();
+    
+    // Load confetti thresholds
+    loadConfettiThresholds();
     
     // Get user info from session
     let currentUser = null;

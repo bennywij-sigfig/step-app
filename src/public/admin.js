@@ -1513,6 +1513,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
+            // Add confetti threshold save functionality
+            document.getElementById('saveConfettiThresholds').addEventListener('click', async function() {
+                await saveConfettiThresholds();
+            });
+
+            // Load current confetti thresholds
+            loadConfettiThresholds();
 
             // Add physics controls functionality
             setupPhysicsControls();
@@ -1542,6 +1549,86 @@ document.addEventListener('DOMContentLoaded', function() {
                 createTestCanvas();
                 createTestMegaConfetti();
             }
+        }
+        
+        // Load current confetti thresholds from server
+        async function loadConfettiThresholds() {
+            try {
+                const response = await fetch('/api/admin/confetti-thresholds');
+                if (response.ok) {
+                    const thresholds = await response.json();
+                    document.getElementById('regularConfettiThreshold').value = thresholds.regular || 15000;
+                    document.getElementById('epicConfettiThreshold').value = thresholds.epic || 20000;
+                    
+                    // Update test button labels
+                    updateTestButtonLabels(thresholds.regular || 15000, thresholds.epic || 20000);
+                    
+                    console.log('✅ Loaded confetti thresholds for admin:', thresholds);
+                } else {
+                    console.warn('Failed to load confetti thresholds');
+                    showExtrasMessage('⚠️ Failed to load current threshold settings', 'error');
+                }
+            } catch (error) {
+                console.warn('Error loading confetti thresholds:', error);
+                showExtrasMessage('⚠️ Error loading threshold settings', 'error');
+            }
+        }
+        
+        // Save confetti threshold settings
+        async function saveConfettiThresholds() {
+            const regular = parseInt(document.getElementById('regularConfettiThreshold').value);
+            const epic = parseInt(document.getElementById('epicConfettiThreshold').value);
+            
+            // Client-side validation
+            if (isNaN(regular) || isNaN(epic)) {
+                showExtrasMessage('⚠️ Both thresholds must be valid numbers', 'error');
+                return;
+            }
+            
+            if (regular < 1000 || regular > 50000 || epic < 1000 || epic > 50000) {
+                showExtrasMessage('⚠️ Thresholds must be between 1,000 and 50,000 steps', 'error');
+                return;
+            }
+            
+            if (epic <= regular) {
+                showExtrasMessage('⚠️ Epic threshold must be greater than regular threshold', 'error');
+                return;
+            }
+            
+            try {
+                const csrfToken = await getCSRFToken();
+                const response = await fetch('/api/admin/confetti-thresholds', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ regular, epic })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    showExtrasMessage(`✅ Confetti thresholds updated! Regular: ${result.regular.toLocaleString()}, Epic: ${result.epic.toLocaleString()}`, 'success');
+                    
+                    // Update test button labels
+                    updateTestButtonLabels(result.regular, result.epic);
+                } else {
+                    const error = await response.json();
+                    showExtrasMessage(`⚠️ Failed to save: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving confetti thresholds:', error);
+                showExtrasMessage('⚠️ Error saving threshold settings', 'error');
+            }
+        }
+        
+        // Update test button labels with current thresholds
+        function updateTestButtonLabels(regular, epic) {
+            const regularLabel = Math.round(regular / 1000) + 'K';
+            const epicLabel = Math.round(epic / 1000) + 'K';
+            
+            document.getElementById('regularTestThreshold').textContent = regularLabel;
+            document.getElementById('epicTestThreshold').textContent = epicLabel;
         }
         
         function createTestCanvas() {

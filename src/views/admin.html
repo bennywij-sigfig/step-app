@@ -627,15 +627,53 @@
             <div style="background: rgba(255, 193, 7, 0.1); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 193, 7, 0.2);">
                 <div style="color: #856404; font-size: 14px; line-height: 1.5;">
                     <strong>🚀 Epic Achievement Feature:</strong><br>
-                    When enabled, users who log 20,000+ steps get an epic physics-based confetti celebration! 
+                    When enabled, users who reach the epic threshold get an epic physics-based confetti celebration! 
                     Confetti particles accumulate at the bottom of the screen and can be disturbed by:
                     <ul style="margin: 8px 0; padding-left: 20px;">
                         <li><strong>Mobile:</strong> Tilt and shake your device (accelerometer)</li>
                         <li><strong>Desktop:</strong> Drag your mouse through the pile</li>
                         <li><strong>Gentle shake:</strong> Disturbs settled particles in the pile</li>
                     </ul>
-                    <em>Note: This is in addition to the regular 15,000+ step confetti celebration.</em>
+                    <em>Note: This is in addition to the regular confetti celebration at the regular threshold.</em>
                 </div>
+            </div>
+        </div>
+
+        <!-- Confetti Threshold Configuration -->
+        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
+            <h3>🎯 Confetti Threshold Settings</h3>
+            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Configure when confetti celebrations are triggered (inclusive)</p>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+                <!-- Regular Confetti Threshold -->
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">
+                        Regular Confetti Threshold
+                        <span style="font-weight: normal; color: #888; font-size: 12px;">(steps)</span>
+                    </label>
+                    <input type="number" id="regularConfettiThreshold" min="1000" max="50000" step="1000" value="15000"
+                           style="width: 100%; padding: 12px 16px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px;">
+                    <div style="font-size: 12px; color: #888; margin-top: 4px;">Step count that triggers regular confetti celebration</div>
+                </div>
+
+                <!-- Epic Confetti Threshold -->
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">
+                        Epic Confetti Threshold
+                        <span style="font-weight: normal; color: #888; font-size: 12px;">(steps)</span>
+                    </label>
+                    <input type="number" id="epicConfettiThreshold" min="1000" max="50000" step="1000" value="20000"
+                           style="width: 100%; padding: 12px 16px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px;">
+                    <div style="font-size: 12px; color: #888; margin-top: 4px;">Step count that triggers epic/mega confetti (if enabled above)</div>
+                </div>
+            </div>
+            
+            <button id="saveConfettiThresholds" style="margin-top: 20px; padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
+                💾 Save Threshold Settings
+            </button>
+            
+            <div style="background: rgba(52, 144, 220, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; font-size: 14px; color: #1976d2; border: 1px solid rgba(52, 144, 220, 0.2); margin-top: 15px;">
+                <strong>Configuration Note:</strong> These thresholds determine when confetti celebrations are triggered. Regular confetti shows for steps ≥ regular threshold. Epic confetti (if enabled) shows for steps ≥ epic threshold and replaces regular confetti.
             </div>
         </div>
 
@@ -744,10 +782,10 @@
             <h3>🧪 Confetti Testing</h3>
             <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
                 <button id="testRegularConfetti" style="padding: 12px 20px; background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
-                    🎉 Test Regular Confetti (15K+)
+                    🎉 Test Regular Confetti (<span id="regularTestThreshold">15K</span>+)
                 </button>
                 <button id="testMegaConfetti" style="padding: 12px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
-                    🚀 Test Epic Confetti (20K+)
+                    🚀 Test Epic Confetti (<span id="epicTestThreshold">20K</span>+)
                 </button>
             </div>
             <div style="background: rgba(52, 144, 220, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; font-size: 14px; color: #1976d2; border: 1px solid rgba(52, 144, 220, 0.2);">
