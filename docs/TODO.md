@@ -8,13 +8,23 @@
 **Setup Experience:** Web-based setup page with one-click Python bridge download OR advanced Node.js distribution  
 **Security status:** B+ security grade with comprehensive token management and user isolation  
 **Client Support:** Claude Desktop, Cursor, Claude Code CLI with both MCP approaches  
-**Last deployed:** August 1, 2025 (Repository reorganization + documentation path updates complete)
+**Last deployed:** August 3, 2025 (Confetti physics Y-axis control fix + accelerometer debugging panel)
 
 ---
 
-## 🎉 RECENTLY COMPLETED (August 1, 2025) ✅
+## 🎉 RECENTLY COMPLETED (August 3, 2025) ✅
 
-### Repository Reorganization Complete (Latest - August 1, 2025)
+### Confetti Physics Y-Axis Control Fix (Latest - August 3, 2025)
+- [x] **Y-Axis Reverse Setting Fixed** - Corrected confetti physics to properly respond to device pitch
+- [x] **Accelerometer Debugging Panel** - Added real-time accelerometer data display in admin extras UI
+- [x] **Interactive Physics Working** - Particles now settle properly and respond to tilt correctly
+- [x] **Pitch Control Behavior** - Normal: chin up → particles slide up, chin down → particles slide down
+- [x] **Reversed Pitch Control** - Y-flip ON: chin up → particles slide down, chin down → particles slide up
+- [x] **Boundary Logic Corrected** - Particles settle at bottom normally, Y-flip only affects accelerometer response
+- [x] **Production Deployed** - Live mobile testing available at https://step-app-4x-yhw.fly.dev/
+- [x] **Cross-Platform Compatibility** - Works correctly on iOS and Android devices with proper permission handling
+
+### Repository Reorganization Complete (August 1, 2025)
 - [x] **Complete Directory Restructure** - Organized codebase with src/, mcp/, docs/, tests/, config/ directories
 - [x] **Path Fixes Deployed** - All require() statements, documentation, and deployment configurations updated
 - [x] **Production Verification** - Successfully deployed and tested reorganized structure in production
