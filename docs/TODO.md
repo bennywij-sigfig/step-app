@@ -86,6 +86,11 @@
 - [ ] **External Uptime Monitoring** - Set up external monitoring for production alerts
 - [ ] **Performance Optimization** - Monitor database size and implement backup rotation
 
+### Development & Operations
+- [ ] **CI/CD Pipeline Fix** - GitHub Actions pipeline is currently broken and needs repair
+- [ ] **Automated Testing** - Set up continuous integration for pull requests and deployments
+- [ ] **Build Verification** - Ensure tests run automatically on code changes
+
 ### Enhanced Features
 - [ ] **Token Hashing at Rest** - Security enhancement for large-scale deployment
 - [ ] **Automated Token Rotation** - Advanced security feature for enterprise use
@@ -124,6 +129,14 @@
 - `tests/mcp-api-load-test.js` - MCP-specific load testing
 - `tests/authenticated-load-test.js` - User flow testing
 - `tests/test-admin-magic-links.js` - Security testing for admin features
+
+### **Confetti Physics System:**
+- Epic confetti physics with accelerometer and mouse interaction
+- Two-phase physics (drop → interactive) with proper settling detection
+- Cross-platform device motion support (iOS permission handling)
+- Orientation-aware boundary collision and gravity systems
+- Y-axis reverse setting for customizable pitch response behavior
+- Real-time accelerometer debugging panel in admin extras UI
 
 ## ✅ FULLY COMPLETED (Production Ready) ✅
 

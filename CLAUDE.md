@@ -527,10 +527,8 @@ This comprehensive testing and development workflow ensures reliability, securit
 5. **CSRF Protection Assessment** - Current 24-hour session-based tokens deemed secure for use case
 6. **Documentation Sync** - All file paths and references updated for new repository structure
 
-### ⚠️ **CRITICAL Next Steps (Before scaling to 150+ users)**
-1. **Database Backup Strategy** - Implement automated backups (no backup system currently)
-2. **Error Handling** - Add global error handlers to prevent silent crashes  
-3. **Monitoring** - External uptime monitoring for production alerts
+### ⚠️ **CRITICAL Next Steps**
+See `/docs/TODO.md` for complete list of next steps and unfinished items.
 
 ## Testing
 - **Local Development**: Creates SQLite database automatically at startup
@@ -550,82 +548,8 @@ This comprehensive testing and development workflow ensures reliability, securit
 - `mcp_tokens` - MCP authentication tokens
 - `mcp_audit_log` - MCP action tracking
 
-## Current Todo Status
+## Project Status & TODO Management
 
-### ✅ **COMPLETED (Production Ready for 150+ Users)**
+**Current Status:** Production ready with comprehensive MCP integration and enterprise security features.
 
-#### **Repository Organization**
-- [x] Complete directory reorganization with src/, mcp/, docs/, tests/, config/ structure
-- [x] Update all file path references in documentation and configuration
-- [x] Fix all require() statements and import paths
-- [x] Deploy reorganized structure to production and verify functionality
-- [x] Update package.json, Dockerfile, and deployment configurations
-
-#### **Core Application**
-- [x] Test production API endpoints (auth, steps, leaderboards, admin)
-- [x] Run Playwright browser automation tests on production  
-- [x] Stress test rate limiting and security features
-- [x] Test edge cases and error handling
-- [x] Validate mobile responsiveness and cross-browser compatibility
-- [x] Analyze backend input validation security issues
-- [x] Implement robust backend input validation with security hardening
-- [x] Test input validation with malicious inputs and penetration testing
-
-#### **Remote MCP Server & Security**
-- [x] Design and implement MCP JSON-RPC 2.0 API with enterprise security
-- [x] Add stdio MCP protocol support with local server integration
-- [x] Add user data isolation and authorization controls
-- [x] Implement SQL injection prevention with safe query builders
-- [x] Add comprehensive input validation and prototype pollution protection
-- [x] Create token scoping system (steps:read, steps:write, profile:read)
-- [x] Implement dual-layer rate limiting (burst + hourly limits)
-- [x] Add comprehensive audit logging with IP tracking
-- [x] Security review by Gemini (B+ grade, production ready)
-- [x] Deploy remote MCP server to production with full testing
-
-#### **Local Stdio MCP Distribution**
-- [x] Create comprehensive Python testing suite (test_mcp_python.py)
-- [x] Build admin token management tools (get_mcp_token.py)
-- [x] Develop local stdio MCP server integration
-- [x] Update documentation for local MCP setup
-- [x] Create Node.js-based MCP server for local deployment
-
-#### **Production Deployment**
-- [x] All code committed, pushed to GitHub, and deployed to Fly.io
-- [x] Production local MCP server fully operational and tested
-- [x] Documentation updated with stdio MCP integration guides
-- [x] Ready for enterprise distribution with local MCP server files
-
-#### **Confetti Physics System & Controls**
-- [x] Analyze and identify confetti physics bugs (tilt direction, rotation, auto-rotate)
-- [x] Implement comprehensive orientation detection system (0°, 90°, 180°, 270°)
-- [x] Fix accelerometer coordinate transformation for proper tilt handling
-- [x] Add dynamic gravity system that adapts to device rotation
-- [x] Implement orientation-aware boundary collision and settling logic
-- [x] Fix iOS DeviceMotion permission caching to prevent multiple requests
-- [x] Add performance optimizations (debounced resize, canvas validation)
-- [x] Comprehensive Gemini code review and bug fixes (11 critical issues)
-- [x] Deploy enhanced confetti physics to production for mobile testing
-- [x] Add "Reverse Y Direction" admin setting for global confetti physics control
-- [x] Fix confetti memory leaks with proper cleanup and duplicate event listener prevention
-- [x] Implement secure development magic link logging (localhost only)
-
-#### **Secure Magic Link Testing System**
-- [x] Analyze security vulnerabilities in magic link system (Gemini security review)
-- [x] Implement SHA-256 token hashing for database storage (prevents plaintext exposure)
-- [x] Add secure admin self-service magic link generation (admin accounts only)
-- [x] Create masked token display in admin UI with secure copy/show controls
-- [x] Add development mode magic link logging (always enabled on localhost)
-- [x] Create dedicated /dev/get-magic-link endpoint for development testing
-- [x] Implement comprehensive audit logging for all magic link generation
-- [x] Add CSRF protection and rate limiting for admin endpoints
-- [x] Deploy secure magic link system to production with rollback plan
-- [x] Verify production deployment and authentication functionality
-
-### 🔄 **Future Enhancements (Post-Launch)**
-- [ ] Consider migrating from ORD to Singapore (sin) region for better global latency
-- [ ] Implement database backup strategy (recommended before 500+ users)
-- [ ] Add global error handlers (recommended before 500+ users)  
-- [ ] Set up external uptime monitoring (recommended for enterprise)
-- [ ] Token hashing at rest (security enhancement for large-scale deployment)
-- [ ] Automated token rotation system (advanced security feature)
+**TODO Management:** All current tasks, completed items, and future enhancements are tracked in `/docs/TODO.md`.
