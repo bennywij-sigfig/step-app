@@ -400,29 +400,65 @@ function transformAccelerometerData(acceleration) {
 function getOrientationAwareBoundaries(canvas) {
     const angle = megaConfettiSystem.orientation.angle;
     
-    // Calculate where particles should settle based on gravity direction
+    // Check reverse Y direction setting
+    const reverseY = localStorage.getItem('reverseYDirection') === 'true';
+    
+    // Calculate where particles should settle based on gravity direction AND reverse setting
     let gravityFloor, gravityCeiling;
     
     switch (angle) {
-        case 0:   // Portrait - gravity pulls down
-            gravityFloor = canvas.height;
-            gravityCeiling = 0;
+        case 0:   // Portrait
+            if (reverseY) {
+                // Reversed: gravity pulls up, particles settle at top
+                gravityFloor = 0;
+                gravityCeiling = canvas.height;
+            } else {
+                // Normal: gravity pulls down, particles settle at bottom
+                gravityFloor = canvas.height;
+                gravityCeiling = 0;
+            }
             break;
-        case 90:  // Landscape left - gravity pulls right
-            gravityFloor = canvas.width;
-            gravityCeiling = 0;
+        case 90:  // Landscape left
+            if (reverseY) {
+                // Reversed: gravity pulls left, particles settle at left
+                gravityFloor = 0;
+                gravityCeiling = canvas.width;
+            } else {
+                // Normal: gravity pulls right, particles settle at right
+                gravityFloor = canvas.width;
+                gravityCeiling = 0;
+            }
             break;
-        case 180: // Portrait upside down - gravity pulls up  
-            gravityFloor = 0;
-            gravityCeiling = canvas.height;
+        case 180: // Portrait upside down
+            if (reverseY) {
+                // Reversed: gravity pulls down (opposite of upside down), particles settle at bottom
+                gravityFloor = canvas.height;
+                gravityCeiling = 0;
+            } else {
+                // Normal: gravity pulls up (upside down), particles settle at top
+                gravityFloor = 0;
+                gravityCeiling = canvas.height;
+            }
             break;
-        case 270: // Landscape right - gravity pulls left
-            gravityFloor = 0;
-            gravityCeiling = canvas.width;
+        case 270: // Landscape right
+            if (reverseY) {
+                // Reversed: gravity pulls right, particles settle at right
+                gravityFloor = canvas.width;
+                gravityCeiling = 0;
+            } else {
+                // Normal: gravity pulls left, particles settle at left
+                gravityFloor = 0;
+                gravityCeiling = canvas.width;
+            }
             break;
         default:  // Fallback to portrait
-            gravityFloor = canvas.height;
-            gravityCeiling = 0;
+            if (reverseY) {
+                gravityFloor = 0;
+                gravityCeiling = canvas.height;
+            } else {
+                gravityFloor = canvas.height;
+                gravityCeiling = 0;
+            }
     }
     
     return {
