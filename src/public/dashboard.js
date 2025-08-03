@@ -331,31 +331,28 @@ function updateOrientationPhysics() {
     const angle = screen.orientation ? screen.orientation.angle : (window.orientation || 0);
     megaConfettiSystem.orientation.angle = angle;
     
-    // Check reverse Y direction setting
-    const reverseY = localStorage.getItem('reverseYDirection') === 'true';
-    const gravityMultiplier = reverseY ? -1 : 1;
-    
     // Calculate gravity direction based on orientation
+    // Note: reverseYDirection only affects accelerometer response, not gravity direction
     switch (angle) {
-        case 0:   // Portrait
+        case 0:   // Portrait - gravity pulls down
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = 0.3 * gravityMultiplier;
+            megaConfettiSystem.orientation.gravityY = 0.3;
             break;
-        case 90:  // Landscape left
-            megaConfettiSystem.orientation.gravityX = 0.3 * gravityMultiplier;
+        case 90:  // Landscape left - gravity pulls right
+            megaConfettiSystem.orientation.gravityX = 0.3;
             megaConfettiSystem.orientation.gravityY = 0;
             break;
-        case 180: // Portrait upside down
+        case 180: // Portrait upside down - gravity pulls up
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = -0.3 * gravityMultiplier;
+            megaConfettiSystem.orientation.gravityY = -0.3;
             break;
-        case 270: // Landscape right
-            megaConfettiSystem.orientation.gravityX = -0.3 * gravityMultiplier;
+        case 270: // Landscape right - gravity pulls left
+            megaConfettiSystem.orientation.gravityX = -0.3;
             megaConfettiSystem.orientation.gravityY = 0;
             break;
         default:  // Fallback to portrait
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = 0.3 * gravityMultiplier;
+            megaConfettiSystem.orientation.gravityY = 0.3;
     }
     
     // Recalibrate accelerometer baseline after orientation change
@@ -400,65 +397,30 @@ function transformAccelerometerData(acceleration) {
 function getOrientationAwareBoundaries(canvas) {
     const angle = megaConfettiSystem.orientation.angle;
     
-    // Check reverse Y direction setting
-    const reverseY = localStorage.getItem('reverseYDirection') === 'true';
-    
-    // Calculate where particles should settle based on gravity direction AND reverse setting
+    // Calculate where particles should settle based on gravity direction
+    // Note: reverseYDirection only affects accelerometer response, not initial settling
     let gravityFloor, gravityCeiling;
     
     switch (angle) {
-        case 0:   // Portrait
-            if (reverseY) {
-                // Reversed: gravity pulls up, particles settle at top
-                gravityFloor = 0;
-                gravityCeiling = canvas.height;
-            } else {
-                // Normal: gravity pulls down, particles settle at bottom
-                gravityFloor = canvas.height;
-                gravityCeiling = 0;
-            }
+        case 0:   // Portrait - gravity pulls down
+            gravityFloor = canvas.height;
+            gravityCeiling = 0;
             break;
-        case 90:  // Landscape left
-            if (reverseY) {
-                // Reversed: gravity pulls left, particles settle at left
-                gravityFloor = 0;
-                gravityCeiling = canvas.width;
-            } else {
-                // Normal: gravity pulls right, particles settle at right
-                gravityFloor = canvas.width;
-                gravityCeiling = 0;
-            }
+        case 90:  // Landscape left - gravity pulls right
+            gravityFloor = canvas.width;
+            gravityCeiling = 0;
             break;
-        case 180: // Portrait upside down
-            if (reverseY) {
-                // Reversed: gravity pulls down (opposite of upside down), particles settle at bottom
-                gravityFloor = canvas.height;
-                gravityCeiling = 0;
-            } else {
-                // Normal: gravity pulls up (upside down), particles settle at top
-                gravityFloor = 0;
-                gravityCeiling = canvas.height;
-            }
+        case 180: // Portrait upside down - gravity pulls up  
+            gravityFloor = 0;
+            gravityCeiling = canvas.height;
             break;
-        case 270: // Landscape right
-            if (reverseY) {
-                // Reversed: gravity pulls right, particles settle at right
-                gravityFloor = canvas.width;
-                gravityCeiling = 0;
-            } else {
-                // Normal: gravity pulls left, particles settle at left
-                gravityFloor = 0;
-                gravityCeiling = canvas.width;
-            }
+        case 270: // Landscape right - gravity pulls left
+            gravityFloor = 0;
+            gravityCeiling = canvas.width;
             break;
         default:  // Fallback to portrait
-            if (reverseY) {
-                gravityFloor = 0;
-                gravityCeiling = canvas.height;
-            } else {
-                gravityFloor = canvas.height;
-                gravityCeiling = 0;
-            }
+            gravityFloor = canvas.height;
+            gravityCeiling = 0;
     }
     
     return {
@@ -534,12 +496,16 @@ async function setupDeviceMotion() {
                 const tiltSensitivity = parseFloat(localStorage.getItem('confettiTiltSensitivity') || '0.3');
                 const maxTiltForce = parseFloat(localStorage.getItem('confettiMaxTiltForce') || '2.0');
                 
+                // Check if Y-axis response should be reversed
+                const reverseY = localStorage.getItem('reverseYDirection') === 'true';
+                const yMultiplier = reverseY ? -1 : 1;
+                
                 megaConfettiSystem.particles.forEach(particle => {
                     // Apply continuous tilt forces to all particles, especially settled ones
                     if (particle.settled || Math.abs(particle.vy) < 2) {
                         // Screen-relative tilt forces (now properly transformed)
                         const tiltX = deltaX * tiltSensitivity;
-                        const tiltY = deltaY * tiltSensitivity;
+                        const tiltY = deltaY * tiltSensitivity * yMultiplier; // Apply Y-axis flip here
                         
                         // Clamp tilt forces to prevent excessive movement
                         const clampedTiltX = Math.max(-maxTiltForce, Math.min(maxTiltForce, tiltX));
@@ -556,7 +522,7 @@ async function setupDeviceMotion() {
                     // Also apply reduced tilt to moving particles for more responsive feel
                     else {
                         particle.vx += deltaX * tiltSensitivity * 0.3;
-                        particle.vy += deltaY * tiltSensitivity * 0.3;
+                        particle.vy += deltaY * tiltSensitivity * 0.3 * yMultiplier; // Apply Y-axis flip here too
                     }
                 });
                 
