@@ -1077,8 +1077,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Set default date to today
-        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        // Set date selector to user's device "today" date
+        function setTodayDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-based
+            const day = String(now.getDate()).padStart(2, '0');
+            const today = `${year}-${month}-${day}`;
+            
+            const dateInput = document.getElementById('date');
+            dateInput.value = today;
+            
+            console.log(`📅 Date selector: Set to today ${today} (user's device time)`);
+        }
         
         // Navigation
         document.getElementById('myStepsBtn').addEventListener('click', () => {
@@ -1139,6 +1150,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update chart
                 renderStepsChart(steps);
+                
+                // Set date selector to today
+                setTodayDate();
                 
             } catch (error) {
                 document.getElementById('stepsList').innerHTML = '<p>Error loading steps</p>';
@@ -1648,4 +1662,40 @@ document.addEventListener('DOMContentLoaded', function() {
         window.createMegaConfetti = createMegaConfetti;
         window.createConfetti = createConfetti;
         window.celebrateSteps = celebrateSteps;
+
+        // Handle accelerometer permission reset button
+        const resetAccelerometerBtn = document.getElementById('resetAccelerometerBtn');
+        if (resetAccelerometerBtn) {
+            resetAccelerometerBtn.addEventListener('click', async function() {
+                // Reset the cached permission status to force a new request
+                deviceMotionPermissionStatus = null;
+                
+                try {
+                    if (!window.DeviceMotionEvent) {
+                        alert('❌ Device motion not supported on this device/browser.');
+                        return;
+                    }
+                    
+                    if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                        // iOS 13+ - request permission
+                        const permission = await DeviceMotionEvent.requestPermission();
+                        if (permission === 'granted') {
+                            alert('✅ Accelerometer access granted! Epic confetti will now respond to device tilting.');
+                            deviceMotionPermissionStatus = true;
+                        } else {
+                            alert('❌ Accelerometer access denied. Epic confetti will work but won\'t respond to device tilting.');
+                            deviceMotionPermissionStatus = false;
+                        }
+                    } else {
+                        // Non-iOS or older iOS - permission not required
+                        alert('✅ Device motion is available! Epic confetti will respond to device tilting.');
+                        deviceMotionPermissionStatus = true;
+                    }
+                } catch (error) {
+                    console.error('Permission request failed:', error);
+                    alert('❌ Could not request accelerometer permission. Make sure you\'re using HTTPS and try again.');
+                    deviceMotionPermissionStatus = false;
+                }
+            });
+        }
 });
