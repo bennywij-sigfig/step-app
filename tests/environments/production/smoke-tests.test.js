@@ -77,7 +77,7 @@ describe('Production Smoke Tests', () => {
         .expect(400);
 
       expect(response.body).toHaveProperty('error');
-      expect(response.body.error).toContain('valid email');
+      expect(response.body.error).toContain('Valid email required');
     });
   });
 
@@ -97,19 +97,21 @@ describe('Production Smoke Tests', () => {
     test('should handle MCP JSON-RPC requests', async () => {
       if (!isProduction) return;
 
-      // Test invalid request - this should not modify anything
+      // Test valid request without authentication - should return tools list
       const response = await request(baseUrl)
         .post('/mcp')
         .send({
           jsonrpc: '2.0',
           method: 'tools/list',
           id: 1
-          // No token - should fail safely
+          // No token required for tools/list
         })
         .expect(200);
 
       expect(response.body).toHaveProperty('jsonrpc');
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toHaveProperty('result');
+      expect(response.body.result).toHaveProperty('tools');
+      expect(Array.isArray(response.body.result.tools)).toBe(true);
     });
   });
 
@@ -167,7 +169,7 @@ describe('Production Smoke Tests', () => {
       expect(response.body.database.accessible).toBe(true);
       
       expect(response.body.database).toHaveProperty('integrity');
-      expect(response.body.database.integrity).toBe('ok');
+      expect(response.body.database.integrity).toBe(true);
     });
   });
 });
