@@ -1666,6 +1666,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Handle accelerometer permission reset button
         const resetAccelerometerBtn = document.getElementById('resetAccelerometerBtn');
         if (resetAccelerometerBtn) {
+            // Add hover effects via JavaScript to avoid CSP violations
+            resetAccelerometerBtn.addEventListener('mouseenter', function() {
+                this.style.background = 'rgba(102, 126, 234, 0.2)';
+            });
+            
+            resetAccelerometerBtn.addEventListener('mouseleave', function() {
+                this.style.background = 'rgba(102, 126, 234, 0.1)';
+            });
+            
             resetAccelerometerBtn.addEventListener('click', async function() {
                 // Reset the cached permission status to force a new request
                 deviceMotionPermissionStatus = null;

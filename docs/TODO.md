@@ -8,13 +8,21 @@
 **Setup Experience:** Web-based setup page with one-click Python bridge download OR advanced Node.js distribution  
 **Security status:** B+ security grade with comprehensive token management and user isolation  
 **Client Support:** Claude Desktop, Cursor, Claude Code CLI with both MCP approaches  
-**Last deployed:** August 3, 2025 (Confetti physics Y-axis control fix + accelerometer debugging panel)
+**Last deployed:** August 4, 2025 (Smart date selector improvement)
 
 ---
 
-## 🎉 RECENTLY COMPLETED (August 3, 2025) ✅
+## 🎉 RECENTLY COMPLETED (August 4, 2025) ✅
 
-### Confetti Physics Y-Axis Control Fix (Latest - August 3, 2025)
+### Smart Date Selector Improvement (Latest - August 4, 2025)
+- [x] **Local Timezone Date Selection** - Date selector now uses user's device local time instead of UTC
+- [x] **Simplified Logic** - Always defaults to "today" from user's perspective on dashboard load
+- [x] **Timezone Bug Prevention** - Uses reliable local date methods to avoid DST and conversion issues
+- [x] **User Experience Enhancement** - No more confusing future/past dates due to timezone differences
+- [x] **Production Deployed** - Live improvement available at https://step-app-4x-yhw.fly.dev/
+- [x] **Cross-Browser Compatibility** - Works correctly across all browsers and timezones
+
+### Confetti Physics Y-Axis Control Fix (August 3, 2025)
 - [x] **Y-Axis Reverse Setting Fixed** - Corrected confetti physics to properly respond to device pitch
 - [x] **Accelerometer Debugging Panel** - Added real-time accelerometer data display in admin extras UI
 - [x] **Interactive Physics Working** - Particles now settle properly and respond to tilt correctly
