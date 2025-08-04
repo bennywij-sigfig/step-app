@@ -2129,7 +2129,7 @@ app.post('/api/admin/confetti-thresholds', adminApiLimiter, requireApiAdmin, val
         return res.status(500).json({ error: 'Failed to update settings' });
       }
       
-      console.log(`✅ Admin ${req.user.email} updated confetti thresholds: regular=${regularThreshold}, epic=${epicThreshold}`);
+      console.log(`✅ Admin ${req.user?.email || 'unknown'} updated confetti thresholds: regular=${regularThreshold}, epic=${epicThreshold}`);
       res.json({ success: true, regular: regularThreshold, epic: epicThreshold });
     });
   });
