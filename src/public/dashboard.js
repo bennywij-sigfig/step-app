@@ -30,15 +30,76 @@ function formatMemberCount(count) {
     }
 }
 
-// Theme functionality
+// Theme system constants (prevent magic strings)
+const THEME_STORAGE_KEYS = {
+    USER: 'userTheme',
+    ADMIN: 'adminTheme'
+};
+const SYSTEM_DEFAULT_VALUE = 'system-default';
+
+// Centralized theme definitions (DRY principle)
+const THEME_DEFINITIONS = {
+    'default': { name: 'Ocean Blue', value: 'default' },
+    'sunset': { name: 'Sunset Orange', value: 'sunset' },
+    'forest': { name: 'Forest Green', value: 'forest' },
+    'lavender': { name: 'Lavender Purple', value: 'lavender' },
+    'monochrome': { name: 'Monochrome', value: 'monochrome' }
+};
+
+// Theme functionality with user preference override
 function initializeTheme() {
-    // Load theme from localStorage
-    const savedTheme = localStorage.getItem('adminTheme') || 'default';
-    applyTheme(savedTheme);
+    const effectiveTheme = getEffectiveTheme();
+    applyTheme(effectiveTheme);
+}
+
+function getEffectiveTheme() {
+    // Priority: User preference > Admin default > Safe fallback
+    const userTheme = localStorage.getItem(THEME_STORAGE_KEYS.USER);
+    if (userTheme && THEME_DEFINITIONS[userTheme]) {
+        return userTheme;
+    }
+    
+    // Validate admin theme before using it
+    const adminTheme = localStorage.getItem(THEME_STORAGE_KEYS.ADMIN);
+    if (adminTheme && THEME_DEFINITIONS[adminTheme]) {
+        return adminTheme;
+    }
+    
+    // Safe fallback to known theme
+    return 'default';
 }
 
 function applyTheme(themeName) {
     document.documentElement.setAttribute('data-theme', themeName === 'default' ? '' : themeName);
+}
+
+function setUserTheme(themeName) {
+    if (themeName === SYSTEM_DEFAULT_VALUE) {
+        // Clear user preference to use admin default
+        localStorage.removeItem(THEME_STORAGE_KEYS.USER);
+    } else if (THEME_DEFINITIONS[themeName]) {
+        localStorage.setItem(THEME_STORAGE_KEYS.USER, themeName);
+    }
+    
+    const effectiveTheme = getEffectiveTheme();
+    applyTheme(effectiveTheme);
+    
+    // Update theme selector if it exists
+    const userThemeSelector = document.getElementById('userThemeSelector');
+    if (userThemeSelector) {
+        userThemeSelector.value = themeName;
+    }
+}
+
+function getUserThemeDisplayName() {
+    const userTheme = localStorage.getItem(THEME_STORAGE_KEYS.USER);
+    if (userTheme && THEME_DEFINITIONS[userTheme]) {
+        return THEME_DEFINITIONS[userTheme].name + ' (Personal)';
+    }
+    
+    const adminTheme = localStorage.getItem(THEME_STORAGE_KEYS.ADMIN);
+    const themeName = THEME_DEFINITIONS[adminTheme]?.name || THEME_DEFINITIONS['default']?.name || 'Ocean Blue';
+    return themeName + ' (Default)';
 }
 
 // Confetti animation system
@@ -1662,6 +1723,47 @@ document.addEventListener('DOMContentLoaded', function() {
         window.createMegaConfetti = createMegaConfetti;
         window.createConfetti = createConfetti;
         window.celebrateSteps = celebrateSteps;
+
+        // Handle user theme selector
+        const userThemeSelector = document.getElementById('userThemeSelector');
+        if (userThemeSelector) {
+            // Set initial value based on current user preference
+            const userTheme = localStorage.getItem(THEME_STORAGE_KEYS.USER);
+            userThemeSelector.value = userTheme || SYSTEM_DEFAULT_VALUE;
+            
+            // Handle theme changes
+            userThemeSelector.addEventListener('change', function() {
+                const selectedTheme = this.value;
+                setUserTheme(selectedTheme);
+                
+                // Show visual feedback
+                const parent = this.parentElement;
+                const feedback = parent.querySelector('.theme-feedback') || document.createElement('div');
+                feedback.className = 'theme-feedback';
+                feedback.style.cssText = 'font-size: 11px; color: #4CAF50; margin-top: 4px; opacity: 1; transition: opacity 0.3s ease;';
+                
+                if (selectedTheme === SYSTEM_DEFAULT_VALUE) {
+                    feedback.textContent = '✓ Using system default theme';
+                } else {
+                    const themeName = THEME_DEFINITIONS[selectedTheme]?.name || selectedTheme;
+                    feedback.textContent = `✓ Personal theme: ${themeName}`;
+                }
+                
+                if (!parent.querySelector('.theme-feedback')) {
+                    parent.appendChild(feedback);
+                }
+                
+                // Fade out feedback after 2 seconds
+                setTimeout(() => {
+                    feedback.style.opacity = '0';
+                    setTimeout(() => {
+                        if (feedback.parentElement) {
+                            feedback.parentElement.removeChild(feedback);
+                        }
+                    }, 300);
+                }, 2000);
+            });
+        }
 
         // Handle accelerometer permission reset button
         const resetAccelerometerBtn = document.getElementById('resetAccelerometerBtn');

@@ -79,6 +79,12 @@ echo "Technical question" | gemini                               # Pipe question
 gemini --all-files -p "Provide comprehensive assessment"         # Full codebase analysis
 gemini --debug -p "Technical query"                              # Debug mode for detailed insights
 
+# Code review and architecture assessment
+gemini -p "Review this implementation: [paste code here]. Assess architecture, identify bugs, suggest improvements."
+
+# Security and production readiness analysis
+gemini -p "Security analysis of this code change. Assess risks for production deployment with 150+ users."
+
 # Repository reorganization validation (tested and confirmed)
 echo "Reorganization plan details" | gemini -p "Analyze from production safety perspective"
 ```
@@ -301,6 +307,65 @@ SELECT token, email, expires_at FROM auth_tokens ORDER BY created_at DESC LIMIT 
 curl -X POST -H "Content-Type: application/json" -d '{"email":"test@example.com"}' http://localhost:3000/dev/get-magic-link
 # Returns magic link directly in JSON response (development mode only)
 ```
+
+### 🤖 **Gemini CLI Integration for Code Review and Analysis**
+
+Leverage the `gemini` command line tool for comprehensive code review and technical validation:
+
+#### **Code Review Workflow**
+```bash
+# Architecture and implementation review
+gemini -p "Review this per-user theme system implementation:
+
+[paste your code here]
+
+Assess:
+1. Architecture design and patterns
+2. Potential bugs and edge cases  
+3. Performance implications
+4. Security considerations
+5. Best practices adherence
+6. Maintainability concerns
+7. Suggest improvements"
+
+# Security analysis for production deployment
+gemini -p "Security assessment of this code change for production app with 150+ users:
+
+[paste code/changes]
+
+Focus on: authentication, input validation, XSS, CSRF, data privacy, localStorage usage"
+
+# Full repository analysis  
+gemini --all-files -p "Comprehensive codebase assessment focusing on production readiness, security vulnerabilities, and architectural improvements"
+```
+
+#### **Development Decision Support**
+```bash
+# Design pattern validation
+gemini -p "Is this implementation pattern appropriate for [specific context]? [paste code] What are better alternatives?"
+
+# Performance analysis
+gemini -p "Performance analysis of this implementation. Identify bottlenecks and optimization opportunities: [paste code]"
+
+# Cross-browser compatibility
+gemini -p "Cross-browser compatibility assessment for this frontend code: [paste code]. Focus on Safari, Chrome, Firefox mobile/desktop."
+```
+
+#### **Pre-deployment Validation**
+```bash
+# Production readiness check
+gemini -p "Production deployment readiness check for these changes: [describe changes]. Risk assessment for live users."
+
+# Breaking change analysis  
+gemini -p "Analyze potential breaking changes in this implementation: [paste code]. Impact on existing users and data."
+```
+
+#### **Best Practices for Claude Code + Gemini**
+- **Always get second opinion** on architectural decisions
+- **Security review** before production deployment
+- **Performance validation** for user-facing changes
+- **Cross-browser compatibility** for frontend modifications
+- **Breaking change assessment** for API or database changes
 
 ### 🖥️ **Playwright MCP Integration for Browser Testing**
 

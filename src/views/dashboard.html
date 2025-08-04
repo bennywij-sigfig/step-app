@@ -4,6 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Step Challenge - Dashboard</title>
+    
+    <!-- Prevent FOUC by applying theme immediately -->
+    <script>
+        (function() {
+            const userTheme = localStorage.getItem('userTheme');
+            const adminTheme = localStorage.getItem('adminTheme') || 'default';
+            const theme = userTheme || adminTheme;
+            if (theme && theme !== 'default') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
     <style>
         :root {
             /* Default theme - Ocean Blue */
@@ -771,15 +783,35 @@
     <div style="margin-top: 40px; margin-bottom: 40px; padding: 0 20px; max-width: 400px; margin-left: auto; margin-right: auto;">
         <details style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.2); padding: 12px;">
             <summary style="cursor: pointer; color: #666; font-size: 13px; user-select: none; outline: none;">
-                Extras
+                Tidbits
             </summary>
             <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                <!-- Personal Theme Selector -->
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 12px; color: #666; margin-bottom: 6px; font-weight: 500;">
+                        Personal Theme
+                    </label>
+                    <select id="userThemeSelector" 
+                            style="width: 100%; padding: 8px 12px; background: rgba(255, 255, 255, 0.8); color: #333; border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;">
+                        <option value="system-default">Use System Default</option>
+                        <option value="default">Ocean Blue</option>
+                        <option value="sunset">Sunset Orange</option>
+                        <option value="forest">Forest Green</option>
+                        <option value="lavender">Lavender Purple</option>
+                        <option value="monochrome">Monochrome</option>
+                    </select>
+                    <div style="font-size: 11px; color: #888; margin-top: 4px; line-height: 1.3;">
+                        Override the system-wide theme with your personal preference.
+                    </div>
+                </div>
+
+                <!-- Accelerometer Button -->
                 <button id="resetAccelerometerBtn" 
-                        style="width: 100%; padding: 8px 12px; background: rgba(102, 126, 234, 0.1); color: #667eea; border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;"
+                        style="width: 100%; padding: 8px 12px; background: rgba(102, 126, 234, 0.1); color: #667eea; border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;">
                     📱 Request Accelerometer Access Again
                 </button>
                 <div style="font-size: 11px; color: #888; margin-top: 6px; line-height: 1.3;">
-                    Allows epic confetti to respond to device tilting and shaking. Only needed if you previously denied permission.
+                    Re-request device accelerometer permissions. Only needed if you previously denied permission and wish to change your mind.
                 </div>
             </div>
         </details>
