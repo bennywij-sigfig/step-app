@@ -8,25 +8,23 @@
 **Setup Experience:** Web-based setup page with one-click Python bridge download OR advanced Node.js distribution  
 **Security status:** B+ security grade with comprehensive token management and user isolation  
 **Client Support:** Claude Desktop, Cursor, Claude Code CLI with both MCP approaches  
-**Last deployed:** August 4, 2025 (Leaderboard UX improvements + hotfixes - GitHub Issue #11 complete resolution)
+**Last deployed:** August 4, 2025 (Complete team leaderboard UX overhaul with enhanced scroll protection + mobile positioning fixes)
 
 ---
 
 ## 🎉 RECENTLY COMPLETED (August 4, 2025) ✅
 
-### Leaderboard UX Improvements + Hotfix (Latest - August 4, 2025)
-- [x] **GitHub Issue #11 Resolution** - Fixed four critical leaderboard user experience issues
-- [x] **Scroll-Induced Collapse Fix** - Debounced resize handler prevents teams from collapsing during mobile scrolling
-- [x] **Mobile Tap Target Enhancement** - Disclosure triangles enlarged to 44x44px with proper touch-action for single-tap interaction
-- [x] **Smooth Scrolling Performance** - Added -webkit-overflow-scrolling: touch and CSS containment for optimized mobile scrolling
-- [x] **State Preservation** - Teams remain expanded during legitimate window resize events with automatic restoration
-- [x] **Cross-Browser Compatibility** - Separate hover/active states for desktop (@media hover: hover) and mobile (@media hover: none)
-- [x] **Hotfix: Scroll-Induced Toggle Bug** - Fixed regression where team capsules opened/closed during scrolling by adding window dimension tracking
-- [x] **Hotfix: Team Name Alignment** - Fixed team names being too far right by adding -16px left margin offset to disclosure triangles
-- [x] **Enhanced Resize Logic** - Increased debounce to 500ms and require >50px dimension changes for legitimate viewport reloads
-- [x] **Production Deployed** - Live at https://step-app-4x-yhw.fly.dev/ with improved mobile leaderboard experience and hotfixes
-- [x] **Zero Regressions** - Surgical fixes maintain all existing functionality while resolving UX pain points
-- [x] **Comprehensive Testing** - Validated on both desktop (1200x800) and mobile (375x667) viewports with scroll testing
+### Complete Team Leaderboard UX Overhaul (Latest - August 4, 2025)
+- [x] **Enhanced Scroll Protection** - Advanced scroll event detection with `isScrolling` tracking prevents false resize triggers during mobile scrolling
+- [x] **Robust Resize Handling** - Extended debounce to 750ms with 100px threshold for genuine viewport changes, separate orientationchange handler
+- [x] **Mobile Tap Target Optimization** - Disclosure triangles enlarged to 48x48px with 16px bold font for superior mobile accessibility
+- [x] **Perfect Team Alignment** - Surgical spacing adjustments: margin-left -24px, margin-right -4px for optimal visual positioning
+- [x] **State Preservation System** - Teams remain expanded during scrolling and legitimate resizes with automatic restoration
+- [x] **Cross-Browser Compatibility** - Enhanced Safari mobile viewport handling with passive scroll listeners and proper event delegation
+- [x] **Production Tested & Deployed** - Live at https://step-app-4x-yhw.fly.dev/ with aggressive scroll simulation validation
+- [x] **Mobile Safari Specific Fixes** - Addressed unique Safari scrolling behavior that caused team capsule flickering
+- [x] **Visual Polish** - Improved left padding, team name positioning, and disclosure triangle visibility for better mobile UX
+- [x] **Zero Functional Regressions** - All existing leaderboard functionality preserved while resolving critical UX pain points
 
 ### Admin Logging Fix - Session Data Access (August 4, 2025)
 - [x] **GitHub Issue #10 Resolution** - Fixed admin logging showing "unknown" in confetti threshold updates
