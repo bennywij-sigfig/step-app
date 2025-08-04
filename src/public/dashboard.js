@@ -1138,18 +1138,31 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        // Set date selector to user's device "today" date
-        function setTodayDate() {
+        // Set date selector to user's device "today" date, with challenge end date as ceiling
+        function setTodayDate(challenge = null) {
             const now = new Date();
             const year = now.getFullYear();
             const month = String(now.getMonth() + 1).padStart(2, '0'); // getMonth() is 0-based
             const day = String(now.getDate()).padStart(2, '0');
-            const today = `${year}-${month}-${day}`;
+            let targetDate = `${year}-${month}-${day}`;
+            
+            // If there's a challenge and today exceeds the challenge end date, use challenge end date as ceiling
+            if (challenge && challenge.end_date) {
+                const todayDate = new Date(targetDate + 'T00:00:00');
+                const challengeEndDate = new Date(challenge.end_date + 'T23:59:59');
+                
+                if (todayDate > challengeEndDate) {
+                    targetDate = challenge.end_date;
+                    console.log(`📅 Date selector: Challenge ended, using challenge end date ${targetDate} instead of today`);
+                } else {
+                    console.log(`📅 Date selector: Set to today ${targetDate} (within challenge period)`);
+                }
+            } else {
+                console.log(`📅 Date selector: Set to today ${targetDate} (no active challenge)`);
+            }
             
             const dateInput = document.getElementById('date');
-            dateInput.value = today;
-            
-            console.log(`📅 Date selector: Set to today ${today} (user's device time)`);
+            dateInput.value = targetDate;
         }
         
         // Navigation
@@ -1212,8 +1225,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Update chart
                 renderStepsChart(steps);
                 
-                // Set date selector to today
-                setTodayDate();
+                // Set date selector to today (with challenge end date as ceiling if applicable)
+                setTodayDate(currentUser?.current_challenge);
                 
             } catch (error) {
                 document.getElementById('stepsList').innerHTML = '<p>Error loading steps</p>';
