@@ -1717,41 +1717,53 @@ document.addEventListener('DOMContentLoaded', function() {
         // Handle responsive leaderboard updates on window resize (debounced to avoid scroll-induced reloads)
         let resizeDebounceTimer;
         let lastResizeTime = 0;
+        let lastWindowWidth = window.innerWidth;
+        let lastWindowHeight = window.innerHeight;
         
         window.addEventListener('resize', function() {
             const now = Date.now();
-            const timeSinceLastResize = now - lastResizeTime;
+            const currentWidth = window.innerWidth;
+            const currentHeight = window.innerHeight;
             
             // Clear existing timer
             clearTimeout(resizeDebounceTimer);
             
-            // Only reload if it's been >100ms since last resize (filters out scroll events) 
-            // and debounce for 250ms to ensure resize is actually finished
-            resizeDebounceTimer = setTimeout(() => {
-                const finalTimeSinceLastResize = Date.now() - lastResizeTime;
-                
-                // Double-check: only reload if resize was substantial and not just scroll bouncing  
-                if (finalTimeSinceLastResize > 100) {
+            // Only trigger if there's an actual window size change (not just scroll bouncing)
+            const hasActualResize = (currentWidth !== lastWindowWidth || currentHeight !== lastWindowHeight);
+            
+            if (hasActualResize) {
+                // Debounce for 500ms to ensure resize is actually finished and avoid scroll-induced toggling
+                resizeDebounceTimer = setTimeout(() => {
                     const individualTab = document.getElementById('leaderboardBtn');
                     const teamTab = document.getElementById('teamLeaderboardBtn');
                     
                     if (individualTab && individualTab.classList.contains('active')) {
                         loadLeaderboard();
                     } else if (teamTab && teamTab.classList.contains('active')) {
-                        // Preserve expanded state when reloading for legitimate resize
-                        const currentExpandedTeams = new Set(expandedTeams);
-                        loadTeamLeaderboard().then(() => {
-                            // Restore expanded teams after reload
-                            currentExpandedTeams.forEach(teamName => {
-                                const disclosureElement = document.querySelector(`[data-team="${teamName}"]`);
-                                if (disclosureElement && !expandedTeams.has(teamName)) {
-                                    toggleTeamDisclosure(teamName, disclosureElement);
-                                }
+                        // Only reload if there's been a significant viewport change (desktop/mobile switch)
+                        const widthDiff = Math.abs(currentWidth - lastWindowWidth);
+                        const heightDiff = Math.abs(currentHeight - lastWindowHeight);
+                        
+                        if (widthDiff > 50 || heightDiff > 50) {
+                            // Preserve expanded state when reloading for legitimate resize
+                            const currentExpandedTeams = new Set(expandedTeams);
+                            loadTeamLeaderboard().then(() => {
+                                // Restore expanded teams after reload
+                                currentExpandedTeams.forEach(teamName => {
+                                    const disclosureElement = document.querySelector(`[data-team="${teamName}"]`);
+                                    if (disclosureElement && !expandedTeams.has(teamName)) {
+                                        toggleTeamDisclosure(teamName, disclosureElement);
+                                    }
+                                });
                             });
-                        });
+                        }
                     }
-                }
-            }, 250);
+                    
+                    // Update last known dimensions
+                    lastWindowWidth = currentWidth;
+                    lastWindowHeight = currentHeight;
+                }, 500);
+            }
             
             lastResizeTime = now;
         });

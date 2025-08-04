@@ -647,7 +647,7 @@
             cursor: pointer;
             font-size: 14px;
             color: #667eea;
-            margin-right: 8px;
+            margin-right: 4px;
             transition: all 0.2s ease;
             user-select: none;
             font-family: monospace;
@@ -659,6 +659,8 @@
             border-radius: 4px;
             position: relative;
             touch-action: manipulation; /* Prevents double-tap zoom on mobile */
+            /* Compensate for the larger tap target by pulling content left */
+            margin-left: -16px;
         }
 
         /* Desktop hover effects */
