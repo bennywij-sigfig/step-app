@@ -1714,17 +1714,46 @@ document.addEventListener('DOMContentLoaded', function() {
             return membersList;
         }
 
-        // Handle responsive leaderboard updates on window resize
+        // Handle responsive leaderboard updates on window resize (debounced to avoid scroll-induced reloads)
+        let resizeDebounceTimer;
+        let lastResizeTime = 0;
+        
         window.addEventListener('resize', function() {
-            // Refresh leaderboards if they're currently displayed to update mobile/desktop formatting
-            const individualTab = document.getElementById('leaderboardBtn');
-            const teamTab = document.getElementById('teamLeaderboardBtn');
+            const now = Date.now();
+            const timeSinceLastResize = now - lastResizeTime;
             
-            if (individualTab && individualTab.classList.contains('active')) {
-                loadLeaderboard();
-            } else if (teamTab && teamTab.classList.contains('active')) {
-                loadTeamLeaderboard();
-            }
+            // Clear existing timer
+            clearTimeout(resizeDebounceTimer);
+            
+            // Only reload if it's been >100ms since last resize (filters out scroll events) 
+            // and debounce for 250ms to ensure resize is actually finished
+            resizeDebounceTimer = setTimeout(() => {
+                const finalTimeSinceLastResize = Date.now() - lastResizeTime;
+                
+                // Double-check: only reload if resize was substantial and not just scroll bouncing  
+                if (finalTimeSinceLastResize > 100) {
+                    const individualTab = document.getElementById('leaderboardBtn');
+                    const teamTab = document.getElementById('teamLeaderboardBtn');
+                    
+                    if (individualTab && individualTab.classList.contains('active')) {
+                        loadLeaderboard();
+                    } else if (teamTab && teamTab.classList.contains('active')) {
+                        // Preserve expanded state when reloading for legitimate resize
+                        const currentExpandedTeams = new Set(expandedTeams);
+                        loadTeamLeaderboard().then(() => {
+                            // Restore expanded teams after reload
+                            currentExpandedTeams.forEach(teamName => {
+                                const disclosureElement = document.querySelector(`[data-team="${teamName}"]`);
+                                if (disclosureElement && !expandedTeams.has(teamName)) {
+                                    toggleTeamDisclosure(teamName, disclosureElement);
+                                }
+                            });
+                        });
+                    }
+                }
+            }, 250);
+            
+            lastResizeTime = now;
         });
 
         // Load initial data
