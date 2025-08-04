@@ -11,7 +11,7 @@
     "test:e2e": "playwright test tests/e2e",
     "test:all": "npm run test && npm run test:e2e",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage --coverageReporters=html",
+    "test:coverage": "jest --coverage --coverageReporters=text,lcov,html",
     "test:debug": "node --inspect-brk node_modules/.bin/jest --runInBand",
     "test:local": "NODE_ENV=test npm run test:all",
     "test:prod": "NODE_ENV=production npm run test:smoke",

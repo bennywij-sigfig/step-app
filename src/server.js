@@ -2498,13 +2498,19 @@ process.on('SIGINT', () => {
   });
 });
 
-// Start server
-const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
-const server = app.listen(PORT, HOST, () => {
-  console.log(`🚀 Step Challenge App server running on http://${HOST}:${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  if (isDevelopment) {
-    console.log(`🔧 Admin panel available at: http://localhost:${PORT}/admin`);
-    console.log(`❤️  Health check at: http://localhost:${PORT}/health`);
-  }
-});
+// Start server (only if not being imported for testing)
+let server;
+if (require.main === module) {
+  const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
+  server = app.listen(PORT, HOST, () => {
+    console.log(`🚀 Step Challenge App server running on http://${HOST}:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    if (isDevelopment) {
+      console.log(`🔧 Admin panel available at: http://localhost:${PORT}/admin`);
+      console.log(`❤️  Health check at: http://localhost:${PORT}/health`);
+    }
+  });
+}
+
+// Export for testing
+module.exports = app;
