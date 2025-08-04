@@ -645,7 +645,7 @@
         /* Team disclosure triangle - optimized for mobile tap targets */
         .team-disclosure {
             cursor: pointer;
-            font-size: 14px;
+            font-size: 16px;
             color: #667eea;
             margin-right: 4px;
             transition: all 0.2s ease;
@@ -654,13 +654,14 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 44px;
-            min-height: 44px;
-            border-radius: 4px;
+            min-width: 48px;
+            min-height: 48px;
+            border-radius: 6px;
             position: relative;
             touch-action: manipulation; /* Prevents double-tap zoom on mobile */
             /* Compensate for the larger tap target by pulling content left */
-            margin-left: -16px;
+            margin-left: -28px;
+            font-weight: bold;
         }
 
         /* Desktop hover effects */

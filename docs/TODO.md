@@ -8,13 +8,35 @@
 **Setup Experience:** Web-based setup page with one-click Python bridge download OR advanced Node.js distribution  
 **Security status:** B+ security grade with comprehensive token management and user isolation  
 **Client Support:** Claude Desktop, Cursor, Claude Code CLI with both MCP approaches  
-**Last deployed:** August 4, 2025 (Per-user theme system with localStorage persistence)
+**Last deployed:** August 4, 2025 (Leaderboard UX improvements + hotfixes - GitHub Issue #11 complete resolution)
 
 ---
 
 ## 🎉 RECENTLY COMPLETED (August 4, 2025) ✅
 
-### Per-User Theme System (Latest - August 4, 2025)
+### Leaderboard UX Improvements + Hotfix (Latest - August 4, 2025)
+- [x] **GitHub Issue #11 Resolution** - Fixed four critical leaderboard user experience issues
+- [x] **Scroll-Induced Collapse Fix** - Debounced resize handler prevents teams from collapsing during mobile scrolling
+- [x] **Mobile Tap Target Enhancement** - Disclosure triangles enlarged to 44x44px with proper touch-action for single-tap interaction
+- [x] **Smooth Scrolling Performance** - Added -webkit-overflow-scrolling: touch and CSS containment for optimized mobile scrolling
+- [x] **State Preservation** - Teams remain expanded during legitimate window resize events with automatic restoration
+- [x] **Cross-Browser Compatibility** - Separate hover/active states for desktop (@media hover: hover) and mobile (@media hover: none)
+- [x] **Hotfix: Scroll-Induced Toggle Bug** - Fixed regression where team capsules opened/closed during scrolling by adding window dimension tracking
+- [x] **Hotfix: Team Name Alignment** - Fixed team names being too far right by adding -16px left margin offset to disclosure triangles
+- [x] **Enhanced Resize Logic** - Increased debounce to 500ms and require >50px dimension changes for legitimate viewport reloads
+- [x] **Production Deployed** - Live at https://step-app-4x-yhw.fly.dev/ with improved mobile leaderboard experience and hotfixes
+- [x] **Zero Regressions** - Surgical fixes maintain all existing functionality while resolving UX pain points
+- [x] **Comprehensive Testing** - Validated on both desktop (1200x800) and mobile (375x667) viewports with scroll testing
+
+### Admin Logging Fix - Session Data Access (August 4, 2025)
+- [x] **GitHub Issue #10 Resolution** - Fixed admin logging showing "unknown" in confetti threshold updates
+- [x] **Option 1 Implementation** - Changed from `req.user?.email` to `req.session.email || req.session.userId` for admin identification
+- [x] **Codebase Consistency** - Solution follows existing logging patterns (matches rate limiting logs on line 191)
+- [x] **Zero Side Effects** - Surgical fix with no middleware changes or architectural impact
+- [x] **Production Deployed** - Live at https://step-app-4x-yhw.fly.dev/ with proper admin identification in logs
+- [x] **Session Data Hierarchy** - Shows email first, falls back to userId, then 'unknown' for complete coverage
+
+### Per-User Theme System (August 4, 2025)
 - [x] **Personal Theme Preferences** - Users can override system theme with personal choice in Tidbits section
 - [x] **Theme Hierarchy Implementation** - User preference > Admin default > Safe fallback with localStorage persistence
 - [x] **Centralized Theme Definitions** - DRY principle with single source for all 5 themes (Ocean Blue, Sunset Orange, Forest Green, Lavender Purple, Monochrome)

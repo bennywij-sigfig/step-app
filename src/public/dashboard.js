@@ -1714,58 +1714,100 @@ document.addEventListener('DOMContentLoaded', function() {
             return membersList;
         }
 
-        // Handle responsive leaderboard updates on window resize (debounced to avoid scroll-induced reloads)
+        // Handle responsive leaderboard updates on window resize with enhanced scroll detection
         let resizeDebounceTimer;
-        let lastResizeTime = 0;
+        let orientationChangeTimer;
         let lastWindowWidth = window.innerWidth;
         let lastWindowHeight = window.innerHeight;
+        let isScrolling = false;
+        let scrollTimeout;
+        
+        // Track scrolling to prevent false resize events
+        window.addEventListener('scroll', function() {
+            isScrolling = true;
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(() => {
+                isScrolling = false;
+            }, 150);
+        }, { passive: true });
+        
+        // Track orientation changes separately for more reliable detection
+        window.addEventListener('orientationchange', function() {
+            clearTimeout(orientationChangeTimer);
+            orientationChangeTimer = setTimeout(() => {
+                const currentWidth = window.innerWidth;
+                const currentHeight = window.innerHeight;
+                
+                // Force reload on orientation change
+                const individualTab = document.getElementById('leaderboardBtn');
+                const teamTab = document.getElementById('teamLeaderboardBtn');
+                
+                if (individualTab && individualTab.classList.contains('active')) {
+                    loadLeaderboard();
+                } else if (teamTab && teamTab.classList.contains('active')) {
+                    const currentExpandedTeams = new Set(expandedTeams);
+                    loadTeamLeaderboard().then(() => {
+                        currentExpandedTeams.forEach(teamName => {
+                            const disclosureElement = document.querySelector(`[data-team="${teamName}"]`);
+                            if (disclosureElement && !expandedTeams.has(teamName)) {
+                                toggleTeamDisclosure(teamName, disclosureElement);
+                            }
+                        });
+                    });
+                }
+                
+                lastWindowWidth = currentWidth;
+                lastWindowHeight = currentHeight;
+            }, 100);
+        });
         
         window.addEventListener('resize', function() {
-            const now = Date.now();
             const currentWidth = window.innerWidth;
             const currentHeight = window.innerHeight;
             
             // Clear existing timer
             clearTimeout(resizeDebounceTimer);
             
-            // Only trigger if there's an actual window size change (not just scroll bouncing)
-            const hasActualResize = (currentWidth !== lastWindowWidth || currentHeight !== lastWindowHeight);
+            // Ignore resize events that happen during scrolling
+            if (isScrolling) {
+                return;
+            }
             
-            if (hasActualResize) {
-                // Debounce for 500ms to ensure resize is actually finished and avoid scroll-induced toggling
+            // Only trigger if there's an actual significant window size change
+            const widthDiff = Math.abs(currentWidth - lastWindowWidth);
+            const heightDiff = Math.abs(currentHeight - lastWindowHeight);
+            const hasSignificantResize = (widthDiff > 100 || heightDiff > 100);
+            
+            if (hasSignificantResize) {
+                // Extended debounce for genuine resize events
                 resizeDebounceTimer = setTimeout(() => {
+                    // Double-check we're not scrolling
+                    if (isScrolling) return;
+                    
                     const individualTab = document.getElementById('leaderboardBtn');
                     const teamTab = document.getElementById('teamLeaderboardBtn');
                     
                     if (individualTab && individualTab.classList.contains('active')) {
                         loadLeaderboard();
                     } else if (teamTab && teamTab.classList.contains('active')) {
-                        // Only reload if there's been a significant viewport change (desktop/mobile switch)
-                        const widthDiff = Math.abs(currentWidth - lastWindowWidth);
-                        const heightDiff = Math.abs(currentHeight - lastWindowHeight);
-                        
-                        if (widthDiff > 50 || heightDiff > 50) {
-                            // Preserve expanded state when reloading for legitimate resize
-                            const currentExpandedTeams = new Set(expandedTeams);
-                            loadTeamLeaderboard().then(() => {
-                                // Restore expanded teams after reload
-                                currentExpandedTeams.forEach(teamName => {
-                                    const disclosureElement = document.querySelector(`[data-team="${teamName}"]`);
-                                    if (disclosureElement && !expandedTeams.has(teamName)) {
-                                        toggleTeamDisclosure(teamName, disclosureElement);
-                                    }
-                                });
+                        // Preserve expanded state when reloading for legitimate resize
+                        const currentExpandedTeams = new Set(expandedTeams);
+                        loadTeamLeaderboard().then(() => {
+                            // Restore expanded teams after reload
+                            currentExpandedTeams.forEach(teamName => {
+                                const disclosureElement = document.querySelector(`[data-team="${teamName}"]`);
+                                if (disclosureElement && !expandedTeams.has(teamName)) {
+                                    toggleTeamDisclosure(teamName, disclosureElement);
+                                }
                             });
-                        }
+                        });
                     }
                     
                     // Update last known dimensions
                     lastWindowWidth = currentWidth;
                     lastWindowHeight = currentHeight;
-                }, 500);
+                }, 750);
             }
-            
-            lastResizeTime = now;
         });
 
         // Load initial data
