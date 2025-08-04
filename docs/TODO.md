@@ -8,13 +8,31 @@
 **Setup Experience:** Web-based setup page with one-click Python bridge download OR advanced Node.js distribution  
 **Security status:** B+ security grade with comprehensive token management and user isolation  
 **Client Support:** Claude Desktop, Cursor, Claude Code CLI with both MCP approaches  
-**Last deployed:** August 4, 2025 (Smart date selector improvement)
+**Last deployed:** August 4, 2025 (Per-user theme system with localStorage persistence)
 
 ---
 
 ## 🎉 RECENTLY COMPLETED (August 4, 2025) ✅
 
-### Smart Date Selector Improvement (Latest - August 4, 2025)
+### Per-User Theme System (Latest - August 4, 2025)
+- [x] **Personal Theme Preferences** - Users can override system theme with personal choice in Tidbits section
+- [x] **Theme Hierarchy Implementation** - User preference > Admin default > Safe fallback with localStorage persistence
+- [x] **Centralized Theme Definitions** - DRY principle with single source for all 5 themes (Ocean Blue, Sunset Orange, Forest Green, Lavender Purple, Monochrome)
+- [x] **FOUC Prevention** - Head script applies theme immediately to prevent flash of wrong theme
+- [x] **Robust Error Handling** - Admin theme validation, constants for localStorage keys, safe fallback logic
+- [x] **Visual Feedback System** - Real-time theme switching with success messages and fade-out animations
+- [x] **Gemini AI Code Review** - Architecture assessment completed with recommendations implemented
+- [x] **Cross-Session Persistence** - Theme preferences maintained across browser sessions and page refreshes
+- [x] **Production Deployed** - Live at https://step-app-4x-yhw.fly.dev/ with full theme customization
+
+### Accelerometer Permission Reset Feature (August 4, 2025)
+- [x] **Permission Reset Button** - Added to Tidbits section for users who previously denied accelerometer access
+- [x] **CSP Compliance** - JavaScript hover effects instead of inline handlers to prevent security violations
+- [x] **User Experience** - Clear language explaining when feature is needed with proper visual spacing
+- [x] **Epic Confetti Integration** - Enables full device-tilting confetti experience after permission reset
+- [x] **Production Deployed** - Solves user pain point for epic confetti celebrations
+
+### Smart Date Selector Improvement (August 4, 2025)
 - [x] **Local Timezone Date Selection** - Date selector now uses user's device local time instead of UTC
 - [x] **Simplified Logic** - Always defaults to "today" from user's perspective on dashboard load
 - [x] **Timezone Bug Prevention** - Uses reliable local date methods to avoid DST and conversion issues
