@@ -1054,6 +1054,27 @@ app.get('/auth/login', (req, res) => {
   );
 });
 
+// Logout endpoints
+app.post('/auth/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Logout error:', err);
+      return res.status(500).json({ error: 'Logout failed' });
+    }
+    res.json({ message: 'Successfully logged out' });
+  });
+});
+
+app.get('/auth/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error('Logout error:', err);
+      return res.status(500).send('Logout failed');
+    }
+    res.redirect('/');
+  });
+});
+
 // Dashboard (protected)
 app.get('/dashboard', requireAuth, (req, res) => {
   devLog('Dashboard accessed by user:', req.session.userId);

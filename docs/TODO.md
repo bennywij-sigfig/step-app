@@ -45,6 +45,15 @@
 - [x] **Cross-Session Persistence** - Theme preferences maintained across browser sessions and page refreshes
 - [x] **Production Deployed** - Live at https://step-app-4x-yhw.fly.dev/ with full theme customization
 
+### Date Ceiling Fix for Post-Challenge Periods (August 4, 2025)
+- [x] **GitHub Issue #9 Resolution** - Fixed frontend date selection after challenge periods end
+- [x] **Challenge End Date Ceiling** - Modified setTodayDate() to use challenge end date when today exceeds challenge period
+- [x] **Smart Date Logic** - Maintains proper behavior for active challenges, expired challenges, and no-challenge periods
+- [x] **User Experience Fix** - Prevents users from being presented with invalid dates that would cause backend errors
+- [x] **Timezone Flexibility Preserved** - Kept +1 day allowance for global timezone support and DST compatibility
+- [x] **Production Deployed** - Live at https://step-app-4x-yhw.fly.dev/ with commit 8521a0b
+- [x] **Testing Confirmed** - Verified locally that expired challenges show challenge end date instead of today
+
 ### Accelerometer Permission Reset Feature (August 4, 2025)
 - [x] **Permission Reset Button** - Added to Tidbits section for users who previously denied accelerometer access
 - [x] **CSP Compliance** - JavaScript hover effects instead of inline handlers to prevent security violations
@@ -141,6 +150,9 @@
 - [ ] **Token Hashing at Rest** - Security enhancement for large-scale deployment
 - [ ] **Automated Token Rotation** - Advanced security feature for enterprise use
 - [ ] **Region Migration Consideration** - Evaluate migrating from ORD to Singapore (sin) for global latency
+
+### Architecture Decisions & Design Notes
+- **+1 Day Timezone Allowance** - Keeping the current +1 day flexibility for future date validation. This accommodates global users in timezones ahead of Pacific Time (server timezone) and prevents DST edge cases. Removing this would break legitimate use cases for international remote workers (e.g., Asian employees trying to log steps for their "today" when server is still on "yesterday"). The current implementation balances security (prevents unlimited future dates) with user experience (allows reasonable timezone flexibility).
 
 ## 📁 COMPLETED MCP INTEGRATION FILES (Current Architecture)
 
