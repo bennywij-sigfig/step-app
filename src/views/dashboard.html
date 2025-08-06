@@ -648,7 +648,8 @@
             font-size: 16px;
             color: #667eea;
             margin-right: -4px;
-            transition: all 0.2s ease;
+            /* Only transition specific properties to avoid layout shifts */
+            transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
             user-select: none;
             font-family: monospace;
             display: inline-flex;
@@ -665,29 +666,40 @@
             /* Ensure consistent positioning regardless of triangle character */
             text-align: center;
             line-height: 1;
-        }
-        
-        /* Rotated state for expanded teams - keeps same character, just rotates */
-        .team-disclosure.expanded {
-            transform: rotate(90deg);
-            /* Ensure rotation doesn't affect surrounding layout */
+            /* Ensure transform origin is always centered */
             transform-origin: center center;
         }
+        
+        /* Rotated state for expanded teams - combines rotation with potential scale */
+        .team-disclosure.expanded {
+            transform: rotate(90deg);
+        }
 
-        /* Desktop hover effects */
+        /* Desktop hover effects - combine transforms for expanded state */
         @media (hover: hover) and (pointer: fine) {
             .team-disclosure:hover {
                 background: rgba(102, 126, 234, 0.1);
                 color: #5a67d8;
                 transform: scale(1.05);
             }
+            
+            .team-disclosure.expanded:hover {
+                background: rgba(102, 126, 234, 0.1);
+                color: #5a67d8;
+                transform: rotate(90deg) scale(1.05);
+            }
         }
 
-        /* Mobile tap feedback */
+        /* Mobile tap feedback - combine transforms for expanded state */
         @media (hover: none) and (pointer: coarse) {
             .team-disclosure:active {
                 background: rgba(102, 126, 234, 0.15);
                 transform: scale(0.95);
+            }
+            
+            .team-disclosure.expanded:active {
+                background: rgba(102, 126, 234, 0.15);
+                transform: rotate(90deg) scale(0.95);
             }
         }
 
