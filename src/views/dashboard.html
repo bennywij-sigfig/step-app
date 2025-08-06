@@ -652,7 +652,7 @@
             user-select: none;
             font-family: monospace;
             display: inline-flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: center;
             min-width: 48px;
             min-height: 24px;
@@ -662,6 +662,16 @@
             /* Compensate for the larger tap target by pulling content left */
             margin-left: -24px;
             font-weight: bold;
+            /* Ensure consistent positioning regardless of triangle character */
+            text-align: center;
+            line-height: 1;
+        }
+        
+        /* Rotated state for expanded teams - keeps same character, just rotates */
+        .team-disclosure.expanded {
+            transform: rotate(90deg);
+            /* Ensure rotation doesn't affect surrounding layout */
+            transform-origin: center center;
         }
 
         /* Desktop hover effects */

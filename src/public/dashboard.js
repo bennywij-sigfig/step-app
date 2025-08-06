@@ -1652,7 +1652,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     });
                 }
                 
-                disclosureElement.innerHTML = '▶';
+                disclosureElement.classList.remove('expanded');
                 expandedTeams.delete(teamName);
             } else {
                 // Expand
@@ -1676,7 +1676,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }, 300);
                         });
                         
-                        disclosureElement.innerHTML = '▼';
+                        disclosureElement.classList.add('expanded');
                         expandedTeams.add(teamName);
                     } else {
                         console.error('Error loading team members:', members.error);
