@@ -291,6 +291,7 @@
 ## 🔄 CRITICAL NEXT STEPS (Before Scaling to 150+ Users)
 
 ### Database & Infrastructure
+- [ ] **Fly.io Backup Directory Fix** - Create missing `/data/backups` directory on persistent volume via SSH console (`fly ssh console -a step-app-4x-yhw && mkdir -p /data/backups`)
 - [ ] **Database Backup Strategy** - Implement automated backups (no backup system currently)
 - [ ] **Global Error Handlers** - Add global error handlers to prevent silent crashes
 - [ ] **External Uptime Monitoring** - Set up external monitoring for production alerts
