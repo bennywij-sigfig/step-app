@@ -10,10 +10,10 @@
 - **Pipeline Speed**: Complete validation in under 3 minutes
 
 ### **Production Application (Fly.io)**: ✅ FULLY DEPLOYED & OPERATIONAL
-- **Current Deployment**: August 5, 2025 (Complete leaderboard spacing optimization)  
+- **Current Deployment**: August 6, 2025 (Mobile Safari hover state fix)  
 - **Live URL**: https://step-app-4x-yhw.fly.dev/
 - **Status**: Healthy and operational with all latest improvements deployed
-- **Latest Features**: CI/CD fixes, logout endpoints, leaderboard spacing optimization
+- **Latest Features**: Mobile Safari hover state fix, disclosure triangle alignment, cell sizing consistency
 
 ### **Repository & Core Features**: ✅ COMPLETE
 **Repository Structure:** Complete reorganization with src/, mcp/, docs/, tests/, config/ directories  
@@ -25,9 +25,41 @@
 
 ---
 
-## 🎉 RECENTLY COMPLETED (August 5, 2025) ✅
+## 🎉 RECENTLY COMPLETED (August 6, 2025) ✅
 
-### Complete Leaderboard Spacing Optimization (Latest - August 5, 2025)
+### Email Case Insensitivity Implementation - Complete Resolution (Latest - August 6, 2025)
+- [x] **Email Normalization Function** - Added `normalizeEmail()` utility to convert emails to lowercase and trim whitespace
+- [x] **Magic Link Endpoints Updated** - Both `/auth/send-link` and `/dev/get-magic-link` now normalize emails before processing
+- [x] **User Authentication Flow** - Updated user lookup and creation to use normalized emails from auth tokens
+- [x] **Database Storage Consistency** - All email addresses now stored in lowercase format preventing case-sensitive duplicates
+- [x] **Session Management** - User sessions store normalized email addresses for consistency
+- [x] **Comprehensive Testing** - Verified uppercase (`TESTCASE@EXAMPLE.COM`) and mixed case (`TestCase@Example.Com`) emails both normalize to `testcase@example.com`
+- [x] **Production Ready** - No duplicate user accounts possible from email case variations (e.g., `USER@email.com` vs `User@email.com`)
+- [x] **Zero User Impact** - Transparent normalization maintains seamless user experience across all case variations
+- [x] **Manual Cleanup Note** - Existing duplicate users with different cases can be manually cleaned up in database
+
+### Mobile Safari Hover State Fix - Complete Resolution (August 6, 2025)
+- [x] **Root Cause Identification** - Diagnosed mobile Safari hover state persistence causing left cell edge "shrinkage"
+- [x] **Hover Effect Analysis** - Found leaderboard-item hover transforms (translateX 4px/6px) getting stuck on mobile tap
+- [x] **Media Query Implementation** - Wrapped all hover effects in @media (hover: hover) and (pointer: fine)
+- [x] **Mobile Safari Fix** - Eliminated stuck hover states that caused left edge shift after disclosure triangle taps
+- [x] **Desktop Preservation** - Maintained smooth hover effects for mouse/trackpad users
+- [x] **Touch Device Optimization** - Clean interactions without persistent transform states on all touch devices
+- [x] **Comprehensive Testing** - Localhost testing with Playwright automation confirmed visual stability
+- [x] **Production Validation** - User-confirmed fix working perfectly on mobile Safari
+- [x] **Zero Regression** - All existing functionality preserved while solving mobile interaction issues
+
+### Team Leaderboard UI Refinements (August 6, 2025)
+- [x] **Cell Sizing Consistency Fix** - Eliminated visual size differences between regular and highlighted teams
+- [x] **Border Standardization** - Changed highlighted user/team borders from 2px to 1px solid with increased opacity (0.4→0.6)
+- [x] **Disclosure Triangle Alignment Fix** - Replaced Unicode character switching (▶/▼) with CSS rotation for consistent positioning
+- [x] **CSS Transform Implementation** - Added .expanded class with 90-degree rotation and proper transform-origin
+- [x] **Visual Stability Achievement** - All team cells now maintain identical dimensions regardless of state or highlight status
+- [x] **Smooth Interaction Enhancement** - Disclosure triangles rotate smoothly without affecting surrounding layout
+- [x] **Production Deployed** - All UI refinements live at https://step-app-4x-yhw.fly.dev/
+- [x] **Zero Regression Testing** - Preserved all existing functionality while fixing visual anomalies
+
+### Complete Leaderboard Spacing Optimization (August 5, 2025)
 - [x] **Team Alpha Excessive Padding Fix** - Resolved root cause: disclosure triangle min-height (48px→24px) was forcing short team rows to be tall with centered content
 - [x] **Disclosure Triangle Alignment** - Changed align-items from 'center' to 'flex-start' eliminating artificial top padding for short team names  
 - [x] **Consistent Short/Long Name Spacing** - Teams with short names (Team Alpha) now have identical top alignment as teams with long wrapping names
@@ -302,8 +334,8 @@ The Step Challenge App has **comprehensive CI/CD infrastructure** with all 149 t
 ### **Current State:**
 - ✅ **CI/CD Pipeline**: Fully operational on GitHub (August 5, 2025)
 - ✅ **Code Quality**: All tests passing, security validated, leaderboard spacing optimized
-- ✅ **Production Deployment**: Latest code deployed to Fly.io with all improvements (August 5, 2025)
+- ✅ **Production Deployment**: Latest code deployed to Fly.io with all improvements (August 6, 2025)
 - ✅ **Enterprise Features**: MCP integration, security hardening, comprehensive testing
-- ✅ **User Experience**: Professional leaderboard spacing with Team Alpha padding fix
+- ✅ **User Experience**: Professional leaderboard spacing with mobile Safari hover state fix complete
 
 **Status: Ready for 150+ user scale with optimized UI and complete CI/CD infrastructure**

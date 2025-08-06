@@ -312,6 +312,10 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function normalizeEmail(email) {
+  return email ? email.toLowerCase().trim() : email;
+}
+
 function isValidDate(dateString) {
   const date = new Date(dateString);
   return date instanceof Date && !isNaN(date);
@@ -791,7 +795,8 @@ app.get('/', (req, res) => {
 
 // Send magic link
 app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
-  const { email } = req.body;
+  const { email: rawEmail } = req.body;
+  const email = normalizeEmail(rawEmail);
   
   if (!email || !isValidEmail(email)) {
     return res.status(400).json({ error: 'Valid email required' });
@@ -912,7 +917,8 @@ End of Message`;
 // Development-only: Get magic link directly (localhost only)
 if (isDevelopment) {
   app.post('/dev/get-magic-link', magicLinkLimiter, async (req, res) => {
-    const { email } = req.body;
+    const { email: rawEmail } = req.body;
+    const email = normalizeEmail(rawEmail);
     
     if (!email || !isValidEmail(email)) {
       return res.status(400).json({ error: 'Valid email required' });
@@ -982,24 +988,25 @@ app.get('/auth/login', (req, res) => {
       }
 
       devLog('Valid token found for email:', row.email);
+      const normalizedEmail = normalizeEmail(row.email);
       
       // Mark token as used
       db.run(`UPDATE auth_tokens SET used = 1 WHERE token = ?`, [hashedToken]);
 
       // Create or get user and set session
-      db.get(`SELECT * FROM users WHERE email = ?`, [row.email], (err, user) => {
+      db.get(`SELECT * FROM users WHERE email = ?`, [normalizedEmail], (err, user) => {
         if (err) {
           console.error('User lookup error:', err);
           return res.status(500).send('Database error');
         }
 
         if (!user) {
-          devLog('Creating new user for:', row.email);
+          devLog('Creating new user for:', normalizedEmail);
           // Create new user
-          const sanitizedName = sanitizeInput(row.email.split('@')[0]);
+          const sanitizedName = sanitizeInput(normalizedEmail.split('@')[0]);
           db.run(
             `INSERT INTO users (email, name) VALUES (?, ?)`,
-            [row.email, sanitizedName],
+            [normalizedEmail, sanitizedName],
             function(err) {
               if (err) {
                 console.error('User creation error:', err);
@@ -1015,7 +1022,7 @@ app.get('/auth/login', (req, res) => {
                   return res.status(500).send('Session error');
                 }
                 req.session.userId = this.lastID;
-                req.session.email = row.email;
+                req.session.email = normalizedEmail;
               
                 req.session.save((err) => {
                 if (err) {
@@ -1037,7 +1044,7 @@ app.get('/auth/login', (req, res) => {
               return res.status(500).send('Session error');
             }
             req.session.userId = user.id;
-            req.session.email = user.email;
+            req.session.email = normalizedEmail;
           
             req.session.save((err) => {
             if (err) {
