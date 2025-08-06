@@ -2,10 +2,11 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 
-// Use persistent volume in production, local file in development
-const dbPath = process.env.NODE_ENV === 'production' 
-  ? '/data/steps.db' 
-  : path.join(__dirname, 'steps.db');
+// Use persistent volume in production, local file in development, or test database path if specified
+const dbPath = process.env.DB_PATH || 
+  (process.env.NODE_ENV === 'production' 
+    ? '/data/steps.db' 
+    : path.join(__dirname, 'steps.db'));
 
 // Ensure data directory exists and is writable in production
 if (process.env.NODE_ENV === 'production') {
@@ -75,6 +76,12 @@ db.run('PRAGMA journal_mode = WAL'); // Write-Ahead Logging for better concurren
 db.run('PRAGMA synchronous = NORMAL'); // Balance between safety and performance
 db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
 
+// Database initialization promise for tracking when setup is complete
+let initializationResolve;
+const initializationPromise = new Promise((resolve) => {
+  initializationResolve = resolve;
+});
+
 // Initialize database tables
 db.serialize(() => {
   // Users table
@@ -120,7 +127,17 @@ db.serialize(() => {
     expires_at DATETIME NOT NULL,
     used BOOLEAN DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+  )`, (err) => {
+    if (err) {
+      console.error('❌ Failed to create auth_tokens table:', err.message);
+      process.exit(1);
+    }
+    console.log('✅ Auth tokens table ready');
+    
+    // Mark database as ready for critical operations when auth_tokens table is ready
+    // This fires whether the table was created or already existed
+    initializationResolve();
+  });
 
   // Challenges table
   db.run(`CREATE TABLE IF NOT EXISTS challenges (
@@ -277,15 +294,17 @@ db.serialize(() => {
 
   // Sample teams removed - teams should be created by admins as needed
   
-  // Create admin users
-  db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('benny@sigfig.com', 'Benny', 1)`);
-  db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('benazir.qureshi@sigfig.com', 'Benazir', 1)`);
-  db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('liz.ridge@sigfig.com', 'Liz', 1)`);
-  db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('megan.crowley@sigfig.com', 'Megan', 1)`);
-  db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('amit.srivastava@sigfig.com', 'Amit', 1)`);
-  
-  // Ensure admin privileges for existing users (handles INSERT OR IGNORE cases)
-  db.run(`UPDATE users SET is_admin = 1 WHERE email IN ('benny@sigfig.com', 'benazir.qureshi@sigfig.com', 'liz.ridge@sigfig.com', 'megan.crowley@sigfig.com', 'amit.srivastava@sigfig.com')`);
+  // Create admin users (skip in test environment)
+  if (!process.env.TEST_DB_INIT) {
+    db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('benny@sigfig.com', 'Benny', 1)`);
+    db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('benazir.qureshi@sigfig.com', 'Benazir', 1)`);
+    db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('liz.ridge@sigfig.com', 'Liz', 1)`);
+    db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('megan.crowley@sigfig.com', 'Megan', 1)`);
+    db.run(`INSERT OR IGNORE INTO users (email, name, is_admin) VALUES ('amit.srivastava@sigfig.com', 'Amit', 1)`);
+    
+    // Ensure admin privileges for existing users (handles INSERT OR IGNORE cases)
+    db.run(`UPDATE users SET is_admin = 1 WHERE email IN ('benny@sigfig.com', 'benazir.qureshi@sigfig.com', 'liz.ridge@sigfig.com', 'megan.crowley@sigfig.com', 'amit.srivastava@sigfig.com')`);
+  }
 });
 
 // Database utility functions for reliability
@@ -531,7 +550,8 @@ const dbUtils = {
   }
 };
 
-// Attach utilities to the database object
+// Attach utilities and initialization promise to the database object
 db.utils = dbUtils;
+db.ready = initializationPromise;
 
 module.exports = db;

@@ -6,6 +6,7 @@
 const request = require('supertest');
 const fs = require('fs');
 const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
 
 /**
  * Create test database with clean state
@@ -20,6 +21,181 @@ function createTestDatabase() {
   }
   
   return testDbPath;
+}
+
+/**
+ * Initialize test database with all required tables
+ * This ensures all schema is ready before tests run
+ */
+async function initializeTestDatabase(dbPath) {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+      if (err) {
+        return reject(err);
+      }
+    });
+
+    // Configure SQLite for better reliability
+    db.configure('busyTimeout', 30000);
+    db.run('PRAGMA journal_mode = WAL');
+    db.run('PRAGMA synchronous = NORMAL');
+    db.run('PRAGMA temp_store = MEMORY');
+
+    // Initialize all tables in order with proper error handling
+    db.serialize(() => {
+      const tables = [
+        // Users table
+        `CREATE TABLE users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          team TEXT,
+          is_admin BOOLEAN DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Teams table
+        `CREATE TABLE teams (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Challenges table
+        `CREATE TABLE challenges (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          start_date TEXT NOT NULL,
+          end_date TEXT NOT NULL,
+          is_active BOOLEAN DEFAULT 0,
+          timezone TEXT DEFAULT 'America/Los_Angeles',
+          reporting_threshold INTEGER DEFAULT 70 CHECK (reporting_threshold >= 0 AND reporting_threshold <= 100),
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Steps table
+        `CREATE TABLE steps (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          date TEXT NOT NULL,
+          count INTEGER NOT NULL,
+          challenge_id INTEGER REFERENCES challenges(id),
+          challenge_day INTEGER,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id),
+          UNIQUE(user_id, date)
+        )`,
+
+        // Auth tokens table
+        `CREATE TABLE auth_tokens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          token TEXT UNIQUE NOT NULL,
+          email TEXT NOT NULL,
+          expires_at DATETIME NOT NULL,
+          used BOOLEAN DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        // Sessions table
+        `CREATE TABLE sessions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          session_id TEXT UNIQUE NOT NULL,
+          user_id INTEGER NOT NULL,
+          expires_at DATETIME NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id)
+        )`,
+
+        // MCP tokens table
+        `CREATE TABLE mcp_tokens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          token TEXT UNIQUE NOT NULL,
+          user_id INTEGER NOT NULL,
+          name TEXT NOT NULL,
+          permissions TEXT DEFAULT 'read_write' CHECK (permissions IN ('read_only', 'read_write')),
+          scopes TEXT DEFAULT 'steps:read,steps:write,profile:read',
+          expires_at DATETIME NOT NULL,
+          last_used_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (user_id) REFERENCES users (id)
+        )`,
+
+        // MCP audit log table
+        `CREATE TABLE mcp_audit_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          token_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          action TEXT NOT NULL,
+          params TEXT,
+          old_value TEXT,
+          new_value TEXT,
+          was_overwrite BOOLEAN DEFAULT 0,
+          ip_address TEXT,
+          user_agent TEXT,
+          success BOOLEAN DEFAULT 1,
+          error_message TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (token_id) REFERENCES mcp_tokens (id),
+          FOREIGN KEY (user_id) REFERENCES users (id)
+        )`,
+
+        // Settings table
+        `CREATE TABLE settings (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          key TEXT UNIQUE NOT NULL,
+          value TEXT NOT NULL,
+          description TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`
+      ];
+
+      const indexes = [
+        // Performance indexes
+        `CREATE INDEX IF NOT EXISTS idx_steps_challenge_date_user ON steps(challenge_id, date, user_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_steps_user_challenge ON steps(user_id, challenge_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_challenges_active ON challenges(is_active) WHERE is_active = 1`,
+        `CREATE INDEX IF NOT EXISTS idx_mcp_tokens_user ON mcp_tokens(user_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_mcp_tokens_expires ON mcp_tokens(expires_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_mcp_audit_token_user ON mcp_audit_log(token_id, user_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_mcp_audit_created ON mcp_audit_log(created_at)`
+      ];
+
+      let completedOperations = 0;
+      const totalOperations = tables.length + indexes.length;
+      let hasError = false;
+
+      const checkComplete = (err) => {
+        if (err && !hasError) {
+          hasError = true;
+          db.close();
+          return reject(err);
+        }
+        
+        completedOperations++;
+        if (completedOperations === totalOperations && !hasError) {
+          // All tables and indexes created successfully
+          db.close((closeErr) => {
+            if (closeErr) {
+              return reject(closeErr);
+            }
+            resolve(dbPath);
+          });
+        }
+      };
+
+      // Create all tables
+      tables.forEach(tableSQL => {
+        db.run(tableSQL, checkComplete);
+      });
+
+      // Create all indexes
+      indexes.forEach(indexSQL => {
+        db.run(indexSQL, checkComplete);
+      });
+    });
+  });
 }
 
 /**
@@ -164,6 +340,7 @@ function expectValidErrorResponse(response, expectedMessage = null) {
 
 module.exports = {
   createTestDatabase,
+  initializeTestDatabase,
   cleanupTestDatabase,
   createTestUser,
   createTestAdmin,

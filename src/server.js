@@ -9,7 +9,7 @@ const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
-const db = require('./database');
+let db = require('./database');
 const { mcpUtils, handleMCPRequest, getMCPCapabilities } = require('../mcp/mcp-server');
 
 // Load environment variables
@@ -807,17 +807,20 @@ app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
     const hashedToken = hashToken(token);
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
     
-    // Store hashed token in database (security enhancement)
-    db.run(
-      `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
-      [hashedToken, email, expiresAt.toISOString()],
-      function(err) {
-        if (err) {
-          console.error('Error storing token:', err);
-          return res.status(500).json({ error: 'Database error' });
+    // Store hashed token in database (security enhancement) - await the operation
+    await new Promise((resolve, reject) => {
+      db.run(
+        `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
+        [hashedToken, email, expiresAt.toISOString()],
+        function(err) {
+          if (err) {
+            console.error('Error storing token:', err);
+            return reject(err);
+          }
+          resolve();
         }
-      }
-    );
+      );
+    });
 
     // Send email
     const loginUrl = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
@@ -903,14 +906,14 @@ End of Message`;
     const emailResult = await sendEmail(email, 'Step Challenge Login Link', htmlBody, textBody);
 
     if (emailResult.success) {
-      res.json({ message: 'Login link sent to your email' });
+      return res.json({ message: 'Login link sent to your email' });
     } else {
       console.error('Failed to send email:', emailResult.error);
-      res.json({ message: 'Login link sent to your email' }); // Still show success to user
+      return res.json({ message: 'Login link sent to your email' }); // Still show success to user
     }
   } catch (error) {
     console.error('Error sending email:', error);
-    res.status(500).json({ error: 'Failed to send login link' });
+    return res.status(500).json({ error: 'Failed to send login link' });
   }
 });
 
@@ -925,28 +928,46 @@ if (isDevelopment) {
     }
 
     try {
+      // Wait for database initialization to complete before proceeding
+      await db.ready;
+      
       const token = generateSecureToken();
       const hashedToken = hashToken(token);
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
       
-      // Store hashed token in database (security enhancement)
-      db.run(
-        `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
-        [hashedToken, email, expiresAt.toISOString()],
-        function(err) {
+      // Ensure auth_tokens table exists before trying to insert
+      await new Promise((resolve, reject) => {
+        db.run(`CREATE TABLE IF NOT EXISTS auth_tokens (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          token TEXT UNIQUE NOT NULL,
+          email TEXT NOT NULL,
+          expires_at DATETIME NOT NULL,
+          used BOOLEAN DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`, (err) => {
           if (err) {
-            console.error('Error storing token:', err);
-            return res.status(500).json({ error: 'Database error' });
+            console.error('Error ensuring auth_tokens table:', err);
+            return reject(err);
           }
-        }
-      );
+          resolve();
+        });
+      });
+      
+      // Store hashed token in database using retry mechanism for reliability
+      await db.utils.executeWithRetry((callback) => {
+        db.run(
+          `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
+          [hashedToken, email, expiresAt.toISOString()],
+          callback
+        );
+      });
 
       // Return the magic link directly (development only)
       const loginUrl = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
       
       console.log('🔗 Development magic link generated:', loginUrl);
       
-      res.json({ 
+      return res.json({ 
         message: 'Magic link generated for development',
         magicLink: loginUrl,
         email: email,
@@ -955,7 +976,7 @@ if (isDevelopment) {
       });
     } catch (error) {
       console.error('Error generating development magic link:', error);
-      res.status(500).json({ error: 'Failed to generate magic link' });
+      return res.status(500).json({ error: 'Failed to generate magic link' });
     }
   });
 }
@@ -2539,6 +2560,37 @@ if (require.main === module) {
     }
   });
 }
+
+// Add cleanup method for testing
+app.close = (callback) => {
+  if (db && db.open) {
+    db.close((err) => {
+      if (err) {
+        console.log('Test cleanup - Error closing database:', err);
+      }
+      if (callback) callback();
+    });
+  } else if (callback) {
+    callback();
+  }
+};
+
+// Add database reinitialization for testing
+app.reinitializeDatabase = () => {
+  if (process.env.NODE_ENV === 'test') {
+    // Close existing connection if it exists
+    if (db && db.open) {
+      db.close();
+    }
+    
+    // Clear the database module from require cache
+    const dbPath = require.resolve('./database');
+    delete require.cache[dbPath];
+    
+    // Re-require the database module with new DB_PATH
+    db = require('./database');
+  }
+};
 
 // Export for testing
 module.exports = app;
