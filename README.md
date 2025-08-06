@@ -13,7 +13,13 @@ A production-ready web application for tracking daily steps in company-wide chal
 - **Production Security**: CSRF protection, rate limiting, CSP headers, SQL injection prevention
 - **MCP Integration**: Python bridge script (primary) and Node.js stdio server (alternate) for Claude Desktop/Cursor/Claude Code
 
-## Recent Updates (August 1, 2025)
+## Recent Updates (August 6, 2025)
+- **Server.js Refactoring**: Major modular architecture refactoring reducing server.js from 2,595 to 2,302 lines (11.3% reduction)
+- **Improved Code Organization**: Extracted components into `middleware/`, `services/`, and `utils/` directories
+- **Zero Regressions**: All functionality preserved with enhanced maintainability and testability
+- **Future-Ready Architecture**: Modular structure enables easier testing, reuse, and evolution
+
+## Previous Updates (August 1, 2025)
 - **Repository Reorganization**: Complete directory restructure with src/, mcp/, docs/, tests/, config/ organization
 - **Documentation Updates**: All path references updated for new structure
 - **Production Stability**: Repository reorganization deployed and verified working
@@ -305,11 +311,23 @@ See `docs/ADMIN_DISTRIBUTION_GUIDE.md` for complete workflow.
 ## File Structure
 
 ### **Core Application**
-- `src/server.js` - Main Express server with all API endpoints + MCP integration
+- `src/server.js` - Main Express server with route definitions and startup logic
 - `src/database.js` - SQLite schema and initialization + MCP tables
 - `src/views/` - HTML templates (dashboard, admin, MCP setup)
 - `src/public/` - Static assets (CSS, JavaScript, images)
 - `src/scripts/` - Backup and deployment scripts
+
+### **Modular Backend Architecture** *(New - August 2025)*
+- `src/middleware/` - Authentication and rate limiting middleware
+  - `auth.js` - Authentication functions (requireAuth, requireAdmin, etc.)
+  - `rateLimiters.js` - Rate limiting configurations (API, MCP, admin)
+- `src/services/` - Business logic services
+  - `email.js` - Email service with Mailgun integration
+- `src/utils/` - Shared utility functions
+  - `dev.js` - Development utilities (logging, environment detection)
+  - `validation.js` - Input validation (email, date, etc.)
+  - `token.js` - Secure token generation and hashing
+  - `challenge.js` - Challenge timezone and date calculations
 
 ### **MCP Integration**
 - `mcp/step_bridge.py` - Single-file Python MCP bridge with rich tool descriptions

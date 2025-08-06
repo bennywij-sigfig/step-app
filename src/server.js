@@ -2,15 +2,30 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const crypto = require('crypto');
 const axios = require('axios');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const rateLimit = require('express-rate-limit');
-const { ipKeyGenerator } = require('express-rate-limit');
 let db = require('./database');
 const { mcpUtils, handleMCPRequest, getMCPCapabilities } = require('../mcp/mcp-server');
+const { isDevelopment, devLog } = require('./utils/dev');
+const {
+  requireAuth,
+  requireApiAuth,
+  requireAdmin,
+  requireApiAdmin
+} = require('./middleware/auth');
+const {
+  magicLinkLimiter,
+  apiLimiter,
+  adminApiLimiter,
+  mcpApiLimiter,
+  mcpBurstLimiter
+} = require('./middleware/rateLimiters');
+const { sendEmail } = require('./services/email');
+const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
+const { hashToken, generateSecureToken } = require('./utils/token');
+const { getCurrentPacificTime, getCurrentChallengeDay, getTotalChallengeDays } = require('./utils/challenge');
 
 // Load environment variables
 require('dotenv').config();
@@ -53,7 +68,6 @@ validateEnvironment();
 
 // Environment info (production-safe)
 const isProduction = process.env.NODE_ENV === 'production';
-const isDevelopment = !isProduction;
 
 if (isDevelopment) {
   console.log('🔧 Development mode - debug logging enabled');
@@ -65,14 +79,6 @@ if (isDevelopment) {
   console.log('🚀 Production mode - starting Step Challenge App');
 }
 
-// Secure token management (security enhancement)
-function hashToken(token) {
-  return crypto.createHash('sha256').update(token).digest('hex');
-}
-
-function generateSecureToken() {
-  return uuidv4();
-}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -132,251 +138,10 @@ app.use(session({
 }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiting configuration
-const magicLinkLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: parseInt(process.env.MAGIC_LINK_LIMIT_MAX) || 50, // increased from 10 to 50 per hour per IP
-  message: {
-    error: 'Too many login requests from this IP, please try again in an hour.',
-    retryAfter: 3600
-  },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-  // Use default IP key generator which handles IPv6 properly
-  handler: (req, res) => {
-    console.log(`Rate limit exceeded for magic link request from IP: ${req.ip}`);
-    res.status(429).json({
-      error: 'Too many login requests from this IP, please try again in an hour.',
-      retryAfter: 3600
-    });
-  }
-});
 
-const apiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: parseInt(process.env.API_LIMIT_MAX) || 300, // increased from 100 to 300 per hour per session
-  message: {
-    error: 'Too many API requests, please try again in an hour.',
-    retryAfter: 3600
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  // Use session-based key generator for authenticated users, IP-based for anonymous
-  keyGenerator: (req) => {
-    return req.session?.userId ? `api_user_${req.session.userId}` : `api_ip_${ipKeyGenerator(req)}`;
-  },
-  handler: (req, res) => {
-    console.log(`API rate limit exceeded for user: ${req.session?.userId || 'anonymous'} from IP: ${req.ip}`);
-    res.status(429).json({
-      error: 'Too many API requests, please try again in an hour.',
-      retryAfter: 3600
-    });
-  }
-});
 
-const adminApiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: parseInt(process.env.ADMIN_API_LIMIT_MAX) || 400, // increased from 200 to 400 per hour per session
-  message: {
-    error: 'Too many admin API requests, please try again in an hour.',
-    retryAfter: 3600
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  // Use session-based key generator for authenticated users, IP-based for anonymous
-  keyGenerator: (req) => {
-    return req.session?.userId ? `admin_user_${req.session.userId}` : `admin_ip_${ipKeyGenerator(req)}`;
-  },
-  handler: (req, res) => {
-    console.log(`Admin API rate limit exceeded for user: ${req.session?.userId || 'anonymous'} from IP: ${req.ip}`);
-    res.status(429).json({
-      error: 'Too many admin API requests, please try again in an hour.',
-      retryAfter: 3600
-    });
-  }
-});
 
-// MCP API rate limiter - token-based (hourly limit)
-const mcpApiLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: parseInt(process.env.MCP_API_LIMIT_MAX) || 300, // increased from 60 to 300 per hour per token
-  message: {
-    error: 'Too many MCP API requests, please try again in an hour.',
-    retryAfter: 3600
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  // Use token-based key generator
-  keyGenerator: (req) => {
-    const token = req.body?.params?.token || req.query?.token || 'anonymous';
-    return `mcp_hourly_${token}`;
-  },
-  handler: (req, res) => {
-    const token = req.body?.params?.token || req.query?.token || 'unknown';
-    console.log(`MCP API hourly rate limit exceeded for token: ${token.substring(0, 10)}... from IP: ${req.ip}`);
-    res.status(429).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32004,
-        message: 'Rate limit exceeded',
-        data: 'Too many MCP API requests, please try again in an hour.'
-      },
-      id: req.body?.id || null
-    });
-  }
-});
 
-// MCP API burst rate limiter - protect against rapid fire requests
-const mcpBurstLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: parseInt(process.env.MCP_BURST_LIMIT_MAX) || 75, // increased from 15 to 75 per minute per token
-  message: {
-    error: 'Too many rapid MCP API requests, please slow down.',
-    retryAfter: 60
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  // Use token-based key generator
-  keyGenerator: (req) => {
-    const token = req.body?.params?.token || req.query?.token || 'anonymous';
-    return `mcp_burst_${token}`;
-  },
-  handler: (req, res) => {
-    const token = req.body?.params?.token || req.query?.token || 'unknown';
-    console.log(`MCP API burst rate limit exceeded for token: ${token.substring(0, 10)}... from IP: ${req.ip}`);
-    res.status(429).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32005,
-        message: 'Burst rate limit exceeded',
-        data: 'Too many rapid requests, please slow down and try again in a minute.'
-      },
-      id: req.body?.id || null
-    });
-  }
-});
-
-// Mailgun configuration
-const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
-const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || 'sigfig.com';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'data@sigfig.com';
-const MAILGUN_API_URL = `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`;
-
-// Email sending function using Mailgun
-async function sendEmail(to, subject, htmlBody, textBody) {
-  // Always log magic links in development mode for easy testing (localhost only)
-  if (isDevelopment) {
-    const linkMatch = textBody.match(/https?:\/\/[^\s]+/);
-    if (linkMatch) {
-      console.log('🔗 Magic link (development mode):', linkMatch[0]);
-    }
-  }
-  
-  if (!MAILGUN_API_KEY) {
-    devLog('MAILGUN_API_KEY not configured. Login URL would be sent to:', to);
-    devLog('Subject:', subject);
-    return { success: false, message: 'Email not configured' };
-  }
-
-  try {
-    const response = await axios.post(
-      MAILGUN_API_URL,
-      new URLSearchParams({
-        from: FROM_EMAIL,
-        to: to,
-        subject: subject,
-        html: htmlBody,
-        text: textBody,
-        'o:tracking': 'no'
-      }),
-      {
-        auth: {
-          username: 'api',
-          password: MAILGUN_API_KEY
-        },
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      }
-    );
-    
-    return { success: true, data: response.data };
-  } catch (error) {
-    console.error('Mailgun error:', error.response?.data || error.message);
-    return { success: false, error: error.response?.data || error.message };
-  }
-}
-
-// Utility functions
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function normalizeEmail(email) {
-  return email ? email.toLowerCase().trim() : email;
-}
-
-function isValidDate(dateString) {
-  const date = new Date(dateString);
-  return date instanceof Date && !isNaN(date);
-}
-
-// Utility function for development logging
-function devLog(...args) {
-  if (isDevelopment) {
-    console.log(...args);
-  }
-}
-
-// Challenge timezone utilities using date-fns-tz for DST-safe calculations
-const { fromZonedTime, toZonedTime, format } = require('date-fns-tz');
-
-const PACIFIC_TIMEZONE = 'America/Los_Angeles';
-
-// Get current Pacific Time (DST-aware)
-function getCurrentPacificTime() {
-  const nowUTC = new Date();
-  return toZonedTime(nowUTC, PACIFIC_TIMEZONE);
-}
-
-// Calculate current challenge day using Pacific Time
-function getCurrentChallengeDay(challenge) {
-  try {
-    const nowPacific = getCurrentPacificTime();
-    
-    // Parse challenge dates in Pacific time
-    const startPacific = new Date(challenge.start_date + 'T00:00:00');
-    const endPacific = new Date(challenge.end_date + 'T23:59:59');
-    
-    // Before challenge starts
-    if (nowPacific < startPacific) {
-      return 0;
-    }
-    
-    // After challenge ends - return final day number
-    if (nowPacific > endPacific) {
-      return Math.floor((endPacific - startPacific) / (1000 * 60 * 60 * 24)) + 1;
-    }
-    
-    // During challenge - calculate current day
-    return Math.floor((nowPacific - startPacific) / (1000 * 60 * 60 * 24)) + 1;
-  } catch (error) {
-    console.error('Error calculating challenge day:', error);
-    return 0;
-  }
-}
-
-// Get total days in challenge
-function getTotalChallengeDays(challenge) {
-  try {
-    const startPacific = new Date(challenge.start_date + 'T00:00:00');
-    const endPacific = new Date(challenge.end_date + 'T23:59:59');
-    return Math.floor((endPacific - startPacific) / (1000 * 60 * 60 * 24)) + 1;
-  } catch (error) {
-    console.error('Error calculating total challenge days:', error);
-    return 0;
-  }
-}
 
 // Check if a date is within challenge period (Pacific Time)
 function isDateInChallengePeriod(date, challenge) {
@@ -567,64 +332,6 @@ async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold) {
 }
 
 // Authentication middleware
-function requireAuth(req, res, next) {
-  devLog('requireAuth check - session userId:', req.session.userId);
-  if (!req.session.userId) {
-    devLog('No session userId, redirecting to login');
-    return res.redirect('/');
-  }
-  next();
-}
-
-// API authentication middleware
-function requireApiAuth(req, res, next) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  next();
-}
-
-// Admin authentication middleware
-function requireAdmin(req, res, next) {
-  if (!req.session.userId) {
-    return res.redirect('/');
-  }
-  
-  // Check if user is admin
-  db.get(`SELECT is_admin FROM users WHERE id = ?`, [req.session.userId], (err, user) => {
-    if (err) {
-      console.error('Error checking admin status:', err);
-      return res.status(500).send('Internal server error');
-    }
-    
-    if (!user || !user.is_admin) {
-      return res.status(403).send('Access denied. Admin privileges required.');
-    }
-    
-    next();
-  });
-}
-
-// Admin API authentication middleware
-function requireApiAdmin(req, res, next) {
-  if (!req.session.userId) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-  
-  // Check if user is admin
-  db.get(`SELECT is_admin FROM users WHERE id = ?`, [req.session.userId], (err, user) => {
-    if (err) {
-      console.error('Error checking admin status:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    if (!user || !user.is_admin) {
-      return res.status(403).json({ error: 'Admin privileges required' });
-    }
-    
-    next();
-  });
-}
 
 // CSRF Protection
 function generateCSRFToken() {

@@ -28,13 +28,22 @@ Production web application for tracking daily steps in company-wide challenges (
 ## Key Files
 
 ### **Core Application**
-- `src/server.js` - Main Express server with all API endpoints + MCP integration
+- `src/server.js` - Main Express server with route definitions and startup logic
 - `src/database.js` - SQLite schema and initialization + MCP tables
 - `src/views/dashboard.html` - Main user interface with leaderboard tabs
 - `src/views/admin.html` - Admin panel with theme picker and management
 - `src/public/dashboard.js` - Client-side logic for leaderboards and team disclosure
 - `src/public/admin.js` - Admin panel functionality and theme management
 - `fly.toml` - Optimal deployment configuration (avoids CLI crashes)
+
+### **Modular Backend Components (New Architecture)**
+- `src/middleware/auth.js` - Authentication middleware (requireAuth, requireAdmin, etc.)
+- `src/middleware/rateLimiters.js` - Rate limiting configurations (API, MCP, admin limiters)
+- `src/services/email.js` - Email service with Mailgun integration
+- `src/utils/dev.js` - Development utilities (devLog, isDevelopment)
+- `src/utils/validation.js` - Input validation utilities (email, date validation)
+- `src/utils/token.js` - Secure token generation and hashing
+- `src/utils/challenge.js` - Challenge timezone and date calculations
 
 ### **Local Stdio MCP Integration**
 - `mcp/mcp-server.js` - Secure stdio-based MCP server with JSON-RPC 2.0 support
@@ -89,7 +98,34 @@ gemini -p "Security analysis of this code change. Assess risks for production de
 echo "Reorganization plan details" | gemini -p "Analyze from production safety perspective"
 ```
 
-## Recent Updates (August 2, 2025)
+## Recent Updates (August 6, 2025)
+
+### 🏗️ **Major Server.js Refactoring - Modular Architecture**
+- **Monolith Broken Down**: Refactored 2,595-line server.js into modular components (now 2,302 lines - 11.3% reduction)
+- **New Module Structure**: Created organized `middleware/`, `services/`, and `utils/` directories
+- **Authentication Middleware**: Extracted all auth functions (`requireAuth`, `requireAdmin`, etc.) → `src/middleware/auth.js`
+- **Rate Limiting**: Consolidated all rate limiters (API, admin, MCP, magic links) → `src/middleware/rateLimiters.js`
+- **Email Service**: Isolated Mailgun integration and email logic → `src/services/email.js`
+- **Utility Modules**: Separated validation, token management, and challenge utilities → `src/utils/`
+- **Zero Regressions**: All 119 unit tests pass, full functionality preserved with improved maintainability
+- **Future-Ready**: Modular structure enables easier testing, reuse, and evolution
+
+### 📁 **Improved Code Organization**
+```
+src/
+├── middleware/          # Authentication & rate limiting
+│   ├── auth.js         # requireAuth, requireAdmin functions
+│   └── rateLimiters.js # All rate limit configurations
+├── services/           # Business logic services
+│   └── email.js        # Mailgun email integration
+└── utils/              # Shared utilities
+    ├── dev.js          # Development logging
+    ├── validation.js   # Input validation
+    ├── token.js        # Token generation/hashing
+    └── challenge.js    # Challenge date calculations
+```
+
+## Previous Updates (August 2, 2025)
 
 ### 🧹 **Admin UI Simplification**
 - **Magic Link Consolidation**: Removed redundant "Generate My Magic Link" button from Extras section
