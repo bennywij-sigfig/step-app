@@ -1,19 +1,46 @@
 name: Comprehensive Test Suite
 
+# 🎯 When this runs:
+# - Manual trigger only (workflow_dispatch) - for pre-release validation  
+# - Weekly automated (Mondays 2 AM UTC) - for regular health checks
+# - Auto-trigger ONLY on very high-risk file changes (auth, server core, deps)
+# 
+# ⚡ For daily development: Use Fast CI (runs in ~30 seconds)
+# 🔍 For thorough validation: Manually trigger this comprehensive suite
+
 on:
-  # Run comprehensive tests on main branch weekly or when manually triggered
+  # Manual triggering only (for pre-release validation)
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for running comprehensive tests'
+        required: false
+        default: 'Manual validation before release'
+  
+  # Weekly automated run (Mondays at 2 AM UTC)  
   schedule:
-    - cron: '0 2 * * 1'  # Monday at 2 AM UTC
-  workflow_dispatch:  # Allow manual triggering
+    - cron: '0 2 * * 1'
+  
+  # ONLY trigger automatically on very high-risk changes
   push:
     branches: [ main ]
     paths:
-      # Run comprehensive tests when critical files change
+      # Core server files (high risk)
       - 'src/server.js'
       - 'src/database.js'
-      - 'src/middleware/**'
+      
+      # Authentication & security (very high risk)
+      - 'src/middleware/auth.js'
+      - 'src/middleware/rateLimiters.js'
+      - 'src/utils/token.js'
+      - 'src/utils/validation.js'
+      
+      # Critical dependencies (high risk)
       - 'package.json'
       - 'package-lock.json'
+      
+      # Workflow changes (meta - high risk)
+      - '.github/workflows/**'
 
 jobs:
   unit-tests:
