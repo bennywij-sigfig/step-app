@@ -90,8 +90,8 @@ jobs:
       
     - name: Run integration tests with stability improvements
       run: |
-        # Run integration tests with better isolation
-        NODE_ENV=test npm run test:integration -- --runInBand --maxWorkers=1 --forceExit --detectOpenHandles
+        # Run integration tests with better isolation (config file already has these settings)
+        NODE_ENV=test npm run test:integration
       timeout-minutes: 12  # Increased timeout for stability
       env:
         NODE_ENV: test
