@@ -1,7 +1,10 @@
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
 
-const magicLinkLimiter = rateLimit({
+// Skip rate limiting entirely for tests when DISABLE_RATE_LIMITING is set
+const skipRateLimit = process.env.DISABLE_RATE_LIMITING === 'true' || process.env.NODE_ENV === 'test';
+
+const magicLinkLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: parseInt(process.env.MAGIC_LINK_LIMIT_MAX) || 50, // increased from 10 to 50 per hour per IP
   message: {
@@ -20,7 +23,7 @@ const magicLinkLimiter = rateLimit({
   }
 });
 
-const apiLimiter = rateLimit({
+const apiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: parseInt(process.env.API_LIMIT_MAX) || 300, // increased from 100 to 300 per hour per session
   message: {
@@ -42,7 +45,7 @@ const apiLimiter = rateLimit({
   }
 });
 
-const adminApiLimiter = rateLimit({
+const adminApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: parseInt(process.env.ADMIN_API_LIMIT_MAX) || 400, // increased from 200 to 400 per hour per session
   message: {

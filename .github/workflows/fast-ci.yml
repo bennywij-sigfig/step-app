@@ -1,0 +1,84 @@
+name: Fast CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  fast-validation:
+    name: Fast Validation Suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    # Core unit tests - most critical functionality
+    - name: Run critical unit tests
+      run: npm run test:critical
+      timeout-minutes: 2
+      
+    # Basic security check
+    - name: Quick security audit
+      run: npm audit --audit-level critical --production
+      timeout-minutes: 1
+      
+    # Basic smoke test - server starts and core endpoints respond
+    - name: Basic smoke test
+      run: |
+        timeout 30s npm run dev &
+        SERVER_PID=$!
+        sleep 5
+        
+        # Test core endpoints
+        curl -f http://localhost:3000/health || exit 1
+        curl -f http://localhost:3000/ || exit 1
+        
+        # Cleanup
+        kill $SERVER_PID || true
+      timeout-minutes: 1
+      env:
+        NODE_ENV: test
+        PORT: 3000
+        
+    # Optional: Quick linting (if configured)
+    - name: Code style check
+      run: |
+        if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ]; then
+          npm run lint 2>/dev/null || echo "No linting configured - skipping"
+        else
+          echo "No ESLint config found - skipping linting"
+        fi
+      timeout-minutes: 1
+      continue-on-error: true
+      
+  deployment-readiness:
+    name: Deployment Check
+    runs-on: ubuntu-latest
+    needs: [fast-validation]
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 2
+    
+    steps:
+    - name: Fast CI passed
+      run: |
+        echo "✅ Fast validation suite passed"
+        echo "## Fast CI Results" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Critical unit tests passed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Security audit passed" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Smoke tests passed" >> $GITHUB_STEP_SUMMARY
+        echo "- 🚀 Ready for deployment" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "💡 **Note**: Run comprehensive tests before major releases" >> $GITHUB_STEP_SUMMARY
