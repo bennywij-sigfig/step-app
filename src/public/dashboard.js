@@ -1100,7 +1100,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentUser = await response.json();
                 const welcomeMsg = document.getElementById('welcomeMessage');
                 if (welcomeMsg) {
-                    welcomeMsg.textContent = `Welcome, ${currentUser.email}!`;
+                    const username = currentUser.email.split('@')[0];
+                    welcomeMsg.textContent = `Welcome, ${username}!`;
                 }
                 
                 // Update challenge info display
