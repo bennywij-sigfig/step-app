@@ -460,18 +460,18 @@ function updateOrientationPhysics() {
             megaConfettiSystem.orientation.gravityX = 0;
             megaConfettiSystem.orientation.gravityY = gravityStrength;
             break;
-        case 90:  // Landscape left - physical bottom is now on the LEFT side of screen
-            megaConfettiSystem.orientation.gravityX = -gravityStrength;
-            megaConfettiSystem.orientation.gravityY = 0;
+        case 90:  // Landscape left - gravity pulls toward bottom of screen (long edge)
+            megaConfettiSystem.orientation.gravityX = 0;
+            megaConfettiSystem.orientation.gravityY = gravityStrength;
             break;
         case 180: // Portrait upside down - gravity pulls up (toward top of screen)
             megaConfettiSystem.orientation.gravityX = 0;
             megaConfettiSystem.orientation.gravityY = -gravityStrength;
             break;
         case -90:
-        case 270: // Landscape right - physical bottom is now on the RIGHT side of screen
-            megaConfettiSystem.orientation.gravityX = gravityStrength;
-            megaConfettiSystem.orientation.gravityY = 0;
+        case 270: // Landscape right - gravity pulls toward bottom of screen (long edge)
+            megaConfettiSystem.orientation.gravityX = 0;
+            megaConfettiSystem.orientation.gravityY = gravityStrength;
             break;
         default:  // Fallback to portrait
             megaConfettiSystem.orientation.gravityX = 0;
