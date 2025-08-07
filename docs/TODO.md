@@ -40,18 +40,30 @@
 - **Connection Leaks**: Eliminated with clone-and-dispose approach
 - **CI Protection**: No more infinite hangs - maximum 10 minutes runtime
 
-### ⚠️ **REMAINING SERVER CONNECTION ISSUES (Non-Critical)**
+### ✅ **MAJOR BREAKTHROUGH - AUTH ENDPOINTS FIXED**
 
-**Partially Remaining**: Some `SQLITE_MISUSE: Database is closed` errors in server code
-- **Root Cause**: Application server database connection management during tests
+**Auth Connection Issues RESOLVED**: Fixed `SQLITE_MISUSE: Database is closed` errors in auth endpoints
+- **Fix Applied**: New `getActiveDbConnection()` helper creates fresh test DB connections
+- **Auth Flow Tests**: ✅ 19/19 passing in 4.5 seconds (was timing out)
+- **Endpoints Fixed**: `/dev/get-magic-link` and `/auth/login` now work reliably in tests
+- **Connection Management**: Proper cleanup prevents database lock issues
+- **Production Impact**: Zero impact - fixes only apply in test environment
+
+**COMMITTED**: Database connection fixes committed (commit 49f7192)
+
+### ⚠️ **REMAINING LEADERBOARD CONNECTION ISSUES**
+
+**Still Remaining**: Leaderboard endpoints have `SQLITE_MISUSE: Database is closed` errors
+- **Root Cause**: `getActiveChallenge()` and leaderboard functions still use global `db` connection
+- **Affected Endpoints**: `/api/leaderboard`, `/api/team-leaderboard`  
 - **Impact**: Does NOT affect production; tests fail clearly instead of hanging
-- **Status**: **Major improvement** - timeout hangs solved, remaining issues are clean failures
-- **Next Session**: Server-level database connection lifecycle optimization
+- **Status**: **Major improvement** - timeout hangs eliminated, auth tests working perfectly
+- **Next Step**: Apply same connection fix pattern to leaderboard helper functions
 
 **Current Test Results**:
-- ✅ **Auth Flow**: 19/19 tests passing perfectly
-- ⚠️ **Leaderboard Tests**: Some failing with server connection issues (not hangs)
-- ✅ **CI Protection**: All tests complete within timeout limits
+- ✅ **Auth Flow**: 19/19 tests passing perfectly (4.5 seconds)
+- ⚠️ **Leaderboard Tests**: Failing with server connection issues (not timeout hangs)
+- ✅ **CI Protection**: All tests complete within timeout limits (no more 15-minute hangs)
 
 ### 🎯 **Ready for CI/CD Deployment**
 
