@@ -210,9 +210,13 @@ async function calculateIndividualReportingPercentage(challengeId, currentDay) {
 
 
 // Get active challenge with error handling
-async function getActiveChallenge() {
+async function getActiveChallenge(dbConnection = null) {
   return new Promise((resolve, reject) => {
-    db.get(`SELECT * FROM challenges WHERE is_active = 1 LIMIT 1`, (err, challenge) => {
+    // Use provided connection or get active connection for test environment
+    const activeDb = dbConnection || (process.env.NODE_ENV === 'test' && process.env.DB_PATH ? 
+      getActiveDbConnection().db : db);
+    
+    activeDb.get(`SELECT * FROM challenges WHERE is_active = 1 LIMIT 1`, (err, challenge) => {
       if (err) {
         console.error('Error fetching active challenge:', err);
         return reject(err);
@@ -223,9 +227,13 @@ async function getActiveChallenge() {
 }
 
 // Get participant count for a challenge
-async function getChallengeParticipantCount(challengeId) {
+async function getChallengeParticipantCount(challengeId, dbConnection = null) {
   return new Promise((resolve, reject) => {
-    db.get(
+    // Use provided connection or get active connection for test environment
+    const activeDb = dbConnection || (process.env.NODE_ENV === 'test' && process.env.DB_PATH ? 
+      getActiveDbConnection().db : db);
+    
+    activeDb.get(
       `SELECT COUNT(DISTINCT user_id) as count FROM steps WHERE challenge_id = ?`,
       [challengeId],
       (err, result) => {
@@ -1034,11 +1042,14 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
 // Challenge-aware individual leaderboard
 app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
   try {
-    const activeChallenge = await getActiveChallenge();
+    // Get appropriate database connection for current environment
+    const { db: activeDb, shouldClose } = getActiveDbConnection();
+    
+    const activeChallenge = await getActiveChallenge(activeDb);
     
     // If no active challenge, return all-time rankings
     if (!activeChallenge) {
-      db.all(`
+      activeDb.all(`
         SELECT 
           u.name, 
           u.team,
@@ -1054,6 +1065,9 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
         GROUP BY u.id
         ORDER BY steps_per_day_reported DESC
       `, (err, rows) => {
+        // Close database connection if we created one
+        if (shouldClose) activeDb.close();
+        
         if (err) {
           console.error('Error fetching all-time leaderboard:', err);
           return res.status(500).json({ error: 'Database error' });
@@ -1070,13 +1084,16 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
 
     // Challenge is active - return challenge rankings with personal filtering
     const currentDay = getCurrentChallengeDay(activeChallenge);
-    const participantCount = await getChallengeParticipantCount(activeChallenge.id);
+    const participantCount = await getChallengeParticipantCount(activeChallenge.id, activeDb);
     try {
       const leaderboardData = await getIndividualLeaderboardWithRates(
         activeChallenge.id, 
         currentDay, 
         activeChallenge.reporting_threshold
       );
+      
+      // Close database connection if we created one
+      if (shouldClose) activeDb.close();
       
       res.json({
         type: 'challenge',
@@ -1097,11 +1114,15 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
       });
     } catch (leaderboardError) {
       console.error('Error getting individual leaderboard with rates:', leaderboardError);
+      // Close database connection if we created one
+      if (shouldClose) activeDb.close();
       return res.status(500).json({ error: 'Database error' });
     }
 
   } catch (error) {
     console.error('Leaderboard error:', error);
+    // Close database connection if we created one (error in active challenge lookup)
+    if (typeof shouldClose !== 'undefined' && shouldClose) activeDb.close();
     res.status(500).json({ error: 'Failed to load leaderboard' });
   }
 });
@@ -1778,11 +1799,14 @@ app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) =>
 // Challenge-aware team leaderboard
 app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
   try {
-    const activeChallenge = await getActiveChallenge();
+    // Get appropriate database connection for current environment
+    const { db: activeDb, shouldClose } = getActiveDbConnection();
+    
+    const activeChallenge = await getActiveChallenge(activeDb);
     
     // If no active challenge, return all-time team rankings
     if (!activeChallenge) {
-      db.all(`
+      activeDb.all(`
         SELECT 
           u.team,
           COUNT(DISTINCT u.id) as member_count,

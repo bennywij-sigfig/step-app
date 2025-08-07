@@ -62,28 +62,50 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 console.log(`📁 Using database path: ${dbPath}`);
-const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
-  if (err) {
-    console.error('❌ Database connection failed:', err.message);
-    process.exit(1);
-  }
-  console.log('✅ Connected to SQLite database');
-});
 
-// Configure SQLite based on environment
-if (process.env.NODE_ENV === 'test') {
-  // Test configuration - prioritize speed and reliability over durability
-  db.configure('busyTimeout', 5000); // Shorter timeout for tests
-  db.run('PRAGMA journal_mode = MEMORY'); // Fastest mode, no WAL files
-  db.run('PRAGMA synchronous = OFF'); // Skip fsync for test speed
-  db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
-  db.run('PRAGMA locking_mode = EXCLUSIVE'); // Exclusive access for tests
+// In test environments, delay database creation to avoid conflicts
+const shouldDelayInit = process.env.NODE_ENV === 'test' && !process.env.DB_PATH;
+
+let db;
+if (shouldDelayInit) {
+  // Create a mock database object for test environments that don't specify DB_PATH
+  db = {
+    get: () => {},
+    run: () => {},
+    all: () => {},
+    close: () => {},
+    serialize: (callback) => { if (callback) callback(); }
+  };
+  console.log('📝 Test mode - database initialization delayed');
 } else {
-  // Production/development configuration
-  db.configure('busyTimeout', 30000); // 30 second timeout for busy database
-  db.run('PRAGMA journal_mode = WAL'); // Write-Ahead Logging for better concurrency
-  db.run('PRAGMA synchronous = NORMAL'); // Balance between safety and performance
-  db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
+  db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+    if (err) {
+      console.error('❌ Database connection failed:', err.message);
+      if (process.env.NODE_ENV !== 'test') {
+        process.exit(1);
+      }
+    } else {
+      console.log('✅ Connected to SQLite database');
+    }
+  });
+}
+
+// Configure SQLite based on environment - only for real databases
+if (!shouldDelayInit) {
+  if (process.env.NODE_ENV === 'test') {
+    // Test configuration - prioritize speed and reliability over durability
+    db.configure('busyTimeout', 5000); // Shorter timeout for tests
+    db.run('PRAGMA journal_mode = MEMORY'); // Fastest mode, no WAL files
+    db.run('PRAGMA synchronous = OFF'); // Skip fsync for test speed
+    db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
+    db.run('PRAGMA locking_mode = EXCLUSIVE'); // Exclusive access for tests
+  } else {
+    // Production/development configuration
+    db.configure('busyTimeout', 30000); // 30 second timeout for busy database
+    db.run('PRAGMA journal_mode = WAL'); // Write-Ahead Logging for better concurrency
+    db.run('PRAGMA synchronous = NORMAL'); // Balance between safety and performance
+    db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
+  }
 }
 
 // Database initialization promise for tracking when setup is complete
@@ -92,8 +114,9 @@ const initializationPromise = new Promise((resolve) => {
   initializationResolve = resolve;
 });
 
-// Initialize database tables
-db.serialize(() => {
+// Initialize database tables - only for real databases
+if (!shouldDelayInit) {
+  db.serialize(() => {
   // Users table
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,7 +128,10 @@ db.serialize(() => {
   )`, (err) => {
     if (err) {
       console.error('❌ Failed to create users table:', err.message);
-      process.exit(1);
+      // Don't exit process in test environment - let tests handle errors
+      if (process.env.NODE_ENV !== 'test') {
+        process.exit(1);
+      }
     }
     console.log('✅ Users table ready');
   });
@@ -316,6 +342,10 @@ db.serialize(() => {
     db.run(`UPDATE users SET is_admin = 1 WHERE email IN ('benny@sigfig.com', 'benazir.qureshi@sigfig.com', 'liz.ridge@sigfig.com', 'megan.crowley@sigfig.com', 'amit.srivastava@sigfig.com')`);
   }
 });
+} else {
+  // For delayed initialization (test mode), resolve immediately
+  initializationResolve();
+}
 
 // Database utility functions for reliability
 const dbUtils = {

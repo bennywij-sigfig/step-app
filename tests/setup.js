@@ -22,8 +22,8 @@ process.env.CSRF_SECRET = 'test-csrf-secret-key';
 // Disable rate limiting in tests
 process.env.DISABLE_RATE_LIMITING = 'true';
 
-// Use test database path
-process.env.DB_PATH = path.join(testDbDir, `test-${Date.now()}-${Math.random()}.db`);
+// Use test database path - will be set per test file
+// process.env.DB_PATH will be set individually by each test file to avoid conflicts
 
 // Suppress console output during tests (can be overridden per test)
 const originalConsole = { ...console };
