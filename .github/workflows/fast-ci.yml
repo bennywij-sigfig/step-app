@@ -52,6 +52,7 @@ jobs:
       env:
         NODE_ENV: test
         PORT: 3000
+        DB_PATH: ./ci-test.db
         
     # Optional: Quick linting (if configured)
     - name: Code style check
