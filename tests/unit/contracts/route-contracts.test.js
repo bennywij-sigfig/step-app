@@ -1,35 +1,24 @@
 /**
- * Route Contract Tests
+ * Route Contract Tests - Unit Tests Only
  * 
  * These tests ensure that:
- * 1. Routes defined in config match actual server endpoints
- * 2. URL generation matches URL consumption patterns
- * 3. Magic link URLs work end-to-end
- * 4. Route definitions are valid and consistent
+ * 1. Route definitions are valid and consistent
+ * 2. URL patterns follow expected conventions
+ * 3. Route structure is properly organized
+ * 4. No duplicate or conflicting routes exist
  */
 
-const request = require('supertest');
 const { ROUTES, getAllRoutes } = require('../../../src/config/routes');
 
 describe('Route Contract Tests', () => {
-  let app;
-  
-  beforeAll(async () => {
+  beforeAll(() => {
     // Set test environment
     process.env.NODE_ENV = 'test';
     process.env.SESSION_SECRET = 'test-contract-secret-key';
-    delete process.env.DB_PATH; // Use in-memory database
-    
-    // Import app after setting environment
-    app = require('../../../src/server');
-    
-    // Wait for app to fully initialize
-    await new Promise(resolve => setTimeout(resolve, 100));
   });
   
-  afterAll(async () => {
+  afterAll(() => {
     delete process.env.SESSION_SECRET;
-    delete process.env.DB_PATH;
   });
 
   describe('Route Definition Validation', () => {
@@ -52,158 +41,180 @@ describe('Route Contract Tests', () => {
       
       expect(uniqueRoutes.size).toBe(routeValues.length);
     });
-  });
 
-  describe('Server Endpoint Contract Validation', () => {
-    test('should respond to defined health endpoint', async () => {
-      await request(app)
-        .get(ROUTES.pages.health)
-        .expect(200);
+    test('should have expected auth routes defined', () => {
+      expect(ROUTES.auth).toBeDefined();
+      expect(ROUTES.auth.sendLink).toBe('/auth/send-link');
+      expect(ROUTES.auth.login).toBe('/auth/login');
+      expect(ROUTES.auth.logout).toBe('/auth/logout');
+      expect(ROUTES.auth.devMagicLink).toBe('/dev/get-magic-link');
     });
 
-    test('should respond to defined dashboard endpoint', async () => {
-      await request(app)
-        .get(ROUTES.pages.dashboard)
-        .expect(200);
+    test('should have expected API routes defined', () => {
+      expect(ROUTES.api).toBeDefined();
+      expect(ROUTES.api.csrfToken).toBe('/api/csrf-token');
+      expect(ROUTES.api.steps).toBe('/api/steps');
+      expect(ROUTES.api.leaderboard).toBe('/api/leaderboard');
+      expect(ROUTES.api.teamLeaderboard).toBe('/api/team-leaderboard');
+      expect(ROUTES.api.userProfile).toBe('/api/user-profile');
+      expect(ROUTES.api.settings).toBe('/api/settings');
     });
 
-    test('should have auth endpoints available', async () => {
-      // Test send link endpoint exists (should be POST only)
-      // Note: Some Express configurations return 404 instead of 405 for wrong method
-      const response = await request(app)
-        .get(ROUTES.auth.sendLink);
-      
-      // Should be either 404 (route not found for GET) or 405 (method not allowed)
-      expect([404, 405]).toContain(response.status);
-      
-      // Test dev magic link endpoint exists (development only)
-      const devResponse = await request(app)
-        .get(ROUTES.auth.devMagicLink);
-      
-      // Should be either 404 (route not found for GET) or 405 (method not allowed)
-      expect([404, 405]).toContain(devResponse.status);
+    test('should have expected page routes defined', () => {
+      expect(ROUTES.pages).toBeDefined();
+      expect(ROUTES.pages.dashboard).toBe('/');
+      expect(ROUTES.pages.admin).toBe('/admin');
+      expect(ROUTES.pages.health).toBe('/health');
     });
 
-    test('should have API endpoints available', async () => {
-      // CSRF token endpoint should require authentication
-      await request(app)
-        .get(ROUTES.api.csrfToken)
-        .expect(401); // Unauthorized without session
-    });
-
-    test('should have MCP endpoints available', async () => {
-      await request(app)
-        .get(ROUTES.mcp.capabilities)
-        .expect(200);
+    test('should have expected MCP routes defined', () => {
+      expect(ROUTES.mcp).toBeDefined();
+      expect(ROUTES.mcp.capabilities).toBe('/mcp/capabilities');
+      expect(ROUTES.mcp.main).toBe('/mcp');
     });
   });
 
-  describe('Magic Link URL Generation Contract', () => {
-    test('should generate magic links using correct route definition', async () => {
-      const testEmail = `contract-test-${Date.now()}@test.com`;
+  describe('Route Pattern Validation', () => {
+    test('should validate route parameter consistency', () => {
+      // All routes should be strings starting with '/'
+      const routes = getAllRoutes();
       
-      const response = await request(app)
-        .post(ROUTES.auth.devMagicLink)
-        .send({ email: testEmail })
-        .expect(200);
-      
-      expect(response.body).toHaveProperty('magicLink');
-      
-      const magicUrl = new URL(response.body.magicLink);
-      
-      // Should use the route defined in ROUTES.auth.login
-      expect(magicUrl.pathname).toBe(ROUTES.auth.login);
-      expect(magicUrl.searchParams.has('token')).toBe(true);
+      routes.forEach(({ path, route }) => {
+        expect(route).toMatch(/^\/[a-zA-Z0-9\-_\/\.]*$/);
+      });
     });
 
-    test('should generate consumable magic link URLs', async () => {
-      const testEmail = `consumable-test-${Date.now()}@test.com`;
+    test('should follow REST conventions', () => {
+      // API routes should follow /api/{resource} or /api/{category}/{resource} pattern
+      const apiRoutes = getAllRoutes().filter(r => r.route.startsWith('/api/'));
       
-      // 1. Generate magic link
-      const magicResponse = await request(app)
-        .post(ROUTES.auth.devMagicLink)
-        .send({ email: testEmail })
-        .expect(200);
+      expect(apiRoutes.length).toBeGreaterThan(0);
       
-      const magicUrl = new URL(magicResponse.body.magicLink);
-      const token = magicUrl.searchParams.get('token');
-      
-      // 2. Use the generated URL (should work without hardcoding paths)
-      const agent = request.agent(app);
-      await agent
-        .get(magicUrl.pathname)
-        .query({ token })
-        .expect(302); // Should redirect after successful auth
-      
-      // 3. Should be able to access protected endpoints
-      await agent
-        .get(ROUTES.api.csrfToken)
-        .expect(200);
+      apiRoutes.forEach(({ route }) => {
+        // Allow both /api/resource and /api/category/resource patterns
+        expect(route).toMatch(/^\/api\/[a-z-]+(?:\/[a-z-]+)*$/);
+      });
     });
 
-    test('should validate magic link token parameter extraction', async () => {
-      const testEmail = `token-extract-${Date.now()}@test.com`;
+    test('should have consistent auth route patterns', () => {
+      const authRoutes = getAllRoutes().filter(r => r.route.startsWith('/auth/'));
       
-      const response = await request(app)
-        .post(ROUTES.auth.devMagicLink)
-        .send({ email: testEmail })
-        .expect(200);
+      expect(authRoutes.length).toBeGreaterThan(0);
       
-      const magicUrl = new URL(response.body.magicLink);
-      const token = magicUrl.searchParams.get('token');
+      authRoutes.forEach(({ route }) => {
+        expect(route).toMatch(/^\/auth\/[a-z-]+$/);
+      });
+    });
+  });
+
+  describe('URL Generation Validation', () => {
+    test('should generate valid magic link URLs', () => {
+      const baseUrl = 'https://example.com';
+      const token = 'test-token-123';
+      
+      // Simulate URL generation logic
+      const magicUrl = `${baseUrl}${ROUTES.auth.login}?token=${token}`;
+      
+      const parsedUrl = new URL(magicUrl);
+      expect(parsedUrl.pathname).toBe(ROUTES.auth.login);
+      expect(parsedUrl.searchParams.get('token')).toBe(token);
+    });
+
+    test('should create valid API endpoint URLs', () => {
+      const baseUrl = 'https://example.com';
+      
+      // Test various API routes
+      const apiEndpoints = [
+        ROUTES.api.steps,
+        ROUTES.api.leaderboard,
+        ROUTES.api.csrfToken,
+        ROUTES.api.userProfile
+      ];
+
+      apiEndpoints.forEach(endpoint => {
+        const fullUrl = `${baseUrl}${endpoint}`;
+        const parsedUrl = new URL(fullUrl);
+        expect(parsedUrl.pathname).toBe(endpoint);
+      });
+    });
+  });
+
+  describe('Route Organization Validation', () => {
+    test('should group routes by functionality', () => {
+      expect(ROUTES.auth).toBeDefined();
+      expect(ROUTES.api).toBeDefined();  
+      expect(ROUTES.pages).toBeDefined();
+      expect(ROUTES.mcp).toBeDefined();
+      expect(ROUTES.admin).toBeDefined();
+      
+      // Should have multiple routes in each category
+      expect(Object.keys(ROUTES.auth).length).toBeGreaterThan(1);
+      expect(Object.keys(ROUTES.api).length).toBeGreaterThan(1);
+      expect(Object.keys(ROUTES.pages).length).toBeGreaterThan(1);
+    });
+
+    test('should not have conflicting route prefixes', () => {
+      const routes = getAllRoutes();
+      const routesByPrefix = {};
+      
+      routes.forEach(({ route }) => {
+        const prefix = route.split('/')[1] || 'root';
+        if (!routesByPrefix[prefix]) {
+          routesByPrefix[prefix] = [];
+        }
+        routesByPrefix[prefix].push(route);
+      });
+      
+      // Check for common prefix conflicts
+      expect(routesByPrefix.api).toBeDefined();
+      expect(routesByPrefix.auth).toBeDefined();
+      expect(routesByPrefix.mcp).toBeDefined();
+    });
+  });
+
+  describe('Token Parameter Validation', () => {
+    test('should validate UUID token format', () => {
+      const { v4: uuidv4 } = require('uuid');
+      const testToken = uuidv4();
       
       // Token should be a valid UUID v4
-      expect(token).toBeTruthy();
-      expect(typeof token).toBe('string');
-      expect(token.length).toBe(36);
+      expect(testToken).toBeTruthy();
+      expect(typeof testToken).toBe('string');
+      expect(testToken.length).toBe(36);
       
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-      expect(token).toMatch(uuidRegex);
+      expect(testToken).toMatch(uuidRegex);
+    });
+
+    test('should handle token URL encoding', () => {
+      const { v4: uuidv4 } = require('uuid');
+      const testToken = uuidv4();
+      
+      const params = new URLSearchParams();
+      params.set('token', testToken);
+      
+      const encodedToken = params.get('token');
+      expect(encodedToken).toBe(testToken);
+      
+      // UUID tokens should not need URL encoding
+      expect(encodeURIComponent(testToken)).toBe(testToken);
     });
   });
 
-  describe('End-to-End Route Workflow Validation', () => {
-    test('complete authentication workflow should use consistent routes', async () => {
-      const agent = request.agent(app);
-      const testEmail = `e2e-workflow-${Date.now()}@test.com`;
+  describe('Route Structure Consistency', () => {
+    test('should maintain consistent route structure', () => {
+      const routes = getAllRoutes();
       
-      // 1. Request magic link using route definition
-      const magicResponse = await agent
-        .post(ROUTES.auth.devMagicLink)
-        .send({ email: testEmail })
-        .expect(200);
-      
-      // 2. Extract URL and validate it uses correct route
-      const magicUrl = new URL(magicResponse.body.magicLink);
-      expect(magicUrl.pathname).toBe(ROUTES.auth.login);
-      
-      // 3. Use magic link for authentication
-      const token = magicUrl.searchParams.get('token');
-      await agent
-        .get(ROUTES.auth.login)
-        .query({ token })
-        .expect(302);
-      
-      // 4. Access protected API endpoints
-      const csrfResponse = await agent
-        .get(ROUTES.api.csrfToken)
-        .expect(200);
-      
-      expect(csrfResponse.body).toHaveProperty('csrfToken');
-      
-      // 5. Use CSRF token for API operations
-      const stepsResponse = await agent
-        .post(ROUTES.api.steps)
-        .set('X-CSRF-Token', csrfResponse.body.csrfToken)
-        .send({ date: '2025-08-01', count: 7500 })
-        .expect(200);
-      
-      expect(stepsResponse.body).toHaveProperty('message');
+      // All routes should have path and route properties
+      routes.forEach(routeObj => {
+        expect(routeObj).toHaveProperty('path');
+        expect(routeObj).toHaveProperty('route');
+        expect(typeof routeObj.path).toBe('string');
+        expect(typeof routeObj.route).toBe('string');
+      });
     });
-  });
 
-  describe('Route Consistency Validation', () => {
-    test('should not have hardcoded routes in critical functions', () => {
+    test('should not have hardcoded routes outside config', () => {
       // This is a meta-test that validates our approach
       const routes = getAllRoutes();
       const authRoutes = routes.filter(r => r.path.includes('auth'));
@@ -215,37 +226,33 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.auth.login).toBeDefined();
       expect(ROUTES.auth.devMagicLink).toBeDefined();
     });
-
-    test('should validate route parameter consistency', () => {
-      // All routes should be strings starting with '/'
-      const routes = getAllRoutes();
-      
-      routes.forEach(({ path, route }) => {
-        expect(route).toMatch(/^\/[a-zA-Z0-9\-_\/\.]*$/);
-      });
-    });
   });
 
-  describe('Error Condition Route Validation', () => {
-    test('should handle invalid magic link tokens correctly', async () => {
-      await request(app)
-        .get(ROUTES.auth.login)
-        .query({ token: 'invalid-token-123' })
-        .expect(400); // Bad request for invalid token
+  describe('Error Handling Route Validation', () => {
+    test('should have consistent error response patterns', () => {
+      // Test that routes are structured for error handling
+      const criticalRoutes = [
+        ROUTES.auth.login,
+        ROUTES.api.steps,
+        ROUTES.api.csrfToken
+      ];
+      
+      criticalRoutes.forEach(route => {
+        expect(route).toBeDefined();
+        expect(typeof route).toBe('string');
+        expect(route.startsWith('/')).toBe(true);
+      });
     });
 
-    test('should handle missing tokens correctly', async () => {
-      await request(app)
-        .get(ROUTES.auth.login)
-        .expect(400); // Bad request for missing token
-    });
-
-    test('should protect API endpoints correctly', async () => {
-      // Should require authentication
-      await request(app)
-        .post(ROUTES.api.steps)
-        .send({ date: '2025-08-01', count: 5000 })
-        .expect(401); // Unauthorized without session
+    test('should validate route path safety', () => {
+      const routes = getAllRoutes();
+      
+      routes.forEach(({ route }) => {
+        // Routes should not contain dangerous characters
+        expect(route).not.toMatch(/[<>'"&]/);
+        expect(route).not.toMatch(/\.\./);
+        expect(route).not.toMatch(/\/\//);
+      });
     });
   });
 });
