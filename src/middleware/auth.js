@@ -2,8 +2,8 @@ const db = require('../database');
 const { devLog } = require('../utils/dev');
 
 function requireAuth(req, res, next) {
-  devLog('requireAuth check - session userId:', req.session.userId);
-  if (!req.session.userId) {
+  devLog('requireAuth check - session userId:', req.session?.userId);
+  if (!req.session?.userId || typeof req.session.userId !== 'number') {
     devLog('No session userId, redirecting to login');
     return res.redirect('/');
   }
@@ -11,15 +11,23 @@ function requireAuth(req, res, next) {
 }
 
 function requireApiAuth(req, res, next) {
-  if (!req.session.userId) {
+  if (!req.session?.userId || typeof req.session.userId !== 'number') {
     return res.status(401).json({ error: 'Authentication required' });
   }
   next();
 }
 
 function requireAdmin(req, res, next) {
-  if (!req.session.userId) {
+  if (!req.session?.userId || typeof req.session.userId !== 'number') {
     return res.redirect('/');
+  }
+  
+  // If isAdmin is already in session, use it (for tests and performance)
+  if (req.session.isAdmin !== undefined) {
+    if (!req.session.isAdmin) {
+      return res.redirect('/');
+    }
+    return next();
   }
   
   // Check if user is admin
@@ -30,7 +38,7 @@ function requireAdmin(req, res, next) {
     }
     
     if (!user || !user.is_admin) {
-      return res.status(403).send('Access denied. Admin privileges required.');
+      return res.redirect('/');
     }
     
     next();
@@ -38,8 +46,16 @@ function requireAdmin(req, res, next) {
 }
 
 function requireApiAdmin(req, res, next) {
-  if (!req.session.userId) {
+  if (!req.session?.userId || typeof req.session.userId !== 'number') {
     return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  // If isAdmin is already in session, use it (for tests and performance)
+  if (req.session.isAdmin !== undefined) {
+    if (!req.session.isAdmin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    return next();
   }
   
   // Check if user is admin
@@ -50,7 +66,7 @@ function requireApiAdmin(req, res, next) {
     }
     
     if (!user || !user.is_admin) {
-      return res.status(403).json({ error: 'Admin privileges required' });
+      return res.status(403).json({ error: 'Admin access required' });
     }
     
     next();

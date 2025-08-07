@@ -32,7 +32,9 @@
       "Bash(npm run test:contracts:*)",
       "Bash(npm run test:middleware:*)",
       "mcp__playwright__browser_snapshot",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "Bash(npm run test:unit:*)",
+      "Bash(npm run test:integration:*)"
     ],
     "deny": []
   }
