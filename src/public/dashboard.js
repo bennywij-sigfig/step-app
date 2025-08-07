@@ -183,7 +183,7 @@ function celebrateSteps(stepCount) {
                 const messageDiv = document.getElementById('stepsMessage');
                 const currentMessage = messageDiv.innerHTML;
                 const formattedThreshold = (confettiThresholds.epic / 1000).toFixed(0) + 'K';
-                messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">🚀 EPIC ACHIEVEMENT! ${formattedThreshold}+ STEPS! 🚀</div>`;
+                messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">EPIC ACHIEVEMENT! ${formattedThreshold}+ STEPS!</div>`;
             }, 500);
             return; // Skip regular confetti for epic threshold+
         }
@@ -198,7 +198,7 @@ function celebrateSteps(stepCount) {
             const messageDiv = document.getElementById('stepsMessage');
             const currentMessage = messageDiv.innerHTML;
             const formattedThreshold = (confettiThresholds.regular / 1000).toFixed(0) + 'K';
-            messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; animation: pulse 1s ease-in-out 3;">🎉 Amazing! ${formattedThreshold}+ steps celebration! 🎉</div>`;
+            messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; animation: pulse 1s ease-in-out 3;">Amazing! ${formattedThreshold}+ steps celebration!</div>`;
         }, 500);
     }
 }
@@ -460,8 +460,8 @@ function updateOrientationPhysics() {
             megaConfettiSystem.orientation.gravityX = 0;
             megaConfettiSystem.orientation.gravityY = gravityStrength;
             break;
-        case 90:  // Landscape left - physical bottom is now on the RIGHT side of screen
-            megaConfettiSystem.orientation.gravityX = gravityStrength;
+        case 90:  // Landscape left - physical bottom is now on the LEFT side of screen
+            megaConfettiSystem.orientation.gravityX = -gravityStrength;
             megaConfettiSystem.orientation.gravityY = 0;
             break;
         case 180: // Portrait upside down - gravity pulls up (toward top of screen)
@@ -469,8 +469,8 @@ function updateOrientationPhysics() {
             megaConfettiSystem.orientation.gravityY = -gravityStrength;
             break;
         case -90:
-        case 270: // Landscape right - physical bottom is now on the LEFT side of screen
-            megaConfettiSystem.orientation.gravityX = -gravityStrength;
+        case 270: // Landscape right - physical bottom is now on the RIGHT side of screen
+            megaConfettiSystem.orientation.gravityX = gravityStrength;
             megaConfettiSystem.orientation.gravityY = 0;
             break;
         default:  // Fallback to portrait
