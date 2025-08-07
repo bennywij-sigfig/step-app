@@ -390,7 +390,8 @@ function createMegaParticle(x, y) {
 
 // Get initial velocity based on current device orientation
 function getOrientationAwareInitialVelocity() {
-    const angle = megaConfettiSystem.orientation.angle;
+    // Use temp orientation if megaConfettiSystem isn't ready yet
+    const angle = megaConfettiSystem ? megaConfettiSystem.orientation.angle : (window.tempConfettiOrientation ? window.tempConfettiOrientation.angle : 0);
     const speed = 8; // Base speed for initial burst
     
     // Initial burst should be OPPOSITE to gravity direction
