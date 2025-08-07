@@ -22,8 +22,8 @@ describe('Database Module', () => {
     restoreConsole();
   });
 
-  beforeEach(() => {
-    testDbPath = createTestDatabase();
+  beforeEach(async () => {
+    testDbPath = await createTestDatabase();
     process.env.DB_PATH = testDbPath;
     process.env.NODE_ENV = 'test';
   });

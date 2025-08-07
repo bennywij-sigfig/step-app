@@ -118,12 +118,19 @@ app.use(cors(corsOptions));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-// Configure session store
-const sessionStore = new SQLiteStore({
-  db: 'sessions.db',
-  dir: process.env.NODE_ENV === 'production' ? '/data' : '.',
-  table: 'sessions'
-});
+// Configure session store - avoid SQLite for unit tests to prevent hanging
+let sessionStore;
+if (process.env.NODE_ENV === 'test' && !process.env.DB_PATH) {
+  // Use memory store for unit tests that don't need database persistence
+  sessionStore = new session.MemoryStore();
+} else {
+  // Use SQLite store for integration tests and production
+  sessionStore = new SQLiteStore({
+    db: 'sessions.db',
+    dir: process.env.NODE_ENV === 'production' ? '/data' : '.',
+    table: 'sessions'
+  });
+}
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'step-challenge-secret-key-change-in-production',
