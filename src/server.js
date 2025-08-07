@@ -700,8 +700,9 @@ app.get('/auth/login', (req, res) => {
     return res.status(400).send('Invalid login link');
   }
 
-  // Verify token (hash before comparison for security)
-  const hashedToken = hashToken(token);
+  try {
+    // Verify token (hash before comparison for security)
+    const hashedToken = hashToken(token);
   db.get(
     `SELECT * FROM auth_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')`,
     [hashedToken],
@@ -788,6 +789,11 @@ app.get('/auth/login', (req, res) => {
       });
     }
   );
+  } catch (error) {
+    console.error('Login endpoint error:', error);
+    devLog('Login endpoint error:', error.message);
+    return res.status(400).send('Invalid login link');
+  }
 });
 
 // Logout endpoints

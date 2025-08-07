@@ -68,7 +68,7 @@ const adminApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
 });
 
 // MCP API rate limiter - token-based (hourly limit)
-const mcpApiLimiter = rateLimit({
+const mcpApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: parseInt(process.env.MCP_API_LIMIT_MAX) || 300, // increased from 60 to 300 per hour per token
   message: {
@@ -98,7 +98,7 @@ const mcpApiLimiter = rateLimit({
 });
 
 // MCP API burst rate limiter - protect against rapid fire requests
-const mcpBurstLimiter = rateLimit({
+const mcpBurstLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: parseInt(process.env.MCP_BURST_LIMIT_MAX) || 75, // increased from 15 to 75 per minute per token
   message: {
