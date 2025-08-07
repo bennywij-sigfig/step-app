@@ -2048,13 +2048,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (isExpanded) {
                 details.classList.remove('expanded');
                 expand.classList.remove('expanded');
-                expand.textContent = '▶';
                 // Remember collapsed state
                 localStorage.setItem('challengeDetailsExpanded', 'false');
             } else {
                 details.classList.add('expanded');
                 expand.classList.add('expanded');
-                expand.textContent = '▼';
                 // Remember expanded state
                 localStorage.setItem('challengeDetailsExpanded', 'true');
             }
@@ -2078,7 +2076,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (details && expand) {
                         details.classList.add('expanded');
                         expand.classList.add('expanded');
-                        expand.textContent = '▼';
                     }
                 }, 100);
             }
