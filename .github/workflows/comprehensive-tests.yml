@@ -73,6 +73,7 @@ jobs:
   integration-tests:
     name: Integration Tests (Full)
     runs-on: ubuntu-latest
+    timeout-minutes: 10  # Prevent 15+ min hangs
     
     steps:
     - name: Checkout code
@@ -89,6 +90,7 @@ jobs:
       
     - name: Run integration tests
       run: npm run test:integration
+      timeout-minutes: 8  # Step-level timeout
       env:
         NODE_ENV: test
 

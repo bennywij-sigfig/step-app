@@ -5,6 +5,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { cleanupGlobalPool } = require('./environments/shared/database-pool');
 
 // Ensure test database directory exists
 const testDbDir = path.join(__dirname, 'test-databases');
@@ -50,3 +51,8 @@ global.cleanupTest = async () => {
 
 // Global test timeout
 jest.setTimeout(30000);
+
+// Global cleanup on test run completion
+afterAll(async () => {
+  await cleanupGlobalPool();
+});

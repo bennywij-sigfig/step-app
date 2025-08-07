@@ -32,9 +32,9 @@ module.exports = {
     '!mcp/get_mcp_token.py'
   ],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
-  testTimeout: 10000,
+  testTimeout: process.env.CI ? 30000 : 15000,
   verbose: true,
-  maxWorkers: 4,
+  maxWorkers: 1, // Force sequential execution for database tests
   // Separate SQLite databases for each test worker
   testEnvironmentOptions: {
     TEST_DB_PATH: './tests/test-databases/'

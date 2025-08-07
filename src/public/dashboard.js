@@ -7,6 +7,58 @@ let confettiThresholds = {
     epic: 20000
 };
 
+// App icon configuration
+const APP_ICONS = {
+    paws: '🐾',
+    feet: '🦶',
+    shoe: '👟',
+    runner: '🏃'
+};
+
+const APP_ICON_STORAGE_KEY = 'appIconConfig';
+
+function getRandomIcon() {
+    const icons = Object.values(APP_ICONS);
+    return icons[Math.floor(Math.random() * icons.length)];
+}
+
+function getAppIconConfig() {
+    try {
+        const stored = localStorage.getItem(APP_ICON_STORAGE_KEY);
+        if (stored) {
+            return JSON.parse(stored);
+        }
+    } catch (e) {
+        console.warn('Error parsing app icon config:', e);
+    }
+    return {
+        style: 'paws'
+    };
+}
+
+function setAppIconConfig(config) {
+    localStorage.setItem(APP_ICON_STORAGE_KEY, JSON.stringify(config));
+    applyAppIcon();
+}
+
+function applyAppIcon() {
+    const config = getAppIconConfig();
+    const iconElement = document.getElementById('appIcon');
+    
+    if (!iconElement) return;
+    
+    // Determine icon to display
+    let icon;
+    if (config.style === 'random') {
+        icon = getRandomIcon();
+    } else {
+        icon = APP_ICONS[config.style] || APP_ICONS.paws;
+    }
+    
+    // Update icon (always show as it's now the main branding element)
+    iconElement.textContent = icon;
+}
+
 // Mobile detection utility
 function isMobileViewport() {
     return window.innerWidth <= 768; // Standard mobile breakpoint
@@ -1046,7 +1098,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 currentUser = await response.json();
-                document.getElementById('userName').textContent = currentUser.email;
+                const welcomeMsg = document.getElementById('welcomeMessage');
+                if (welcomeMsg) {
+                    welcomeMsg.textContent = `Welcome, ${currentUser.email}!`;
+                }
                 
                 // Update challenge info display
                 updateChallengeInfo(currentUser.current_challenge);
@@ -1069,12 +1124,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 const endDate = new Date(challenge.end_date + 'T23:59:59');
                 const isWithinPeriod = today >= startDate && today <= endDate;
                 
+                // Calculate days remaining
+                let daysInfo = '';
+                if (isWithinPeriod) {
+                    const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+                    daysInfo = `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`;
+                } else if (today < startDate) {
+                    const daysUntilStart = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+                    daysInfo = `starts in ${daysUntilStart} day${daysUntilStart !== 1 ? 's' : ''}`;
+                } else {
+                    daysInfo = 'challenge ended';
+                }
+                
                 challengeInfo.innerHTML = `
-                    <h3>${challenge.name}</h3>
-                    <p><strong>Challenge Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
-                    <p style="color: #666; font-size: 14px; margin-top: 8px;">You can log steps from the start date onwards, including catch-up entries.</p>
-                    ${!isWithinPeriod ? '<p style="color: #666; font-size: 14px; margin-top: 4px;">You can still log steps for dates during this challenge period.</p>' : ''}
+                    <div class="challenge-header" id="challengeHeader">
+                        <div class="challenge-title">
+                            <div class="challenge-name">
+                                <div class="challenge-expand" id="challengeExpand">▶</div>
+                                <h3>${challenge.name}</h3>
+                            </div>
+                            <div class="challenge-status">${daysInfo}</div>
+                        </div>
+                    </div>
+                    <div class="challenge-details" id="challengeDetails">
+                        <p><strong>Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
+                        <p>You can log steps from the start date onwards, including catch-up entries.</p>
+                        ${!isWithinPeriod ? '<p style="color: #666; font-size: 14px; margin-top: 4px;">You can still log steps for dates during this challenge period.</p>' : ''}
+                    </div>
                 `;
+                
+                // Add event listeners after creating the HTML
+                const challengeHeader = document.getElementById('challengeHeader');
+                
+                if (challengeHeader) {
+                    challengeHeader.addEventListener('click', toggleChallengeDetails);
+                }
                 
                 challengeInfo.className = isWithinPeriod ? 'challenge-info active' : 'challenge-info inactive';
                 challengeInfo.classList.remove('hidden');
@@ -1950,4 +2034,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
+        
+        // Challenge UI functions
+        function toggleChallengeDetails() {
+            const details = document.getElementById('challengeDetails');
+            const expand = document.getElementById('challengeExpand');
+            
+            if (!details || !expand) return;
+            
+            const isExpanded = details.classList.contains('expanded');
+            
+            if (isExpanded) {
+                details.classList.remove('expanded');
+                expand.classList.remove('expanded');
+                expand.textContent = '▶';
+                // Remember collapsed state
+                localStorage.setItem('challengeDetailsExpanded', 'false');
+            } else {
+                details.classList.add('expanded');
+                expand.classList.add('expanded');
+                expand.textContent = '▼';
+                // Remember expanded state
+                localStorage.setItem('challengeDetailsExpanded', 'true');
+            }
+        }
+        
+        function showChallengeInfo(event) {
+            event.stopPropagation();
+            alert('💡 Challenge Tips:\n\n• You can log steps for any date during the challenge period\n• Entries can be made retroactively (catch-up entries)\n• The challenge runs from start date to end date (inclusive)\n• Your steps count toward individual and team rankings\n\n📅 Use the date picker to select which day you want to log steps for!');
+        }
+        
+        // Initialize app icon on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            applyAppIcon();
+            
+            // Restore challenge details expansion state
+            const wasExpanded = localStorage.getItem('challengeDetailsExpanded') === 'true';
+            if (wasExpanded) {
+                setTimeout(() => {
+                    const details = document.getElementById('challengeDetails');
+                    const expand = document.getElementById('challengeExpand');
+                    if (details && expand) {
+                        details.classList.add('expanded');
+                        expand.classList.add('expanded');
+                        expand.textContent = '▼';
+                    }
+                }, 100);
+            }
+        });
 });

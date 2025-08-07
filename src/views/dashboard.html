@@ -95,22 +95,54 @@
         .header {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            padding: 18px;
+            padding: 10px 18px;
             border-radius: 16px;
-            margin-bottom: 16px;
+            margin-bottom: 10px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
         }
         
         .header h1 {
-            margin: 0 0 10px 0;
-            font-size: 24px;
+            margin: 0;
+            font-size: 20px;
             font-weight: 600;
             background: var(--text-gradient);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            line-height: 1.2;
+        }
+        
+        .header h1 #userName {
+            word-break: break-word;
+            max-width: 200px;
+        }
+        
+        .app-icon {
+            font-size: 24px;
+            transition: all 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 8px 16px;
+                margin-bottom: 8px;
+            }
+            
+            .header h1 {
+                font-size: 18px;
+            }
+            
+            .app-icon {
+                font-size: 20px;
+            }
         }
         
         .card {
@@ -602,12 +634,13 @@
         }
         
         .challenge-info {
-            padding: 15px;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 16px;
             background: rgba(52, 144, 220, 0.1);
             border: 1px solid rgba(52, 144, 220, 0.2);
             backdrop-filter: blur(10px);
+            overflow: hidden;
+            transition: all 0.3s ease;
         }
         
         .challenge-info.active {
@@ -620,17 +653,110 @@
             border: 1px solid rgba(255, 193, 7, 0.2);
         }
         
-        .challenge-info h3 {
-            margin: 0 0 8px 0;
+        .challenge-header {
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s ease;
+            user-select: none;
+        }
+        
+        .challenge-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .challenge-title {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+        }
+        
+        .challenge-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .challenge-name h3 {
+            margin: 0;
             font-size: 16px;
             font-weight: 600;
             color: #333;
         }
         
-        .challenge-info p {
-            margin: 0;
+        .challenge-status {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+            margin-left: 24px;
+        }
+        
+        .challenge-expand {
+            font-size: 16px;
+            color: #666;
+            transition: transform 0.2s ease;
+            min-width: 16px;
+            text-align: center;
+        }
+        
+        .challenge-expand.expanded {
+            transform: rotate(90deg);
+        }
+        
+        .challenge-details {
+            padding: 0 15px 15px 15px;
+            display: none;
+            animation: slideDown 0.2s ease-out;
+        }
+        
+        .challenge-details.expanded {
+            display: block;
+        }
+        
+        .challenge-details p {
+            margin: 8px 0 0 0;
             font-size: 14px;
             color: #666;
+            line-height: 1.4;
+        }
+        
+        .challenge-details p:first-child {
+            margin-top: 0;
+        }
+        
+        .info-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 16px;
+            height: 16px;
+            background: rgba(52, 144, 220, 0.2);
+            border-radius: 50%;
+            font-size: 10px;
+            color: #1976d2;
+            cursor: pointer;
+            margin-left: 6px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        
+        .info-icon:hover {
+            background: rgba(52, 144, 220, 0.3);
+            transform: scale(1.1);
+        }
+        
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                max-height: 0;
+            }
+            to {
+                opacity: 1;
+                max-height: 200px;
+            }
         }
         
         .form-disabled {
@@ -786,9 +912,11 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Step Challenge</h1>
-            <p>Welcome, <span id="userName"></span>!</p>
+        <div class="header" id="appHeader">
+            <h1>
+                <span class="app-icon" id="appIcon" aria-label="Step Challenge">🐾</span>
+                <span id="welcomeMessage">Step Challenge</span>
+            </h1>
         </div>
 
     <div class="nav">

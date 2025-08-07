@@ -38,7 +38,7 @@ describe('Authentication Flow Integration Tests', () => {
 
   beforeEach(async () => {
     // Create fresh test database for each test
-    testDbPath = createTestDatabase();
+    testDbPath = await createTestDatabase();
     process.env.DB_PATH = testDbPath;
     
     // Clear require cache to get fresh app instance - clear all related modules

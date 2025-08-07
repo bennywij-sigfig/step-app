@@ -7,7 +7,7 @@
     "dev": "node src/server.js",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "jest tests/unit",
-    "test:integration": "jest tests/integration",
+    "test:integration": "NODE_ENV=test jest tests/integration --runInBand",
     "test:e2e": "playwright test tests/e2e",
     "test:e2e:ci": "echo 'E2E tests skipped in CI - require manual authentication'",
     "test:all": "npm run test && npm run test:e2e",

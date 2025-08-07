@@ -21,7 +21,6 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { 
   createTestDatabase, 
-  initializeTestDatabase,
   cleanupTestDatabase, 
   createTestUser,
   createTestAdmin,
@@ -70,11 +69,7 @@ describe('Leaderboard Functionality Regression Tests', () => {
     await wait(100);
     
     // Create fresh test database for each test
-    testDbPath = createTestDatabase();
-    
-    // Initialize database with all tables synchronously
-    await initializeTestDatabase(testDbPath);
-    
+    testDbPath = await createTestDatabase();
     process.env.DB_PATH = testDbPath;
     
     // Set test environment to prevent admin user creation in database.js

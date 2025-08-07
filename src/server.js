@@ -2288,11 +2288,18 @@ app.close = (callback) => {
 };
 
 // Add database reinitialization for testing
-app.reinitializeDatabase = () => {
+app.reinitializeDatabase = async () => {
   if (process.env.NODE_ENV === 'test') {
     // Close existing connection if it exists
     if (db && db.open) {
-      db.close();
+      await new Promise((resolve) => {
+        db.close((err) => {
+          if (err) {
+            console.warn('Warning closing database during reinit:', err.message);
+          }
+          resolve();
+        });
+      });
     }
     
     // Clear the database module from require cache

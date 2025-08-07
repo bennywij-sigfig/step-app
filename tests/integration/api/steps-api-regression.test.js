@@ -9,7 +9,8 @@ const request = require('supertest');
 const path = require('path');
 const { 
   createTestDatabase, 
-  cleanupTestDatabase, 
+  cleanupTestDatabase,
+  closeDatabaseConnections,
   createTestUser,
   createTestAdmin,
   createTestSteps,
@@ -56,8 +57,8 @@ describe('Steps API Regression Tests', () => {
   });
 
   beforeEach(async () => {
-    // Create fresh test database for each test
-    testDbPath = createTestDatabase();
+    // Create fresh test database for each test using connection pool
+    testDbPath = await createTestDatabase();
     process.env.DB_PATH = testDbPath;
     
     // Clear require cache to get fresh app instance - clear all related modules
@@ -95,12 +96,9 @@ describe('Steps API Regression Tests', () => {
   });
 
   afterEach(async () => {
-    // Don't close the database connection between tests to avoid race conditions
-    // Just clean up the database file
-    cleanupTestDatabase(testDbPath);
+    // Properly close database connections to prevent leaks
+    await cleanupTestDatabase(testDbPath);
     delete process.env.DB_PATH;
-    
-    // Only close the app connection at the very end
   });
 
 

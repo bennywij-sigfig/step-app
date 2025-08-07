@@ -1136,6 +1136,79 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // App Icon management functionality
+        function initializeAppIcon() {
+            const appIconSelector = document.getElementById('appIconSelector');
+            const appIconPreview = document.getElementById('appIconPreview');
+            
+            if (!appIconSelector || !appIconPreview) {
+                console.log('App icon elements not found, skipping initialization');
+                return;
+            }
+            
+            // Load saved configuration
+            const savedConfig = getAppIconConfig();
+            appIconSelector.value = savedConfig.style;
+            updateAppIconPreview();
+            
+            // Add event listeners
+            appIconSelector.addEventListener('change', function() {
+                updateAppIconConfig();
+            });
+            
+            function updateAppIconConfig() {
+                const config = {
+                    style: appIconSelector.value
+                };
+                
+                // Save to localStorage
+                localStorage.setItem('appIconConfig', JSON.stringify(config));
+                
+                // Update preview
+                updateAppIconPreview();
+                
+                console.log('App icon configuration updated:', config);
+            }
+            
+            function updateAppIconPreview() {
+                const config = getAppIconConfig();
+                
+                // App icons mapping
+                const icons = {
+                    paws: '🐾',
+                    feet: '🦶',
+                    shoe: '👟',
+                    sweat: '💦',
+                    random: '🎲'
+                };
+                
+                let previewIcon = icons[config.style] || icons.paws;
+                if (config.style === 'random') {
+                    // For preview, show the dice but mention it changes
+                    previewIcon = '🎲';
+                    appIconPreview.title = 'Changes each visit';
+                } else {
+                    appIconPreview.title = '';
+                }
+                
+                appIconPreview.textContent = previewIcon;
+            }
+            
+            function getAppIconConfig() {
+                try {
+                    const stored = localStorage.getItem('appIconConfig');
+                    if (stored) {
+                        return JSON.parse(stored);
+                    }
+                } catch (e) {
+                    console.warn('Error parsing app icon config:', e);
+                }
+                return {
+                    style: 'paws'
+                };
+            }
+        }
+        
         // MCP Token Management Functions
         async function loadMCPTokens() {
             try {
@@ -2068,6 +2141,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Initialize themes
         initializeThemes();
+        initializeAppIcon();
         
         window.deleteUser = deleteUser;
         window.createTeam = createTeam;

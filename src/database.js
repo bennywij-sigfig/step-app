@@ -70,11 +70,21 @@ const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CR
   console.log('✅ Connected to SQLite database');
 });
 
-// Configure SQLite for better reliability
-db.configure('busyTimeout', 30000); // 30 second timeout for busy database
-db.run('PRAGMA journal_mode = WAL'); // Write-Ahead Logging for better concurrency
-db.run('PRAGMA synchronous = NORMAL'); // Balance between safety and performance
-db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
+// Configure SQLite based on environment
+if (process.env.NODE_ENV === 'test') {
+  // Test configuration - prioritize speed and reliability over durability
+  db.configure('busyTimeout', 5000); // Shorter timeout for tests
+  db.run('PRAGMA journal_mode = MEMORY'); // Fastest mode, no WAL files
+  db.run('PRAGMA synchronous = OFF'); // Skip fsync for test speed
+  db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
+  db.run('PRAGMA locking_mode = EXCLUSIVE'); // Exclusive access for tests
+} else {
+  // Production/development configuration
+  db.configure('busyTimeout', 30000); // 30 second timeout for busy database
+  db.run('PRAGMA journal_mode = WAL'); // Write-Ahead Logging for better concurrency
+  db.run('PRAGMA synchronous = NORMAL'); // Balance between safety and performance
+  db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
+}
 
 // Database initialization promise for tracking when setup is complete
 let initializationResolve;

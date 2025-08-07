@@ -46,7 +46,7 @@ describe('Database Integrity Regression Tests', () => {
   });
 
   beforeEach(async () => {
-    testDbPath = createTestDatabase();
+    testDbPath = await createTestDatabase();
     process.env.NODE_ENV = 'test';
     
     // Clear module cache to ensure fresh database initialization

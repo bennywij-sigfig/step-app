@@ -7,20 +7,15 @@ const request = require('supertest');
 const fs = require('fs');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const { getDatabasePool } = require('./database-pool');
 
 /**
- * Create test database with clean state
+ * Create test database using connection pool (fast)
  */
-function createTestDatabase() {
-  const testDbPath = process.env.DB_PATH || path.join(__dirname, '../../test-databases', `test-${Date.now()}.db`);
-  
-  // Ensure directory exists
-  const dbDir = path.dirname(testDbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-  
-  return testDbPath;
+async function createTestDatabase() {
+  const pool = getDatabasePool();
+  const dbPath = await pool.acquireDatabase();
+  return dbPath;
 }
 
 /**
@@ -199,11 +194,27 @@ async function initializeTestDatabase(dbPath) {
 }
 
 /**
- * Clean up test database
+ * Close database connections properly
  */
-function cleanupTestDatabase(dbPath) {
-  if (dbPath && fs.existsSync(dbPath)) {
-    fs.unlinkSync(dbPath);
+async function closeDatabaseConnections() {
+  // Give time for any pending operations to complete
+  await wait(50);
+  
+  // Clear the database module from require cache to ensure fresh connections
+  delete require.cache[require.resolve('../../../src/database.js')];
+}
+
+/**
+ * Clean up test database using connection pool
+ */
+async function cleanupTestDatabase(dbPath) {
+  // First close any open connections
+  await closeDatabaseConnections();
+  
+  // Return database to pool instead of deleting
+  if (dbPath) {
+    const pool = getDatabasePool();
+    await pool.releaseDatabase(dbPath);
   }
 }
 
@@ -422,6 +433,7 @@ module.exports = {
   createTestDatabase,
   initializeTestDatabase,
   cleanupTestDatabase,
+  closeDatabaseConnections,
   createTestUser,
   createTestAdmin,
   createTestSteps,
