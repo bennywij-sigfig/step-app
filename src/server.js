@@ -2216,11 +2216,9 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('🚨 Unhandled Rejection:', {
-    reason: reason,
-    promise: promise,
-    timestamp: new Date().toISOString()
-  });
+  console.error('🚨 Unhandled Rejection at:', promise);
+  console.error('🚨 Reason:', reason);
+  console.error('🚨 Timestamp:', new Date().toISOString());
   
   // For unhandled rejections, log but don't exit immediately
   // This allows the application to continue running for other requests

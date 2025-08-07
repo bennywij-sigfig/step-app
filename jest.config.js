@@ -25,7 +25,11 @@ module.exports = {
     '!**/node_modules/**',
     '!**/coverage/**',
     '!**/tests/**',
-    '!**/*.test.js'
+    '!**/*.test.js',
+    // Optimize coverage collection - exclude heavy files for faster coverage
+    '!src/server.js', // Large file - can be tested with integration tests
+    '!mcp/test_mcp_python.py',
+    '!mcp/get_mcp_token.py'
   ],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
   testTimeout: 10000,

@@ -32,8 +32,8 @@ describe('Steps API Regression Tests', () => {
   let testUserId;
 
   beforeAll(async () => {
-    // Suppress console output during tests
-    suppressConsole();
+    // Don't suppress console output to see errors
+    // suppressConsole();
     
     // Set up test environment
     process.env.NODE_ENV = 'test';
@@ -42,8 +42,17 @@ describe('Steps API Regression Tests', () => {
     process.env.CSRF_SECRET = 'test-csrf-secret';
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     restoreConsole();
+    
+    // Close the app properly at the end of all tests
+    if (app && app.close) {
+      await new Promise(resolve => {
+        setTimeout(() => {
+          app.close(resolve);
+        }, 100);
+      });
+    }
   });
 
   beforeEach(async () => {
@@ -51,14 +60,34 @@ describe('Steps API Regression Tests', () => {
     testDbPath = createTestDatabase();
     process.env.DB_PATH = testDbPath;
     
-    // Clear require cache to get fresh app instance
+    // Clear require cache to get fresh app instance - clear all related modules
     delete require.cache[require.resolve('../../../src/server.js')];
+    delete require.cache[require.resolve('../../../src/database.js')];
+    
+    // Also clear middleware modules that might be cached
+    const middlewarePaths = [
+      '../../../src/middleware/auth.js',
+      '../../../src/middleware/rateLimiters.js',
+      '../../../src/services/email.js',
+      '../../../src/utils/dev.js',
+      '../../../src/utils/validation.js',
+      '../../../src/utils/token.js',
+      '../../../src/utils/challenge.js'
+    ];
+    
+    middlewarePaths.forEach(modulePath => {
+      try {
+        delete require.cache[require.resolve(modulePath)];
+      } catch (e) {
+        // Module might not exist, ignore
+      }
+    });
     
     // Import app after setting environment
     app = require('../../../src/server.js');
     
     // Wait for app to initialize
-    await wait(100);
+    await wait(200);
 
     // For most tests, we don't need authentication since we're testing
     // the authentication requirement itself and input validation
@@ -66,11 +95,12 @@ describe('Steps API Regression Tests', () => {
   });
 
   afterEach(async () => {
-    if (app && app.close) {
-      await new Promise(resolve => app.close(resolve));
-    }
+    // Don't close the database connection between tests to avoid race conditions
+    // Just clean up the database file
     cleanupTestDatabase(testDbPath);
     delete process.env.DB_PATH;
+    
+    // Only close the app connection at the very end
   });
 
 
@@ -1103,16 +1133,45 @@ describe('Steps API Regression Tests', () => {
       expect(response.body).toHaveProperty('data');
     });
 
-    // Note: This test is commented out due to date validation complexity in test environment
-    // The steps API properly rejects future dates, which can cause issues with test dates
-    // depending on when tests are run. The concurrent database writes test above 
-    // provides similar coverage for database performance.
-    
-    test.skip('should handle multiple step submissions efficiently - DISABLED', async () => {
-      // Test disabled due to date validation complexity in test environment
-      // The API correctly rejects dates that are too far in the future,
-      // which can cause test failures depending on execution timing.
-      // See other tests for database performance validation.
+    test('should handle multiple step submissions efficiently', async () => {
+      const { agent, csrfToken } = await createAuthenticatedSession();
+      
+      // Use past dates to avoid date validation issues
+      const startTime = Date.now();
+      const baseDate = new Date('2025-07-01'); // Use a stable past date
+      
+      // Test multiple step submissions for different dates
+      const requests = Array.from({ length: 10 }, (_, i) => {
+        const testDate = new Date(baseDate);
+        testDate.setDate(baseDate.getDate() + i);
+        const dateStr = testDate.toISOString().split('T')[0];
+        
+        return agent
+          .post('/api/steps')
+          .set('X-CSRF-Token', csrfToken)
+          .send({ date: dateStr, count: 1000 + i * 100 });
+      });
+      
+      const responses = await Promise.all(requests);
+      const endTime = Date.now();
+      const totalTime = endTime - startTime;
+      
+      // All requests should succeed
+      responses.forEach((response, index) => {
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('count');
+        expect(response.body.count).toBe(1000 + index * 100);
+      });
+      
+      // Should complete efficiently (less than 3 seconds for 10 requests)
+      expect(totalTime).toBeLessThan(3000);
+      
+      // Verify all steps were recorded
+      const stepsResponse = await agent
+        .get('/api/steps')
+        .expect(200);
+      
+      expect(stepsResponse.body.length).toBe(10);
     });
 
     test('should maintain data consistency during concurrent operations', async () => {

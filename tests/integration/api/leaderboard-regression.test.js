@@ -42,8 +42,8 @@ describe('Leaderboard Functionality Regression Tests', () => {
   let agent;
 
   beforeAll(async () => {
-    // Suppress console output during tests
-    suppressConsole();
+    // Don't suppress console output to see errors
+    // suppressConsole();
     
     // Set up test environment
     process.env.NODE_ENV = 'test';
@@ -52,8 +52,17 @@ describe('Leaderboard Functionality Regression Tests', () => {
     process.env.CSRF_SECRET = 'test-csrf-secret';
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     restoreConsole();
+    
+    // Close the app properly at the end of all tests
+    if (app && app.close) {
+      await new Promise(resolve => {
+        setTimeout(() => {
+          app.close(resolve);
+        }, 100);
+      });
+    }
   });
 
   beforeEach(async () => {
@@ -105,10 +114,10 @@ describe('Leaderboard Functionality Regression Tests', () => {
       db = null;
     }
     
-    // Close Express server and its database connections
-    if (app && app.close) {
-      await new Promise(resolve => app.close(resolve));
-    }
+    // Don't close Express server between tests to avoid database race conditions
+    // if (app && app.close) {
+    //   await new Promise(resolve => app.close(resolve));
+    // }
     app = null;
     
     // Wait longer for all connections to close and cleanup to complete

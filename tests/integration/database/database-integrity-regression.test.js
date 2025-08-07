@@ -29,20 +29,20 @@ describe('Database Integrity Regression Tests', () => {
   let consoleLog, consoleError, consoleWarn;
 
   beforeAll(() => {
-    // Suppress console output during tests
-    consoleLog = console.log;
-    consoleError = console.error;
-    consoleWarn = console.warn;
-    console.log = jest.fn();
-    console.error = jest.fn();
-    console.warn = jest.fn();
+    // Don't suppress console output to see errors
+    // consoleLog = console.log;
+    // consoleError = console.error;
+    // consoleWarn = console.warn;
+    // console.log = jest.fn();
+    // console.error = jest.fn();
+    // console.warn = jest.fn();
   });
 
   afterAll(() => {
-    // Restore console output
-    console.log = consoleLog;
-    console.error = consoleError;
-    console.warn = consoleWarn;
+    // Don't restore console since we didn't suppress it
+    // console.log = consoleLog;
+    // console.error = consoleError;
+    // console.warn = consoleWarn;
   });
 
   beforeEach(async () => {
