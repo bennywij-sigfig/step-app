@@ -625,6 +625,22 @@ End of Message`;
   }
 });
 
+/**
+ * Get active database connection for the current environment
+ * In test mode, creates fresh connection to avoid closed connection issues
+ */
+function getActiveDbConnection() {
+  if (process.env.NODE_ENV === 'test' && process.env.DB_PATH) {
+    const sqlite3 = require('sqlite3').verbose();
+    const activeDb = new sqlite3.Database(process.env.DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE);
+    activeDb.configure('busyTimeout', 5000);
+    activeDb.run('PRAGMA journal_mode = MEMORY');
+    activeDb.run('PRAGMA synchronous = OFF');
+    return { db: activeDb, shouldClose: true };
+  }
+  return { db: db, shouldClose: false };
+}
+
 // Development-only: Get magic link directly (localhost only)
 if (isDevelopment) {
   app.post('/dev/get-magic-link', magicLinkLimiter, async (req, res) => {
@@ -636,8 +652,13 @@ if (isDevelopment) {
     }
 
     try {
-      // Wait for database initialization to complete before proceeding
-      await db.ready;
+      // Get appropriate database connection for current environment
+      const { db: activeDb, shouldClose } = getActiveDbConnection();
+      
+      if (!shouldClose) {
+        // Wait for database initialization to complete before proceeding (production/development)
+        await db.ready;
+      }
       
       const token = generateSecureToken();
       const hashedToken = hashToken(token);
@@ -645,7 +666,7 @@ if (isDevelopment) {
       
       // Ensure auth_tokens table exists before trying to insert
       await new Promise((resolve, reject) => {
-        db.run(`CREATE TABLE IF NOT EXISTS auth_tokens (
+        activeDb.run(`CREATE TABLE IF NOT EXISTS auth_tokens (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           token TEXT UNIQUE NOT NULL,
           email TEXT NOT NULL,
@@ -661,12 +682,23 @@ if (isDevelopment) {
         });
       });
       
-      // Store hashed token in database using retry mechanism for reliability
-      await db.utils.executeWithRetry((callback) => {
-        db.run(
+      // Store hashed token in database
+      await new Promise((resolve, reject) => {
+        activeDb.run(
           `INSERT INTO auth_tokens (token, email, expires_at) VALUES (?, ?, ?)`,
           [hashedToken, email, expiresAt.toISOString()],
-          callback
+          (err) => {
+            // Close test database connection if we created one
+            if (shouldClose) {
+              activeDb.close();
+            }
+            
+            if (err) {
+              console.error('Error inserting auth token:', err);
+              return reject(err);
+            }
+            resolve();
+          }
         );
       });
 
@@ -701,72 +733,86 @@ app.get('/auth/login', (req, res) => {
   }
 
   try {
+    // Get appropriate database connection for current environment
+    const { db: activeDb, shouldClose } = getActiveDbConnection();
+    
     // Verify token (hash before comparison for security)
     const hashedToken = hashToken(token);
-  db.get(
-    `SELECT * FROM auth_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')`,
-    [hashedToken],
-    (err, row) => {
-      if (err) {
-        console.error('Token verification error:', err);
-        return res.status(500).send('Database error');
-      }
-      
-      if (!row) {
-        devLog('Token not found, used, or expired');
-        return res.status(400).send('Invalid or expired login link');
-      }
-
-      devLog('Valid token found for email:', row.email);
-      const normalizedEmail = normalizeEmail(row.email);
-      
-      // Mark token as used
-      db.run(`UPDATE auth_tokens SET used = 1 WHERE token = ?`, [hashedToken]);
-
-      // Create or get user and set session
-      db.get(`SELECT * FROM users WHERE email = ?`, [normalizedEmail], (err, user) => {
+    activeDb.get(
+      `SELECT * FROM auth_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')`,
+      [hashedToken],
+      (err, row) => {
         if (err) {
-          console.error('User lookup error:', err);
+          console.error('Token verification error:', err);
+          if (shouldClose) activeDb.close();
           return res.status(500).send('Database error');
         }
+        
+        if (!row) {
+          devLog('Token not found, used, or expired');
+          if (shouldClose) activeDb.close();
+          return res.status(400).send('Invalid or expired login link');
+        }
 
-        if (!user) {
-          devLog('Creating new user for:', normalizedEmail);
-          // Create new user
-          const sanitizedName = sanitizeInput(normalizedEmail.split('@')[0]);
-          db.run(
-            `INSERT INTO users (email, name) VALUES (?, ?)`,
-            [normalizedEmail, sanitizedName],
-            function(err) {
-              if (err) {
-                console.error('User creation error:', err);
-                return res.status(500).send('Database error');
-              }
-              
-              devLog('New user created with ID:', this.lastID);
-              
-              // Regenerate session for security and set user data
-              req.session.regenerate((err) => {
+        devLog('Valid token found for email:', row.email);
+        const normalizedEmail = normalizeEmail(row.email);
+        
+        // Mark token as used
+        activeDb.run(`UPDATE auth_tokens SET used = 1 WHERE token = ?`, [hashedToken]);
+
+        // Create or get user and set session
+        activeDb.get(`SELECT * FROM users WHERE email = ?`, [normalizedEmail], (err, user) => {
+          if (err) {
+            console.error('User lookup error:', err);
+            if (shouldClose) activeDb.close();
+            return res.status(500).send('Database error');
+          }
+
+          if (!user) {
+            devLog('Creating new user for:', normalizedEmail);
+            // Create new user
+            const sanitizedName = sanitizeInput(normalizedEmail.split('@')[0]);
+            activeDb.run(
+              `INSERT INTO users (email, name) VALUES (?, ?)`,
+              [normalizedEmail, sanitizedName],
+              function(err) {
                 if (err) {
-                  console.error('Session regeneration error:', err);
-                  return res.status(500).send('Session error');
+                  console.error('User creation error:', err);
+                  if (shouldClose) activeDb.close();
+                  return res.status(500).send('Database error');
                 }
-                req.session.userId = this.lastID;
-                req.session.email = normalizedEmail;
-              
-                req.session.save((err) => {
-                if (err) {
-                  console.error('Session save error:', err);
-                  return res.status(500).send('Session error');
-                }
-                devLog('Session saved for new user, redirecting to dashboard');
-                res.redirect(`/dashboard`);
+                
+                devLog('New user created with ID:', this.lastID);
+                
+                // Close database connection before session operations
+                if (shouldClose) activeDb.close();
+                
+                // Regenerate session for security and set user data
+                req.session.regenerate((err) => {
+                  if (err) {
+                    console.error('Session regeneration error:', err);
+                    return res.status(500).send('Session error');
+                  }
+                  req.session.userId = this.lastID;
+                  req.session.email = normalizedEmail;
+                
+                  req.session.save((err) => {
+                    if (err) {
+                      console.error('Session save error:', err);
+                      return res.status(500).send('Session error');
+                    }
+                    devLog('Session saved for new user, redirecting to dashboard');
+                    res.redirect(`/dashboard`);
+                  });
                 });
-              });
-            }
-          );
+              }
+            );
         } else {
           devLog('Existing user found:', user.id, user.email);
+          
+          // Close database connection before session operations
+          if (shouldClose) activeDb.close();
+          
           // Regenerate session for security and set user data
           req.session.regenerate((err) => {
             if (err) {
@@ -777,12 +823,12 @@ app.get('/auth/login', (req, res) => {
             req.session.email = normalizedEmail;
           
             req.session.save((err) => {
-            if (err) {
-              console.error('Session save error:', err);
-              return res.status(500).send('Session error');
-            }
-            devLog('Session saved for existing user, redirecting to dashboard');
-            res.redirect(`/dashboard`);
+              if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).send('Session error');
+              }
+              devLog('Session saved for existing user, redirecting to dashboard');
+              res.redirect(`/dashboard`);
             });
           });
         }
