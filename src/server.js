@@ -6,6 +6,7 @@ const axios = require('axios');
 const session = require('express-session');
 const SQLiteStore = require('connect-sqlite3')(session);
 const rateLimit = require('express-rate-limit');
+const { v4: uuidv4 } = require('uuid');
 let db = require('./database');
 const { mcpUtils, handleMCPRequest, getMCPCapabilities } = require('../mcp/mcp-server');
 const { isDevelopment, devLog } = require('./utils/dev');

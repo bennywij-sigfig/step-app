@@ -309,7 +309,10 @@ function createMegaConfetti() {
         particles: [],
         gravity: 0.3,
         friction: 0.98,
-        restitution: 0.7,
+        restitution: parseFloat(localStorage.getItem('confettiBounciness') || '0.7'),
+        particleMinSize: parseInt(localStorage.getItem('confettiMinSize') || '3', 10),
+        particleMaxSize: parseInt(localStorage.getItem('confettiMaxSize') || '8', 10),
+        shapeVariety: parseFloat(localStorage.getItem('confettiShapeVariety') || '1.0'),
         colors: ['#FF1493', '#FFD700', '#00FF00', '#FF4500', '#FF69B4', '#00BFFF', '#FF6347', '#7FFF00', '#FF00FF', '#FFA500'],
         lastTime: 0,
         accelerometer: { x: 0, y: 0, z: 0 },
@@ -350,22 +353,60 @@ function createMegaConfetti() {
 }
 
 function createMegaParticle(x, y) {
+    // Get orientation-aware initial velocity
+    const initialVelocity = getOrientationAwareInitialVelocity();
+    
+    // Varied particle sizes based on admin settings
+    const minSize = megaConfettiSystem.particleMinSize;
+    const maxSize = megaConfettiSystem.particleMaxSize;
+    const size = Math.random() * (maxSize - minSize) + minSize;
+    
+    // Shape variety based on admin settings
+    const shapes = ['circle', 'square', 'strip', 'diamond'];
+    const varietyFactor = megaConfettiSystem.shapeVariety;
+    const availableShapes = Math.max(1, Math.floor(shapes.length * varietyFactor));
+    const shape = shapes[Math.floor(Math.random() * availableShapes)];
+    
     const particle = {
         x: x,
         y: y,
-        vx: (Math.random() - 0.5) * 12,
-        vy: Math.random() * 5 + 3,
-        size: Math.random() * 6 + 3,
+        vx: initialVelocity.vx + (Math.random() - 0.5) * 6, // Add some spread
+        vy: initialVelocity.vy + (Math.random() - 0.5) * 4,
+        size: size,
         color: megaConfettiSystem.colors[Math.floor(Math.random() * megaConfettiSystem.colors.length)],
         rotation: Math.random() * 360,
         rotationSpeed: (Math.random() - 0.5) * 15,
         settled: false,
         restingY: 0,
-        shape: Math.random() > 0.5 ? 'square' : 'circle',
-        opacity: 1.0
+        shape: shape,
+        opacity: 1.0,
+        mass: size / 10, // Larger particles are heavier
+        flutter: Math.random() * 0.3, // For strip flutter effect
+        bounceCount: 0 // Track bounces for decreasing bounciness
     };
     
     megaConfettiSystem.particles.push(particle);
+}
+
+// Get initial velocity based on current device orientation
+function getOrientationAwareInitialVelocity() {
+    const angle = megaConfettiSystem.orientation.angle;
+    const speed = 8; // Base speed for initial burst
+    
+    // Initial burst should be OPPOSITE to gravity direction
+    switch (angle) {
+        case 0:   // Portrait - burst upward
+            return { vx: 0, vy: -speed };
+        case 90:  // Landscape left - burst toward left
+            return { vx: -speed, vy: 0 };
+        case 180: // Portrait upside down - burst downward
+            return { vx: 0, vy: speed };
+        case -90:
+        case 270: // Landscape right - burst toward right
+            return { vx: speed, vy: 0 };
+        default:  // Fallback to portrait
+            return { vx: 0, vy: -speed };
+    }
 }
 
 // Orientation detection and physics transformation
@@ -396,32 +437,44 @@ function debouncedOrientationUpdate() {
 function updateOrientationPhysics() {
     if (!megaConfettiSystem) return;
     
-    // Get current orientation angle
-    const angle = screen.orientation ? screen.orientation.angle : (window.orientation || 0);
-    megaConfettiSystem.orientation.angle = angle;
+    // Get current orientation - use Screen Orientation API first, fallback to window.orientation
+    let angle = 0;
+    if (screen.orientation && screen.orientation.angle !== undefined) {
+        angle = screen.orientation.angle;
+    } else if (window.orientation !== undefined) {
+        angle = window.orientation;
+    } else {
+        // Fallback: detect orientation from window dimensions
+        angle = window.innerWidth > window.innerHeight ? 90 : 0;
+    }
     
-    // Calculate gravity direction based on orientation
-    // Note: reverseYDirection only affects accelerometer response, not gravity direction
+    megaConfettiSystem.orientation.angle = angle;
+    console.log(`🎊 Confetti orientation updated: ${angle}°`);
+    
+    // Calculate gravity direction based on PHYSICAL device orientation
+    // Key fix: gravity should pull toward the physical "bottom" of the device
+    const gravityStrength = 0.3;
     switch (angle) {
-        case 0:   // Portrait - gravity pulls down
+        case 0:   // Portrait - gravity pulls down (normal)
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = 0.3;
+            megaConfettiSystem.orientation.gravityY = gravityStrength;
             break;
-        case 90:  // Landscape left - gravity pulls right
-            megaConfettiSystem.orientation.gravityX = 0.3;
+        case 90:  // Landscape left - physical bottom is now on the RIGHT side of screen
+            megaConfettiSystem.orientation.gravityX = gravityStrength;
             megaConfettiSystem.orientation.gravityY = 0;
             break;
-        case 180: // Portrait upside down - gravity pulls up
+        case 180: // Portrait upside down - gravity pulls up (toward top of screen)
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = -0.3;
+            megaConfettiSystem.orientation.gravityY = -gravityStrength;
             break;
-        case 270: // Landscape right - gravity pulls left
-            megaConfettiSystem.orientation.gravityX = -0.3;
+        case -90:
+        case 270: // Landscape right - physical bottom is now on the LEFT side of screen
+            megaConfettiSystem.orientation.gravityX = -gravityStrength;
             megaConfettiSystem.orientation.gravityY = 0;
             break;
         default:  // Fallback to portrait
             megaConfettiSystem.orientation.gravityX = 0;
-            megaConfettiSystem.orientation.gravityY = 0.3;
+            megaConfettiSystem.orientation.gravityY = gravityStrength;
     }
     
     // Recalibrate accelerometer baseline after orientation change
@@ -749,151 +802,142 @@ function animateMegaConfetti() {
     for (let i = megaConfettiSystem.particles.length - 1; i >= 0; i--) {
         const particle = megaConfettiSystem.particles[i];
         
-        // Update physics if not settled
-        if (!particle.settled) {
-            // Apply orientation-aware gravity
-            particle.vx += megaConfettiSystem.orientation.gravityX;
-            particle.vy += megaConfettiSystem.orientation.gravityY;
-            
-            // Update position
-            particle.x += particle.vx;
-            particle.y += particle.vy;
-            
-            // Apply friction
-            particle.vx *= megaConfettiSystem.friction;
-            particle.vy *= megaConfettiSystem.friction;
+        // Always apply gravity and update position (even for settled particles)
+        // This allows particles to continue bouncing and lose energy naturally
+        
+        // Apply orientation-aware gravity
+        particle.vx += megaConfettiSystem.orientation.gravityX;
+        particle.vy += megaConfettiSystem.orientation.gravityY;
+        
+        // Update position
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+        
+        // Apply friction (slightly less for settled particles)
+        const frictionAmount = particle.settled ? megaConfettiSystem.friction * 0.95 : megaConfettiSystem.friction;
+        particle.vx *= frictionAmount;
+        particle.vy *= frictionAmount;
             
             // Get orientation-aware boundaries
             const boundaries = getOrientationAwareBoundaries(canvas);
             
-            // Handle boundary collisions based on gravity direction
-            if (boundaries.isHorizontalGravity) {
-                // Horizontal gravity - allow settling on left/right, bounce on top/bottom
-                if (particle.x <= particle.size) {
-                    particle.x = particle.size;
-                    if (boundaries.gravityFloor === 0) {
-                        // Settling on left edge - reduce velocity for settling
-                        particle.vx *= 0.3;
-                    } else {
-                        // Bouncing off left wall
-                        particle.vx *= -megaConfettiSystem.restitution;
-                    }
-                }
-                if (particle.x >= boundaries.right - particle.size) {
-                    particle.x = boundaries.right - particle.size;
-                    if (boundaries.gravityFloor === canvas.width) {
-                        // Settling on right edge - reduce velocity for settling
-                        particle.vx *= 0.3;
-                    } else {
-                        // Bouncing off right wall
-                        particle.vx *= -megaConfettiSystem.restitution;
-                    }
-                }
-                
-                // Always bounce off top/bottom in horizontal gravity
-                if (particle.y <= particle.size) {
-                    particle.y = particle.size;
-                    particle.vy *= -megaConfettiSystem.restitution;
-                }
-                if (particle.y >= boundaries.bottom - particle.size) {
-                    particle.y = boundaries.bottom - particle.size;
-                    particle.vy *= -megaConfettiSystem.restitution;
-                }
-            } else {
-                // Vertical gravity - allow settling on top/bottom, bounce on left/right
-                if (particle.y <= particle.size) {
-                    particle.y = particle.size;
-                    if (boundaries.gravityFloor === 0) {
-                        // Settling on top edge - reduce velocity for settling
-                        particle.vy *= 0.3;
-                    } else {
-                        // Bouncing off top wall
-                        particle.vy *= -megaConfettiSystem.restitution;
-                    }
-                }
-                if (particle.y >= boundaries.bottom - particle.size) {
-                    particle.y = boundaries.bottom - particle.size;
-                    if (boundaries.gravityFloor === canvas.height) {
-                        // Settling on bottom edge - reduce velocity for settling
-                        particle.vy *= 0.3;
-                    } else {
-                        // Bouncing off bottom wall
-                        particle.vy *= -megaConfettiSystem.restitution;
-                    }
-                }
-                
-                // Always bounce off left/right in vertical gravity
-                if (particle.x <= particle.size) {
-                    particle.x = particle.size;
-                    particle.vx *= -megaConfettiSystem.restitution;
-                }
-                if (particle.x >= boundaries.right - particle.size) {
-                    particle.x = boundaries.right - particle.size;
-                    particle.vx *= -megaConfettiSystem.restitution;
-                }
+            // Enhanced bouncy collision physics
+            let bounced = false;
+            const currentBounciness = megaConfettiSystem.restitution * Math.max(0.3, 1 - particle.bounceCount * 0.1); // Decrease bounciness with each bounce
+            const friction = megaConfettiSystem.friction;
+            
+            // Enhanced boundary collisions - ALL edges bounce based on bounciness setting
+            // Left wall collision
+            if (particle.x <= particle.size) {
+                particle.x = particle.size;
+                particle.vx *= -currentBounciness;
+                particle.vy *= friction; // Apply friction to perpendicular motion
+                particle.bounceCount++;
+                bounced = true;
+                particle.settled = false; // Unsettle after bounce
             }
             
-            // Settle based on gravity direction
-            let isAtFloor = false;
-            
-            if (boundaries.isVerticalGravity) {
-                // Vertical gravity - settle on top or bottom
-                if (boundaries.gravityFloor === canvas.height) {
-                    // Normal gravity - settle at bottom
-                    isAtFloor = particle.y >= canvas.height - particle.size;
-                } else {
-                    // Upside down - settle at top
-                    isAtFloor = particle.y <= particle.size;
-                }
-            } else if (boundaries.isHorizontalGravity) {
-                // Horizontal gravity - settle on left or right
-                if (boundaries.gravityFloor === canvas.width) {
-                    // Gravity pulls right - settle at right edge
-                    isAtFloor = particle.x >= canvas.width - particle.size;
-                } else {
-                    // Gravity pulls left - settle at left edge
-                    isAtFloor = particle.x <= particle.size;
-                }
+            // Right wall collision
+            if (particle.x >= boundaries.right - particle.size) {
+                particle.x = boundaries.right - particle.size;
+                particle.vx *= -currentBounciness;
+                particle.vy *= friction;
+                particle.bounceCount++;
+                bounced = true;
+                particle.settled = false; // Unsettle after bounce
             }
             
-            // Check if particle should settle
-            if (isAtFloor) {
-                // Stop if moving slowly enough
-                const totalVelocity = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
-                if (totalVelocity < 1.5) {
-                    particle.settled = true;
-                    particle.vx *= 0.5; // Reduce velocity significantly
-                    particle.vy *= 0.5;
-                    particle.restingY = particle.y;
-                }
+            // Top wall collision
+            if (particle.y <= particle.size) {
+                particle.y = particle.size;
+                particle.vy *= -currentBounciness;
+                particle.vx *= friction;
+                particle.bounceCount++;
+                bounced = true;
+                particle.settled = false; // Unsettle after bounce
             }
             
-            // Remove particles that fly too far off screen
-            if (particle.y < -100 || particle.x < -100 || particle.x > canvas.width + 100) {
-                megaConfettiSystem.particles.splice(i, 1);
-                continue;
+            // Bottom wall collision (the "floor" in portrait mode)
+            if (particle.y >= boundaries.bottom - particle.size) {
+                particle.y = boundaries.bottom - particle.size;
+                particle.vy *= -currentBounciness;
+                particle.vx *= friction;
+                particle.bounceCount++;
+                bounced = true;
+                particle.settled = false; // Unsettle after bounce
             }
+            
+        // Particles settle when they move slowly enough, but can still be disturbed
+        const totalVelocity = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+        
+        // Check if particle is near a boundary (likely settled against a wall/floor)
+        const nearBoundary = (particle.x <= particle.size + 2) || 
+                            (particle.x >= canvas.width - particle.size - 2) ||
+                            (particle.y <= particle.size + 2) ||
+                            (particle.y >= canvas.height - particle.size - 2);
+        
+        if (totalVelocity < 0.5 && nearBoundary) {
+            // Settle particles that are slow AND near boundaries
+            particle.settled = true;
+            particle.restingY = particle.y;
+        } else if (totalVelocity < 0.2) {
+            // Settle very slow particles anywhere (floating in air after many bounces)
+            particle.settled = true;
+            particle.restingY = particle.y;
+        } else if (totalVelocity > 1.5) {
+            // Unsettle if moving fast enough (from bounces or disturbances)
+            particle.settled = false;
+        }
+            
+        // Remove particles that fly too far off screen
+        if (particle.y < -100 || particle.x < -100 || particle.x > canvas.width + 100) {
+            megaConfettiSystem.particles.splice(i, 1);
+            continue;
         }
         
-        // Update rotation
+        // Update rotation with shape-specific effects
         particle.rotation += particle.rotationSpeed;
+        
+        // Add flutter effect for strips
+        if (particle.shape === 'strip' && !particle.settled) {
+            particle.vx += Math.sin(particle.rotation * 0.1) * particle.flutter;
+        }
         
         // Update particle opacity with global fade
         particle.opacity = globalOpacity;
         
-        // Draw particle with opacity
+        // Draw particle with enhanced shapes
         ctx.save();
         ctx.translate(particle.x, particle.y);
         ctx.rotate(particle.rotation * Math.PI / 180);
         ctx.globalAlpha = particle.opacity;
         ctx.fillStyle = particle.color;
         
-        if (particle.shape === 'circle') {
-            ctx.beginPath();
-            ctx.arc(0, 0, particle.size / 2, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+        switch (particle.shape) {
+            case 'circle':
+                ctx.beginPath();
+                ctx.arc(0, 0, particle.size / 2, 0, Math.PI * 2);
+                ctx.fill();
+                break;
+            case 'square':
+                ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+                break;
+            case 'strip':
+                // Rectangular strip for flutter effect
+                ctx.fillRect(-particle.size, -particle.size / 4, particle.size * 2, particle.size / 2);
+                break;
+            case 'diamond':
+                ctx.beginPath();
+                ctx.moveTo(0, -particle.size / 2);
+                ctx.lineTo(particle.size / 2, 0);
+                ctx.lineTo(0, particle.size / 2);
+                ctx.lineTo(-particle.size / 2, 0);
+                ctx.closePath();
+                ctx.fill();
+                break;
+            default:
+                // Fallback to square
+                ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
         }
         
         ctx.restore();

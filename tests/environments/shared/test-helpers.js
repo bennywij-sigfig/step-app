@@ -286,12 +286,92 @@ async function getAuthenticatedSession(app, userEmail = 'test@example.com') {
 }
 
 /**
- * Create CSRF token for tests
+ * Create authenticated session with CSRF token - Enhanced error handling
+ * This replaces the common pattern in tests and provides better error reporting
+ */
+async function createAuthenticatedSessionWithCsrf(app, userEmail = null) {
+  const testEmail = userEmail || generateRandomEmail();
+  const agent = request.agent(app);
+  
+  try {
+    // Step 1: Get magic link with detailed error handling
+    const magicResponse = await agent
+      .post('/dev/get-magic-link')
+      .send({ email: testEmail });
+    
+    if (magicResponse.status === 500) {
+      throw new Error(`Server error getting magic link (500): ${magicResponse.body?.error || 'Unknown server error'}. This likely indicates a server startup or import issue.`);
+    }
+    
+    if (magicResponse.status !== 200) {
+      throw new Error(`Failed to get magic link (${magicResponse.status}): ${magicResponse.body?.error || 'Unknown error'}`);
+    }
+    
+    if (!magicResponse.body?.magicLink) {
+      throw new Error(`Magic link missing from response. Response: ${JSON.stringify(magicResponse.body)}`);
+    }
+    
+    // Step 2: Extract and use token
+    const magicUrl = new URL(magicResponse.body.magicLink);
+    const token = magicUrl.searchParams.get('token');
+    
+    if (!token) {
+      throw new Error(`Token missing from magic link URL: ${magicResponse.body.magicLink}`);
+    }
+    
+    // Step 3: Authenticate
+    const authResponse = await agent
+      .get('/auth/verify')
+      .query({ token });
+    
+    if (authResponse.status !== 302) {
+      throw new Error(`Authentication failed (${authResponse.status}): Expected redirect after token verification`);
+    }
+    
+    // Step 4: Get CSRF token with enhanced error handling
+    const csrfToken = await getCsrfToken(agent);
+    
+    return { 
+      agent, 
+      csrfToken, 
+      email: testEmail,
+      magicLink: magicResponse.body.magicLink,
+      authToken: token
+    };
+    
+  } catch (error) {
+    // Enhance error message with context
+    const contextMessage = `Failed to create authenticated session for ${testEmail}`;
+    if (error.message.includes('500')) {
+      throw new Error(`${contextMessage}: ${error.message}. This is likely a server startup issue - check for missing imports or syntax errors.`);
+    }
+    throw new Error(`${contextMessage}: ${error.message}`);
+  }
+}
+
+/**
+ * Create CSRF token for tests with better error handling
  */
 async function getCsrfToken(agent) {
   const response = await agent
-    .get('/api/csrf-token')
-    .expect(200);
+    .get('/api/csrf-token');
+    
+  // Better error handling to distinguish between different failure types
+  if (response.status === 500) {
+    throw new Error(`Server error getting CSRF token (500): ${response.body?.error || 'Unknown server error'}. This likely indicates a missing import or server startup issue.`);
+  }
+  
+  if (response.status === 401) {
+    throw new Error(`Authentication required for CSRF token (401): ${response.body?.error || 'Not authenticated'}`);
+  }
+  
+  if (response.status !== 200) {
+    throw new Error(`Unexpected status getting CSRF token (${response.status}): ${response.body?.error || 'Unknown error'}`);
+  }
+  
+  if (!response.body?.csrfToken) {
+    throw new Error(`CSRF token missing from response body. Response: ${JSON.stringify(response.body)}`);
+  }
     
   return response.body.csrfToken;
 }
@@ -348,6 +428,7 @@ module.exports = {
   createTestChallenge,
   createTestTeam,
   getAuthenticatedSession,
+  createAuthenticatedSessionWithCsrf,
   getCsrfToken,
   wait,
   generateRandomEmail,

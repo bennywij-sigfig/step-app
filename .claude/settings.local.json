@@ -23,7 +23,16 @@
       "mcp__playwright__browser_console_messages",
       "Bash(rm:*)",
       "Bash(npm run dev:*)",
-      "Bash(timeout 5 curl -s http://localhost:3000/health)"
+      "Bash(timeout 5 curl -s http://localhost:3000/health)",
+      "Bash(grep:*)",
+      "Bash(fly deploy:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:critical:*)",
+      "Bash(gemini:*)",
+      "Bash(npm run test:contracts:*)",
+      "Bash(npm run test:middleware:*)",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_evaluate"
     ],
     "deny": []
   }

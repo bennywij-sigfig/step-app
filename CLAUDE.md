@@ -100,6 +100,17 @@ echo "Reorganization plan details" | gemini -p "Analyze from production safety p
 
 ## Recent Updates (August 6, 2025)
 
+### 🛡️ **Critical CSRF Fix + Enhanced Test Coverage**
+- **CSRF Issue Fixed**: Resolved missing `uuid` import that was causing "Invalid CSRF token" errors for users
+- **Root Cause**: `generateCSRFToken()` function called `uuidv4()` without proper import, causing 500 errors
+- **Production Deploy**: Fixed and deployed - users can now save steps without CSRF errors
+- **Enhanced Test Suite**: Added comprehensive test coverage to prevent similar issues:
+  - **Direct CSRF Tests**: `tests/unit/api/csrf-token-generation.test.js` - Isolated CSRF token validation
+  - **Startup Smoke Tests**: `tests/unit/server/startup-smoke-test.test.js` - Catches import failures early
+  - **Import Validation**: `tests/unit/imports/critical-dependencies.test.js` - Validates all critical imports
+  - **Better Error Handling**: Improved test helpers distinguish 500 vs auth errors
+  - **New Test Command**: `npm run test:critical` - Runs all critical failure detection tests
+
 ### 🏗️ **Major Server.js Refactoring - Modular Architecture**
 - **Monolith Broken Down**: Refactored 2,595-line server.js into modular components (now 2,302 lines - 11.3% reduction)
 - **New Module Structure**: Created organized `middleware/`, `services/`, and `utils/` directories

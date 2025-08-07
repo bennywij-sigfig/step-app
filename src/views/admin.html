@@ -738,6 +738,61 @@
                     </div>
                     <div style="font-size: 12px; color: #888; margin-top: 4px;">Maximum force applied from device tilt</div>
                 </div>
+
+                <!-- Bounciness -->
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">
+                        Bounciness
+                        <span style="font-weight: normal; color: #888; font-size: 12px;">(0.0-1.0)</span>
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="range" id="bouncinessSlider" min="0.0" max="1.0" step="0.1" value="0.7"
+                               style="flex: 1; accent-color: var(--primary-color);">
+                        <span id="bouncinessValue" style="min-width: 50px; font-weight: 600; color: var(--primary-color);">0.7</span>
+                    </div>
+                    <div style="font-size: 12px; color: #888; margin-top: 4px;">How bouncy particles are when hitting edges (0=thud, 1=super bouncy)</div>
+                </div>
+
+                <!-- Particle Size Range -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">
+                            Min Size
+                            <span style="font-weight: normal; color: #888; font-size: 12px;">(2-10px)</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="range" id="minSizeSlider" min="2" max="10" step="1" value="3"
+                                   style="flex: 1; accent-color: var(--primary-color);">
+                            <span id="minSizeValue" style="min-width: 40px; font-weight: 600; color: var(--primary-color);">3px</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">
+                            Max Size
+                            <span style="font-weight: normal; color: #888; font-size: 12px;">(5-20px)</span>
+                        </label>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <input type="range" id="maxSizeSlider" min="5" max="20" step="1" value="8"
+                                   style="flex: 1; accent-color: var(--primary-color);">
+                            <span id="maxSizeValue" style="min-width: 40px; font-weight: 600; color: var(--primary-color);">8px</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size: 12px; color: #888; margin-top: 4px;">Size range for confetti particles - bigger range = more variety</div>
+
+                <!-- Shape Variety -->
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">
+                        Shape Variety
+                        <span style="font-weight: normal; color: #888; font-size: 12px;">(0.25-1.0)</span>
+                    </label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="range" id="shapeVarietySlider" min="0.25" max="1.0" step="0.25" value="1.0"
+                               style="flex: 1; accent-color: var(--primary-color);">
+                        <span id="shapeVarietyValue" style="min-width: 50px; font-weight: 600; color: var(--primary-color);">All</span>
+                    </div>
+                    <div style="font-size: 12px; color: #888; margin-top: 4px;">Variety of shapes: 0.25=circles only, 0.5=circles+squares, 0.75=+strips, 1.0=all shapes</div>
+                </div>
             </div>
 
             <div style="margin-top: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">

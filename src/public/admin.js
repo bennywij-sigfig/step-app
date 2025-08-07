@@ -1732,6 +1732,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 3000);
         }
 
+        // Helper function to update shape variety label
+        function updateShapeVarietyLabel(value) {
+            const shapeVarietyValue = document.getElementById('shapeVarietyValue');
+            switch(value) {
+                case '0.25':
+                    shapeVarietyValue.textContent = 'Circles';
+                    break;
+                case '0.5':
+                    shapeVarietyValue.textContent = 'Basic';
+                    break;
+                case '0.75':
+                    shapeVarietyValue.textContent = 'Varied';
+                    break;
+                case '1.0':
+                    shapeVarietyValue.textContent = 'All';
+                    break;
+                default:
+                    shapeVarietyValue.textContent = value;
+            }
+        }
+        
         function setupPhysicsControls() {
             // Initialize values from localStorage
             const particleCountSlider = document.getElementById('particleCountSlider');
@@ -1742,6 +1763,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const tiltSensitivityValue = document.getElementById('tiltSensitivityValue');
             const maxTiltForceSlider = document.getElementById('maxTiltForceSlider');
             const maxTiltForceValue = document.getElementById('maxTiltForceValue');
+            const bouncinessSlider = document.getElementById('bouncinessSlider');
+            const bouncinessValue = document.getElementById('bouncinessValue');
+            const minSizeSlider = document.getElementById('minSizeSlider');
+            const minSizeValue = document.getElementById('minSizeValue');
+            const maxSizeSlider = document.getElementById('maxSizeSlider');
+            const maxSizeValue = document.getElementById('maxSizeValue');
+            const shapeVarietySlider = document.getElementById('shapeVarietySlider');
+            const shapeVarietyValue = document.getElementById('shapeVarietyValue');
 
             // Load saved values or use defaults
             particleCountSlider.value = localStorage.getItem('confettiParticleCount') || '600';
@@ -1755,6 +1784,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             maxTiltForceSlider.value = localStorage.getItem('confettiMaxTiltForce') || '2.0';
             maxTiltForceValue.textContent = maxTiltForceSlider.value;
+            
+            bouncinessSlider.value = localStorage.getItem('confettiBounciness') || '0.7';
+            bouncinessValue.textContent = bouncinessSlider.value;
+            
+            minSizeSlider.value = localStorage.getItem('confettiMinSize') || '3';
+            minSizeValue.textContent = minSizeSlider.value + 'px';
+            
+            maxSizeSlider.value = localStorage.getItem('confettiMaxSize') || '8';
+            maxSizeValue.textContent = maxSizeSlider.value + 'px';
+            
+            shapeVarietySlider.value = localStorage.getItem('confettiShapeVariety') || '1.0';
+            updateShapeVarietyLabel(shapeVarietySlider.value);
 
             // Add event listeners for real-time updates
             particleCountSlider.addEventListener('input', function() {
@@ -1776,6 +1817,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 maxTiltForceValue.textContent = this.value;
                 localStorage.setItem('confettiMaxTiltForce', this.value);
             });
+            
+            bouncinessSlider.addEventListener('input', function() {
+                bouncinessValue.textContent = this.value;
+                localStorage.setItem('confettiBounciness', this.value);
+            });
+            
+            minSizeSlider.addEventListener('input', function() {
+                const minVal = parseInt(this.value);
+                const maxVal = parseInt(maxSizeSlider.value);
+                
+                // Ensure min doesn't exceed max
+                if (minVal >= maxVal) {
+                    maxSizeSlider.value = minVal + 1;
+                    maxSizeValue.textContent = (minVal + 1) + 'px';
+                    localStorage.setItem('confettiMaxSize', minVal + 1);
+                }
+                
+                minSizeValue.textContent = minVal + 'px';
+                localStorage.setItem('confettiMinSize', minVal);
+            });
+            
+            maxSizeSlider.addEventListener('input', function() {
+                const maxVal = parseInt(this.value);
+                const minVal = parseInt(minSizeSlider.value);
+                
+                // Ensure max doesn't go below min
+                if (maxVal <= minVal) {
+                    minSizeSlider.value = maxVal - 1;
+                    minSizeValue.textContent = (maxVal - 1) + 'px';
+                    localStorage.setItem('confettiMinSize', maxVal - 1);
+                }
+                
+                maxSizeValue.textContent = maxVal + 'px';
+                localStorage.setItem('confettiMaxSize', maxVal);
+            });
+            
+            shapeVarietySlider.addEventListener('input', function() {
+                updateShapeVarietyLabel(this.value);
+                localStorage.setItem('confettiShapeVariety', this.value);
+            });
 
             // Reset to defaults button
             document.getElementById('resetPhysicsBtn').addEventListener('click', function() {
@@ -1794,6 +1875,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 maxTiltForceSlider.value = '2.0';
                 maxTiltForceValue.textContent = '2.0';
                 localStorage.setItem('confettiMaxTiltForce', '2.0');
+                
+                bouncinessSlider.value = '0.7';
+                bouncinessValue.textContent = '0.7';
+                localStorage.setItem('confettiBounciness', '0.7');
+                
+                minSizeSlider.value = '3';
+                minSizeValue.textContent = '3px';
+                localStorage.setItem('confettiMinSize', '3');
+                
+                maxSizeSlider.value = '8';
+                maxSizeValue.textContent = '8px';
+                localStorage.setItem('confettiMaxSize', '8');
+                
+                shapeVarietySlider.value = '1.0';
+                updateShapeVarietyLabel('1.0');
+                localStorage.setItem('confettiShapeVariety', '1.0');
 
                 showExtrasMessage('🔄 Physics settings reset to defaults!', 'success');
             });
