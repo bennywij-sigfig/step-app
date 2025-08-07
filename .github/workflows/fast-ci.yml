@@ -29,6 +29,9 @@ jobs:
     - name: Run critical unit tests
       run: npm run test:critical
       timeout-minutes: 2
+      env:
+        NODE_ENV: test
+        CI: true
       
     # Basic security check
     - name: Quick security audit

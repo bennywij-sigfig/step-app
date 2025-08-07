@@ -202,11 +202,19 @@ describe('Middleware Integrity Tests', () => {
 
     describe('Rate limiter behavior validation', () => {
       test('should allow requests under rate limit', (done) => {
+        // Mock Express app context for rate limiter
+        const mockApp = {
+          get: jest.fn().mockReturnValue(false) // trust proxy setting
+        };
+        mockReq.app = mockApp;
+
         // Create a fresh limiter for this test
         const testLimiter = require('express-rate-limit')({
           windowMs: 60 * 1000, // 1 minute
           max: 5,
-          message: { error: 'Too many requests' }
+          message: { error: 'Too many requests' },
+          skip: () => false, // Don't skip requests
+          keyGenerator: () => 'test-key' // Use fixed key for testing
         });
 
         testLimiter(mockReq, mockRes, (err) => {
