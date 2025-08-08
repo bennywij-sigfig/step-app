@@ -247,9 +247,15 @@ window.PigUI = (function() {
     
     function resetGameCanvas() {
         if (elements.gameCanvas) {
+            const today = getPacificDateString();
+            const todayData = gameData[today];
+            const heartsLeft = todayData ? todayData.hearts : 5;
+            
+            const message = heartsLeft > 0 ? 'Ready to step...' : 'Time to rest';
+            
             elements.gameCanvas.innerHTML = `
                 <div class="loading">
-                    <p>Ready to run...</p>
+                    <p>${message}</p>
                 </div>
             `;
         }
