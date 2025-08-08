@@ -163,6 +163,12 @@ window.PigUI = (function() {
         
         saveGameData();
         
+        // Reset button text back to "Start"
+        if (elements.startGameBtn) {
+            elements.startGameBtn.textContent = 'Start';
+            elements.startGameBtn.disabled = false;
+        }
+        
         // Save to database via API
         const heartsUsed = 1; // Always use 1 heart per game
         fetch('/api/shadow/save-result', {
@@ -207,7 +213,7 @@ window.PigUI = (function() {
             <p style="color: #ff6b6b; margin: 8px 0; font-size: 0.9em;">
                 Hearts remaining: ${gameData[today].hearts}
             </p>
-            ${gameData[today].bestDistance === distance ? '<p style="color: #FFD700; margin: 4px 0; font-size: 0.9em;">🏆 New personal best!</p>' : ''}
+            ${gameData[today].bestDistance === distance ? '<p style="color: #FFD700; margin: 4px 0; font-size: 0.9em;">New personal best!</p>' : ''}
         `;
         
         elements.gameCanvas.appendChild(resultOverlay);
@@ -258,7 +264,7 @@ window.PigUI = (function() {
                 
                 if (todayData.hearts <= 0) {
                     const hoursUntilReset = getHoursUntilPacificMidnight();
-                    alert(`💔 No hearts remaining today! Hearts reset in ${hoursUntilReset} hours (midnight Pacific Time).`);
+                    alert(`No hearts remaining today! Hearts reset in ${hoursUntilReset} hours (midnight Pacific Time).`);
                     return;
                 }
                 
@@ -280,12 +286,12 @@ window.PigUI = (function() {
             if (isDevelopment) {
                 elements.resetStatsBtn.style.display = 'inline-block';
                 elements.resetStatsBtn.addEventListener('click', function() {
-                    if (confirm('🔄 Reset all pig game stats? This cannot be undone.')) {
+                    if (confirm('Reset all pig game stats? This cannot be undone.')) {
                         localStorage.removeItem('shadowPigGameData');
                         gameData = loadGameData();
                         updateUI();
                         resetGameCanvas();
-                        alert('✅ Stats reset successfully!');
+                        alert('Stats reset successfully!');
                     }
                 });
             }
@@ -321,6 +327,12 @@ window.PigUI = (function() {
         canvas.style.height = '100%';
         
         elements.gameCanvas.appendChild(canvas);
+        
+        // Update button text to indicate it's clickable during gameplay
+        if (elements.startGameBtn) {
+            elements.startGameBtn.textContent = 'Playing... (Click to Jump!)';
+            elements.startGameBtn.disabled = false; // Keep it clickable
+        }
         
         // Start the game
         PigGameEngine.startGame(canvas);
@@ -512,7 +524,7 @@ window.PigUI = (function() {
             resetGameCanvas();
             loadLeaderboard();
             
-            console.log('🐷 Shadow Pig Game UI initialized');
+            console.log('Shadow Pig Game UI initialized');
         },
         
         updateUI: updateUI,

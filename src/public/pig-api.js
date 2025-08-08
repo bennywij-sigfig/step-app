@@ -163,7 +163,7 @@ window.PigAPI = (function() {
 // Initialize the pig game when DOM is ready
 window.PigGame = {
     init: function() {
-        console.log('🐷 Initializing Shadow Pig Game...');
+        console.log('Initializing Shadow Pig Game...');
         
         // Check if we're on the pig game page
         if (!document.querySelector('#gameCanvas')) {

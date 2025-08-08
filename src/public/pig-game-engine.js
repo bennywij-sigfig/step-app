@@ -150,12 +150,32 @@ window.PigGameEngine = (function() {
             }
         };
         
+        // Get game container and start button for expanded tap detection
+        const gameContainer = canvas.parentElement;
+        const startButton = document.getElementById('startGameBtn');
+        
         // Store event listeners for cleanup
         gameState.eventListeners.push(
             { element: canvas, event: 'click', handler: jumpHandler },
             { element: canvas, event: 'touchstart', handler: jumpHandler },
             { element: document, event: 'keydown', handler: keyHandler }
         );
+        
+        // Add expanded tap detection for game container if it exists
+        if (gameContainer && gameContainer.classList.contains('game-canvas')) {
+            gameState.eventListeners.push(
+                { element: gameContainer, event: 'click', handler: jumpHandler },
+                { element: gameContainer, event: 'touchstart', handler: jumpHandler }
+            );
+        }
+        
+        // Add tap detection for start button during gameplay
+        if (startButton) {
+            gameState.eventListeners.push(
+                { element: startButton, event: 'click', handler: jumpHandler },
+                { element: startButton, event: 'touchstart', handler: jumpHandler }
+            );
+        }
         
         // Attach event listeners
         gameState.eventListeners.forEach(({ element, event, handler }) => {
