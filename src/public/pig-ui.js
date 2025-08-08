@@ -297,7 +297,7 @@ window.PigUI = (function() {
             const todayData = gameData[today];
             const heartsLeft = todayData ? todayData.hearts : 5;
             
-            const message = heartsLeft > 0 ? 'Ready to step...' : 'Time to rest';
+            const message = heartsLeft > 0 ? 'Ready to <s>step</s> trot...' : 'Time to rest';
             
             elements.gameCanvas.innerHTML = `
                 <div class="loading">
