@@ -53,7 +53,8 @@ const ROUTES = {
     dashboard: '/',
     admin: '/admin',
     mcpSetup: '/mcp-setup',
-    health: '/health'
+    health: '/health',
+    pig: '/pig'
   },
 
   // Download Routes

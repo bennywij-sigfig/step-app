@@ -516,6 +516,17 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Shadow Pig Game (protected, separate from main app)
+app.get('/pig', requireAuth, (req, res) => {
+  devLog('Pig game accessed by user:', req.session.userId);
+  res.sendFile(path.join(__dirname, 'views', 'pig.html'));
+});
+
+// Mount shadow game API (completely separate from main app)
+const shadowApi = require('./shadow-api');
+app.use('/api/shadow', shadowApi);
+
+
 // Send magic link
 app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
   const { email: rawEmail } = req.body;

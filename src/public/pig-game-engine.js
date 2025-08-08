@@ -1,0 +1,540 @@
+// Shadow Pig Game Engine
+// Completely isolated from main app - no dependencies on dashboard.js
+
+window.PigGameEngine = (function() {
+    'use strict';
+    
+    let gameState = null;
+    let animationId = null;
+    let canvas = null;
+    let ctx = null;
+    
+    // Game configuration
+    const CONFIG = {
+        GRAVITY: 0.6,              // Reduced for more floaty jumping
+        JUMP_FORCE: -11,           // Slightly reduced for better control
+        DOUBLE_JUMP_FORCE: -8,     // Weaker second jump
+        BASE_SPEED: 2,
+        SPEED_INCREMENT: 0.2,
+        SPEED_INTERVAL: 800,
+        OBSTACLE_MIN_GAP: 200,
+        OBSTACLE_MAX_GAP: 450,
+        OBSTACLE_FREE_CHANCE: 0.3,  // 30% chance of extended obstacle-free stretch
+        BONUS_HEART_MIN_DISTANCE: 500,  // Minimum distance before bonus hearts can spawn
+        BONUS_HEART_CHANCE: 0.05,       // 5% chance per obstacle spawn to create bonus heart
+        PIG_SIZE: { width: 30, height: 25 },
+        GROUND_HEIGHT: 35,
+        HITBOX_FORGIVENESS: 0.75,  // Make hitbox 75% of visual size (more forgiving)
+        VISUAL_SCALE: 1.2          // Render obstacles 20% larger than hitbox
+    };
+    
+    // Obstacle types with varied heights and shapes
+    const OBSTACLE_TYPES = [
+        { type: 'short', height: 30, width: 18, color: '#ff4444' },
+        { type: 'medium', height: 45, width: 20, color: '#ff6644' },
+        { type: 'tall', height: 65, width: 22, color: '#ff8844' },
+        { type: 'spike', height: 40, width: 15, color: '#ff2222' },
+        { type: 'wide', height: 35, width: 30, color: '#ff4466' }
+    ];
+    
+    // Pixel art pig sprite data
+    const PIG_SPRITE = [
+        [0,0,1,1,1,1,0,0],
+        [0,1,2,1,1,2,1,0],
+        [1,1,1,1,1,1,1,1],
+        [1,3,1,1,1,1,3,1],
+        [1,1,1,4,4,1,1,1],
+        [1,1,4,4,4,4,1,1],
+        [0,1,1,1,1,1,1,0],
+        [0,0,1,0,0,1,0,0]
+    ];
+    
+    const PIG_COLORS = ['transparent', '#FFB6C1', '#FF69B4', '#000', '#FF1493'];
+    
+    function createGameState(canvasElement) {
+        canvas = canvasElement;
+        ctx = canvas.getContext('2d');
+        
+        return {
+            running: false,
+            startTime: 0,
+            distance: 0,
+            speed: CONFIG.BASE_SPEED,
+            obstacles: [],
+            bonusHearts: [],
+            particles: [],
+            score: 0,
+            pig: {
+                x: 80,
+                y: canvas.height - CONFIG.GROUND_HEIGHT - CONFIG.PIG_SIZE.height,
+                width: CONFIG.PIG_SIZE.width,
+                height: CONFIG.PIG_SIZE.height,
+                velocityY: 0,
+                jumping: false,
+                grounded: true,
+                groundY: canvas.height - CONFIG.GROUND_HEIGHT - CONFIG.PIG_SIZE.height,
+                doubleJumpAvailable: false,
+                jumpsUsed: 0
+            },
+            ground: {
+                y: canvas.height - CONFIG.GROUND_HEIGHT,
+                height: CONFIG.GROUND_HEIGHT
+            },
+            eventListeners: []
+        };
+    }
+    
+    function createObstacle(x) {
+        // Select random obstacle type
+        const obstacleTemplate = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+        
+        const obstacle = {
+            x: x,
+            y: gameState.ground.y - obstacleTemplate.height,
+            width: obstacleTemplate.width,
+            height: obstacleTemplate.height,
+            type: obstacleTemplate.type,
+            color: obstacleTemplate.color,
+            // Actual hitbox is smaller (more forgiving)
+            hitboxWidth: obstacleTemplate.width * CONFIG.HITBOX_FORGIVENESS,
+            hitboxHeight: obstacleTemplate.height * CONFIG.HITBOX_FORGIVENESS,
+            // Visual rendering is larger
+            visualWidth: obstacleTemplate.width * CONFIG.VISUAL_SCALE,
+            visualHeight: obstacleTemplate.height * CONFIG.VISUAL_SCALE
+        };
+        
+        return obstacle;
+    }
+    
+    function createBonusHeart(x) {
+        return {
+            x: x,
+            y: gameState.ground.y - 80, // Float above ground
+            width: 20,
+            height: 20,
+            collected: false,
+            bob: 0 // For floating animation
+        };
+    }
+    
+    function initializeObstacles() {
+        gameState.obstacles = [];
+        for (let i = 0; i < 5; i++) {
+            gameState.obstacles.push(createObstacle(canvas.width + i * 200));
+        }
+    }
+    
+    function setupInputHandlers() {
+        const jumpHandler = (e) => {
+            e.preventDefault();
+            if (!gameState.running) return;
+            
+            if (gameState.pig.grounded) {
+                // First jump
+                gameState.pig.velocityY = CONFIG.JUMP_FORCE;
+                gameState.pig.jumping = true;
+                gameState.pig.grounded = false;
+                gameState.pig.doubleJumpAvailable = true;
+                gameState.pig.jumpsUsed = 1;
+            } else if (gameState.pig.doubleJumpAvailable) {
+                // Double jump
+                gameState.pig.velocityY = CONFIG.DOUBLE_JUMP_FORCE;
+                gameState.pig.doubleJumpAvailable = false;
+                gameState.pig.jumpsUsed = 2;
+            }
+        };
+        
+        const keyHandler = (e) => {
+            if (e.code === 'Space' || e.code === 'ArrowUp') {
+                jumpHandler(e);
+            }
+        };
+        
+        // Store event listeners for cleanup
+        gameState.eventListeners.push(
+            { element: canvas, event: 'click', handler: jumpHandler },
+            { element: canvas, event: 'touchstart', handler: jumpHandler },
+            { element: document, event: 'keydown', handler: keyHandler }
+        );
+        
+        // Attach event listeners
+        gameState.eventListeners.forEach(({ element, event, handler }) => {
+            element.addEventListener(event, handler);
+        });
+    }
+    
+    function updateGame() {
+        const deltaTime = 16 / 1000; // Assume 60fps
+        
+        // Update distance and speed
+        gameState.distance += gameState.speed;
+        gameState.speed = CONFIG.BASE_SPEED + Math.floor(gameState.distance / CONFIG.SPEED_INTERVAL) * CONFIG.SPEED_INCREMENT;
+        
+        // Update pig physics
+        if (!gameState.pig.grounded) {
+            gameState.pig.velocityY += CONFIG.GRAVITY;
+            gameState.pig.y += gameState.pig.velocityY;
+            
+            // Ground collision
+            if (gameState.pig.y >= gameState.pig.groundY) {
+                gameState.pig.y = gameState.pig.groundY;
+                gameState.pig.velocityY = 0;
+                gameState.pig.grounded = true;
+                gameState.pig.jumping = false;
+                gameState.pig.doubleJumpAvailable = false;
+                gameState.pig.jumpsUsed = 0;
+            }
+        }
+        
+        // Update obstacles
+        for (let i = gameState.obstacles.length - 1; i >= 0; i--) {
+            const obstacle = gameState.obstacles[i];
+            obstacle.x -= gameState.speed;
+            
+            // Remove off-screen obstacles
+            if (obstacle.x + obstacle.width < 0) {
+                gameState.obstacles.splice(i, 1);
+                gameState.score += 10;
+            }
+            
+            // Check collision
+            if (isColliding(gameState.pig, obstacle)) {
+                gameOver();
+                return;
+            }
+        }
+        
+        // Add new obstacles with occasional obstacle-free stretches
+        const lastObstacle = gameState.obstacles[gameState.obstacles.length - 1];
+        if (!lastObstacle || lastObstacle.x < canvas.width + 100) {
+            let gap = CONFIG.OBSTACLE_MIN_GAP + Math.random() * (CONFIG.OBSTACLE_MAX_GAP - CONFIG.OBSTACLE_MIN_GAP);
+            
+            // Occasionally create extended obstacle-free stretches
+            if (Math.random() < CONFIG.OBSTACLE_FREE_CHANCE) {
+                gap = gap * 2.5; // Much longer gap for breathing room
+            }
+            
+            gameState.obstacles.push(createObstacle(canvas.width + gap));
+            
+            // Spawn bonus hearts occasionally after minimum distance
+            if (gameState.distance > CONFIG.BONUS_HEART_MIN_DISTANCE && 
+                Math.random() < CONFIG.BONUS_HEART_CHANCE) {
+                const heartGap = gap * 0.5; // Place heart in middle of gap
+                gameState.bonusHearts.push(createBonusHeart(canvas.width + heartGap));
+            }
+        }
+        
+        // Update bonus hearts
+        for (let i = gameState.bonusHearts.length - 1; i >= 0; i--) {
+            const heart = gameState.bonusHearts[i];
+            heart.x -= gameState.speed;
+            heart.bob += 0.1;
+            heart.y = gameState.ground.y - 80 + Math.sin(heart.bob) * 5; // Floating animation
+            
+            // Remove off-screen hearts
+            if (heart.x + heart.width < 0) {
+                gameState.bonusHearts.splice(i, 1);
+                continue;
+            }
+            
+            // Check collection
+            if (!heart.collected && isColliding(gameState.pig, heart)) {
+                heart.collected = true;
+                // Bonus heart collected! (UI will handle heart restoration)
+                if (window.PigGameCallbacks && window.PigGameCallbacks.onBonusHeart) {
+                    window.PigGameCallbacks.onBonusHeart();
+                }
+                gameState.bonusHearts.splice(i, 1);
+                
+                // Create sparkle particles
+                for (let j = 0; j < 10; j++) {
+                    gameState.particles.push({
+                        x: heart.x + heart.width / 2,
+                        y: heart.y + heart.height / 2,
+                        vx: (Math.random() - 0.5) * 8,
+                        vy: (Math.random() - 0.5) * 8 - 2,
+                        life: 1.0,
+                        maxLife: 1.0,
+                        color: '#FFD700'
+                    });
+                }
+            }
+        }
+        
+        // Update particles
+        for (let i = gameState.particles.length - 1; i >= 0; i--) {
+            const particle = gameState.particles[i];
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.vy += 0.2; // gravity
+            particle.life -= deltaTime;
+            
+            if (particle.life <= 0) {
+                gameState.particles.splice(i, 1);
+            }
+        }
+        
+        // Add dust particles when pig lands
+        if (gameState.pig.grounded && gameState.pig.velocityY === 0 && Math.random() > 0.8) {
+            for (let i = 0; i < 3; i++) {
+                gameState.particles.push({
+                    x: gameState.pig.x + Math.random() * gameState.pig.width,
+                    y: gameState.pig.y + gameState.pig.height,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: -Math.random() * 2,
+                    life: 0.5,
+                    maxLife: 0.5
+                });
+            }
+        }
+    }
+    
+    function drawGame() {
+        // Clear canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw background gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, '#1a1a2e');
+        gradient.addColorStop(1, '#16213e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw ground
+        ctx.fillStyle = '#2d2d2d';
+        ctx.fillRect(0, gameState.ground.y, canvas.width, gameState.ground.height);
+        
+        // Draw ground pattern
+        ctx.fillStyle = '#3d3d3d';
+        for (let x = 0; x < canvas.width; x += 20) {
+            ctx.fillRect(x, gameState.ground.y + 10, 10, 2);
+        }
+        
+        // Draw obstacles with varied types and larger visual size
+        gameState.obstacles.forEach(obstacle => {
+            const visualOffsetX = (obstacle.visualWidth - obstacle.width) / 2;
+            const visualOffsetY = (obstacle.visualHeight - obstacle.height) / 2;
+            
+            // Draw main obstacle with type-specific color
+            ctx.fillStyle = obstacle.color;
+            ctx.fillRect(
+                obstacle.x - visualOffsetX, 
+                obstacle.y - visualOffsetY, 
+                obstacle.visualWidth, 
+                obstacle.visualHeight
+            );
+            
+            // Add different visual effects based on type
+            switch (obstacle.type) {
+                case 'spike':
+                    // Add spiky top
+                    ctx.fillStyle = '#ff0000';
+                    ctx.fillRect(
+                        obstacle.x - visualOffsetX + obstacle.visualWidth * 0.25, 
+                        obstacle.y - visualOffsetY, 
+                        obstacle.visualWidth * 0.5, 
+                        5
+                    );
+                    break;
+                case 'wide':
+                    // Add pattern for wide obstacles
+                    ctx.fillStyle = '#aa2222';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.fillRect(
+                            obstacle.x - visualOffsetX + i * (obstacle.visualWidth / 3), 
+                            obstacle.y - visualOffsetY + obstacle.visualHeight * 0.3, 
+                            obstacle.visualWidth / 6, 
+                            obstacle.visualHeight * 0.4
+                        );
+                    }
+                    break;
+                default:
+                    // Add highlight for normal obstacles
+                    ctx.fillStyle = obstacle.color.replace('44', '66');
+                    ctx.fillRect(
+                        obstacle.x - visualOffsetX, 
+                        obstacle.y - visualOffsetY, 
+                        obstacle.visualWidth, 
+                        5
+                    );
+            }
+        });
+        
+        // Draw pig
+        drawPixelatedPig();
+        
+        // Draw bonus hearts
+        gameState.bonusHearts.forEach(heart => {
+            if (!heart.collected) {
+                // Draw floating heart emoji
+                ctx.font = '24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('💖', heart.x + heart.width / 2, heart.y + heart.height);
+                
+                // Add glow effect
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 10;
+                ctx.fillText('💖', heart.x + heart.width / 2, heart.y + heart.height);
+                ctx.shadowBlur = 0;
+            }
+        });
+        
+        // Draw particles
+        gameState.particles.forEach(particle => {
+            const alpha = particle.life / particle.maxLife;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = particle.color || '#888';
+            ctx.fillRect(particle.x, particle.y, 2, 2);
+        });
+        ctx.globalAlpha = 1;
+        
+        // Draw UI
+        ctx.fillStyle = '#fff';
+        ctx.font = '14px monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`Distance: ${Math.floor(gameState.distance / 10)}m`, 10, 25);
+        ctx.fillText(`Speed: ${gameState.speed.toFixed(1)}x`, 10, 45);
+        
+        // Draw jump instruction
+        if (gameState.pig.grounded) {
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = '12px monospace';
+            ctx.fillText('TAP/CLICK/SPACE TO JUMP • DOUBLE TAP FOR DOUBLE JUMP', canvas.width / 2, canvas.height - 10);
+        } else if (gameState.pig.doubleJumpAvailable) {
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(255,255,255,0.9)';
+            ctx.font = '12px monospace';
+            ctx.fillText('DOUBLE JUMP AVAILABLE!', canvas.width / 2, canvas.height - 10);
+        }
+    }
+    
+    function drawPixelatedPig() {
+        const pig = gameState.pig;
+        const pixelSize = 3;
+        
+        // Add bounce animation when jumping
+        let offsetY = 0;
+        if (!pig.grounded) {
+            offsetY = Math.sin(Date.now() * 0.01) * 2;
+        }
+        
+        for (let y = 0; y < PIG_SPRITE.length; y++) {
+            for (let x = 0; x < PIG_SPRITE[y].length; x++) {
+                const colorIndex = PIG_SPRITE[y][x];
+                if (colorIndex > 0) {
+                    ctx.fillStyle = PIG_COLORS[colorIndex];
+                    ctx.fillRect(
+                        pig.x + x * pixelSize,
+                        pig.y + y * pixelSize + offsetY,
+                        pixelSize,
+                        pixelSize
+                    );
+                }
+            }
+        }
+    }
+    
+    function isColliding(pig, obstacle) {
+        // Use the smaller hitbox for collision detection (more forgiving)
+        const hitboxOffsetX = (obstacle.width - obstacle.hitboxWidth) / 2;
+        const hitboxOffsetY = (obstacle.height - obstacle.hitboxHeight) / 2;
+        
+        return pig.x < obstacle.x + hitboxOffsetX + obstacle.hitboxWidth &&
+               pig.x + pig.width > obstacle.x + hitboxOffsetX &&
+               pig.y < obstacle.y + hitboxOffsetY + obstacle.hitboxHeight &&
+               pig.y + pig.height > obstacle.y + hitboxOffsetY;
+    }
+    
+    function gameLoop() {
+        if (!gameState.running) return;
+        
+        updateGame();
+        drawGame();
+        
+        animationId = requestAnimationFrame(gameLoop);
+    }
+    
+    function gameOver() {
+        gameState.running = false;
+        
+        // Calculate steps based on distance traveled
+        const stepsEarned = Math.floor(gameState.distance / 20); // 1 step per 20 pixels
+        
+        // Create explosion particles at collision point
+        for (let i = 0; i < 20; i++) {
+            gameState.particles.push({
+                x: gameState.pig.x + gameState.pig.width / 2,
+                y: gameState.pig.y + gameState.pig.height / 2,
+                vx: (Math.random() - 0.5) * 10,
+                vy: (Math.random() - 0.5) * 10,
+                life: 1.0,
+                maxLife: 1.0
+            });
+        }
+        
+        // Continue drawing particles for a moment
+        const finalAnimationLoop = () => {
+            drawGame();
+            if (gameState.particles.length > 0) {
+                requestAnimationFrame(finalAnimationLoop);
+            }
+        };
+        finalAnimationLoop();
+        
+        // End game after brief delay
+        setTimeout(() => {
+            // Trigger game over callback
+            if (window.PigGameCallbacks && window.PigGameCallbacks.onGameOver) {
+                window.PigGameCallbacks.onGameOver(stepsEarned, Math.floor(gameState.distance / 10));
+            }
+        }, 1000);
+    }
+    
+    function cleanup() {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+        
+        if (gameState && gameState.eventListeners) {
+            gameState.eventListeners.forEach(({ element, event, handler }) => {
+                element.removeEventListener(event, handler);
+            });
+        }
+        
+        gameState = null;
+    }
+    
+    // Public API
+    return {
+        startGame: function(canvasElement) {
+            cleanup(); // Clean up any existing game
+            
+            gameState = createGameState(canvasElement);
+            gameState.running = true;
+            gameState.startTime = Date.now();
+            
+            initializeObstacles();
+            setupInputHandlers();
+            gameLoop();
+            
+            return gameState;
+        },
+        
+        stopGame: function() {
+            if (gameState) {
+                gameState.running = false;
+            }
+            cleanup();
+        },
+        
+        isRunning: function() {
+            return gameState && gameState.running;
+        },
+        
+        getGameState: function() {
+            return gameState;
+        }
+    };
+})();

@@ -325,6 +325,39 @@ if (!shouldDelayInit) {
     }
   });
   
+  // Shadow game tables for pig game leaderboard
+  db.run(`CREATE TABLE IF NOT EXISTS shadow_steps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    trots INTEGER NOT NULL DEFAULT 0,
+    games_played INTEGER NOT NULL DEFAULT 0,
+    best_distance INTEGER NOT NULL DEFAULT 0,
+    hearts_used INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    UNIQUE(user_id, date)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS shadow_hearts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    date TEXT NOT NULL,
+    hearts_remaining INTEGER NOT NULL DEFAULT 5,
+    hearts_used INTEGER NOT NULL DEFAULT 0,
+    last_game_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    UNIQUE(user_id, date)
+  )`);
+
+  // Shadow game performance indexes
+  db.run(`CREATE INDEX IF NOT EXISTS idx_shadow_steps_user_date ON shadow_steps(user_id, date)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_shadow_steps_date ON shadow_steps(date)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_shadow_hearts_user_date ON shadow_hearts(user_id, date)`);
+
   // Add constraint to prevent multiple active challenges (SQLite doesn't support partial unique indexes easily)
   // We'll handle this in application logic for now
 
