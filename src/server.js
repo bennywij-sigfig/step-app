@@ -1956,6 +1956,42 @@ app.get('/api/admin/fun-setting', adminApiLimiter, requireApiAdmin, (req, res) =
   });
 });
 
+// TEMPORARY: Reset shadow game stats for a user (DELETE AFTER USE)
+app.post('/api/admin/reset-shadow-stats', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+  
+  // Find user by email
+  db.get('SELECT id FROM users WHERE email = ?', [email], (err, user) => {
+    if (err) {
+      console.error('Error finding user:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Reset shadow_steps trots to 0 (keep other fields)
+    db.run('UPDATE shadow_steps SET trots = 0 WHERE user_id = ?', [user.id], function(err) {
+      if (err) {
+        console.error('Error resetting shadow stats:', err);
+        return res.status(500).json({ error: 'Failed to reset shadow stats' });
+      }
+      
+      console.log(`Reset shadow game trots for user ${email} (ID: ${user.id}). Rows affected: ${this.changes}`);
+      res.json({ 
+        success: true, 
+        message: `Reset shadow game trots for ${email}`,
+        rowsAffected: this.changes
+      });
+    });
+  });
+});
+
 // Get confetti threshold settings
 app.get('/api/admin/confetti-thresholds', adminApiLimiter, requireApiAdmin, (req, res) => {
   db.all(`SELECT key, value FROM settings WHERE key IN ('confetti_regular_threshold', 'confetti_epic_threshold')`, [], (err, rows) => {
