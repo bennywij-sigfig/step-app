@@ -132,6 +132,78 @@ window.PigAPI = (function() {
         return null;
     }
     
+    // Get current heart status from server
+    async function getHeartStatus() {
+        try {
+            const response = await fetch(`${API_BASE}/hearts`);
+            if (response.ok) {
+                return await response.json();
+            } else if (response.status === 404) {
+                console.log('Server-side hearts not available, using localStorage');
+                return null;
+            }
+        } catch (error) {
+            console.warn('Failed to get heart status:', error);
+        }
+        return null;
+    }
+    
+    // Start a new game (decrements server-side heart)
+    async function startSecureGame() {
+        try {
+            const token = await getCSRFToken();
+            const response = await fetch(`${API_BASE}/start-game`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    csrfToken: token
+                })
+            });
+            
+            if (response.ok) {
+                return await response.json();
+            } else if (response.status === 400) {
+                const error = await response.json();
+                throw new Error(error.error || 'Cannot start game');
+            }
+        } catch (error) {
+            console.warn('Failed to start secure game:', error);
+            throw error;
+        }
+        return null;
+    }
+    
+    // Submit game result with server validation
+    async function submitSecureGameResult(stepsEarned, distance, gameToken) {
+        try {
+            const token = await getCSRFToken();
+            const response = await fetch(`${API_BASE}/save-result-secure`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    stepsEarned: stepsEarned,
+                    distance: distance,
+                    gameToken: gameToken,
+                    csrfToken: token
+                })
+            });
+            
+            if (response.ok) {
+                return await response.json();
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to save game result');
+            }
+        } catch (error) {
+            console.warn('Failed to submit secure game result:', error);
+            throw error;
+        }
+    }
+    
     // Public API
     return {
         // Authentication
@@ -141,6 +213,11 @@ window.PigAPI = (function() {
         getShadowStatus: getShadowStatus,
         submitGameSession: submitGameSession,
         getShadowStats: getShadowStats,
+        
+        // Heart management (server-side)
+        getHeartStatus: getHeartStatus,
+        startSecureGame: startSecureGame,
+        submitSecureGameResult: submitSecureGameResult,
         
         // Discovery
         markShadowDiscovered: markShadowDiscovered,

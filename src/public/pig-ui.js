@@ -57,10 +57,24 @@ window.PigUI = (function() {
         return Math.ceil(totalHoursLeft);
     }
     
-    function loadGameData() {
+    async function loadGameData() {
         const today = getPacificDateString(); // Use Pacific Time instead of browser timezone
-        const storedData = localStorage.getItem('shadowPigGameData');
         
+        // Try to get heart status from server first
+        let serverHeartData = null;
+        if (window.PigAPI) {
+            try {
+                serverHeartData = await PigAPI.getHeartStatus();
+                if (serverHeartData) {
+                    console.log('✅ Using server-side heart tracking');
+                }
+            } catch (error) {
+                console.warn('Server heart tracking unavailable, falling back to localStorage');
+            }
+        }
+        
+        // Load localStorage data
+        const storedData = localStorage.getItem('shadowPigGameData');
         try {
             gameData = storedData ? JSON.parse(storedData) : {};
         } catch (e) {
@@ -71,11 +85,14 @@ window.PigUI = (function() {
         // Initialize today's data if not exists
         if (!gameData[today]) {
             gameData[today] = {
-                hearts: 5,
+                hearts: serverHeartData ? serverHeartData.hearts : 5,
                 steps: 0,
                 gamesPlayed: 0,
                 bestDistance: 0
             };
+        } else if (serverHeartData) {
+            // Update hearts from server (server is authoritative)
+            gameData[today].hearts = serverHeartData.hearts;
         }
         
         // Initialize overall stats if not exists
@@ -86,6 +103,11 @@ window.PigUI = (function() {
                 bestEverDistance: 0,
                 totalPlayTime: 0
             };
+        }
+        
+        // Store server data for UI consistency
+        if (serverHeartData) {
+            gameData.serverHeartData = serverHeartData;
         }
         
         return gameData;
@@ -112,7 +134,8 @@ window.PigUI = (function() {
         // Show hours until hearts reset (Pacific Time) - only when hearts are 0
         if (elements.heartsReset) {
             if (todayData.hearts <= 0) {
-                const hoursUntilReset = getHoursUntilPacificMidnight();
+                // Use server data if available, otherwise calculate locally
+                const hoursUntilReset = gameData.serverHeartData?.hoursUntilReset || getHoursUntilPacificMidnight();
                 if (hoursUntilReset <= 24) {
                     elements.heartsReset.textContent = `(${hoursUntilReset}h to reset)`;
                     elements.heartsReset.title = 'Hearts reset at midnight Pacific Time';
@@ -147,11 +170,29 @@ window.PigUI = (function() {
         }
     }
     
-    function showGameResult(stepsEarned, distance) {
+    async function showGameResult(stepsEarned, distance) {
         const today = getPacificDateString(); // Use Pacific Time
+        const gameToken = window.currentGameToken;
         
-        // Update game data
-        gameData[today].hearts = Math.max(0, gameData[today].hearts - 1);
+        // Try server-side result submission first
+        let serverSuccess = false;
+        if (window.PigAPI && gameData.serverHeartData && gameToken) {
+            try {
+                await PigAPI.submitSecureGameResult(stepsEarned, distance, gameToken);
+                console.log('🔒 Secure result submitted to server');
+                serverSuccess = true;
+                // Don't update hearts locally - they're already decremented server-side
+            } catch (error) {
+                console.warn('Server result submission failed:', error.message);
+            }
+        }
+        
+        // Update local game data
+        if (!serverSuccess) {
+            // Only decrement hearts if server didn't handle it
+            gameData[today].hearts = Math.max(0, gameData[today].hearts - 1);
+        }
+        
         gameData[today].steps += stepsEarned;
         gameData[today].gamesPlayed += 1;
         gameData[today].bestDistance = Math.max(gameData[today].bestDistance, distance);
@@ -162,28 +203,34 @@ window.PigUI = (function() {
         
         saveGameData();
         
+        // Clear game token
+        if (gameToken) {
+            delete window.currentGameToken;
+        }
+        
         // Reset button text back to "Start"
         if (elements.startGameBtn) {
             elements.startGameBtn.textContent = 'Start';
             elements.startGameBtn.disabled = false;
         }
         
-        // Save to database via API
-        const heartsUsed = 1; // Always use 1 heart per game
-        fetch('/api/shadow/save-result', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                stepsEarned: stepsEarned,
-                distance: distance,
-                heartsUsed: heartsUsed
-            })
-        }).catch(err => {
-            console.warn('Failed to save game result to database:', err);
-            // Still works with localStorage as fallback
-        });
+        // Fallback: Save to database via old API if server submission failed
+        if (!serverSuccess) {
+            const heartsUsed = 1;
+            fetch('/api/shadow/save-result', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    stepsEarned: stepsEarned,
+                    distance: distance,
+                    heartsUsed: heartsUsed
+                })
+            }).catch(err => {
+                console.warn('Failed to save game result to database:', err);
+            });
+        }
         
         // Create result overlay
         const resultOverlay = document.createElement('div');
@@ -316,9 +363,43 @@ window.PigUI = (function() {
         }
     }
     
-    function startGame() {
+    async function startGame() {
         if (!elements.gameCanvas) {
             console.error('Game canvas not found');
+            return;
+        }
+        
+        const today = getPacificDateString();
+        const todayData = gameData[today];
+        
+        // Try server-side heart validation first
+        let gameToken = null;
+        if (window.PigAPI && gameData.serverHeartData) {
+            try {
+                const gameSession = await PigAPI.startSecureGame();
+                if (gameSession && gameSession.success) {
+                    gameToken = gameSession.gameToken;
+                    // Update local hearts to match server
+                    gameData[today].hearts = gameSession.heartsRemaining;
+                    console.log('🔒 Started secure game with server validation');
+                } else {
+                    throw new Error('Server rejected game start');
+                }
+            } catch (error) {
+                console.warn('Server-side validation failed:', error.message);
+                alert(`Cannot start game: ${error.message}`);
+                return;
+            }
+        } else {
+            // Fallback to client-side validation
+            if (todayData.hearts <= 0) {
+                const hoursUntilReset = getHoursUntilPacificMidnight();
+                alert(`No hearts remaining today! Hearts reset in ${hoursUntilReset} hours (midnight Pacific Time).`);
+                return;
+            }
+        }
+        
+        if (PigGameEngine.isRunning()) {
             return;
         }
         
@@ -337,6 +418,11 @@ window.PigUI = (function() {
         if (elements.startGameBtn) {
             elements.startGameBtn.textContent = 'Playing... (Click to Jump!)';
             elements.startGameBtn.disabled = false; // Keep it clickable
+        }
+        
+        // Store game token for result submission
+        if (gameToken) {
+            window.currentGameToken = gameToken;
         }
         
         // Start the game
@@ -522,9 +608,9 @@ window.PigUI = (function() {
     
     // Public API
     return {
-        init: function() {
+        init: async function() {
             initializeElements();
-            gameData = loadGameData();
+            gameData = await loadGameData();
             setupEventListeners();
             updateUI();
             resetGameCanvas();

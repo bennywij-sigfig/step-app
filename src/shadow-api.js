@@ -136,4 +136,172 @@ router.post('/save-result', requireShadowAuth, (req, res) => {
   });
 });
 
+// Get user's current heart status
+router.get('/hearts', requireShadowAuth, (req, res) => {
+  const userId = req.session.userId;
+  
+  // Use Pacific Time to match main app
+  const today = new Date().toLocaleString("en-US", {timeZone: "America/Los_Angeles"}).split(',')[0];
+  const pacificDate = new Date(today).toISOString().split('T')[0];
+
+  // Get or create today's heart record
+  const query = `
+    INSERT INTO shadow_hearts (user_id, date, hearts_remaining, hearts_used)
+    VALUES (?, ?, 5, 0)
+    ON CONFLICT(user_id, date) DO NOTHING
+  `;
+  
+  db.run(query, [userId, pacificDate], function(err) {
+    if (err) {
+      console.error('Error initializing hearts:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Now get the current heart status
+    const selectQuery = `
+      SELECT hearts_remaining, hearts_used, last_game_at
+      FROM shadow_hearts 
+      WHERE user_id = ? AND date = ?
+    `;
+    
+    db.get(selectQuery, [userId, pacificDate], (selectErr, row) => {
+      if (selectErr) {
+        console.error('Error fetching hearts:', selectErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Calculate hours until Pacific midnight
+      const now = new Date();
+      const pacificNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+      const hoursLeft = 23 - pacificNow.getHours();
+      const minutesLeft = 59 - pacificNow.getMinutes();
+      const secondsLeft = 59 - pacificNow.getSeconds();
+      const totalHoursLeft = hoursLeft + (minutesLeft / 60) + (secondsLeft / 3600);
+      const hoursUntilReset = Math.ceil(totalHoursLeft);
+      
+      res.json({
+        hearts: row.hearts_remaining,
+        heartsUsed: row.hearts_used,
+        hoursUntilReset: hoursUntilReset,
+        lastGameAt: row.last_game_at,
+        date: pacificDate
+      });
+    });
+  });
+});
+
+// Start a new game (decrements heart) with atomic transaction
+router.post('/start-game', requireShadowAuth, (req, res) => {
+  const userId = req.session.userId;
+  
+  // Use Pacific Time to match main app
+  const today = new Date().toLocaleString("en-US", {timeZone: "America/Los_Angeles"}).split(',')[0];
+  const pacificDate = new Date(today).toISOString().split('T')[0];
+
+  // Atomic heart check and decrement using single UPDATE with WHERE clause
+  const gameSessionToken = require('crypto').randomBytes(16).toString('hex');
+  
+  // Atomic operation: only update if hearts_remaining > 0
+  const atomicUpdateQuery = `
+    UPDATE shadow_hearts 
+    SET hearts_remaining = hearts_remaining - 1,
+        hearts_used = hearts_used + 1,
+        last_game_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = ? AND date = ? AND hearts_remaining > 0
+  `;
+  
+  db.run(atomicUpdateQuery, [userId, pacificDate], function(err) {
+    if (err) {
+      console.error('Error updating hearts:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Check if the update actually affected a row
+    if (this.changes === 0) {
+      // No rows affected means either no record exists or hearts_remaining <= 0
+      return res.status(400).json({ error: 'No hearts remaining today' });
+    }
+    
+    // Get the updated heart count
+    const getHeartsQuery = `
+      SELECT hearts_remaining 
+      FROM shadow_hearts 
+      WHERE user_id = ? AND date = ?
+    `;
+    
+    db.get(getHeartsQuery, [userId, pacificDate], (selectErr, row) => {
+      if (selectErr) {
+        console.error('Error fetching updated hearts:', selectErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Store game session for validation
+      req.session.currentGameToken = gameSessionToken;
+      req.session.gameStartTime = Date.now();
+      
+      res.json({
+        success: true,
+        gameToken: gameSessionToken,
+        heartsRemaining: row ? row.hearts_remaining : 0
+      });
+    });
+  });
+});
+
+// Save game result (enhanced with heart validation)
+router.post('/save-result-secure', requireShadowAuth, (req, res) => {
+  const { stepsEarned, distance, gameToken } = req.body;
+  const userId = req.session.userId;
+  
+  // Validate game session
+  if (!gameToken || gameToken !== req.session.currentGameToken) {
+    return res.status(400).json({ error: 'Invalid game session' });
+  }
+  
+  // Validate reasonable game duration (min 5 seconds, max 10 minutes)
+  const gameStartTime = req.session.gameStartTime;
+  const gameDuration = Date.now() - gameStartTime;
+  if (gameDuration < 5000 || gameDuration > 600000) {
+    return res.status(400).json({ error: 'Invalid game duration' });
+  }
+  
+  // Clear game session
+  delete req.session.currentGameToken;
+  delete req.session.gameStartTime;
+  
+  // Use Pacific Time to match main app
+  const today = new Date().toLocaleString("en-US", {timeZone: "America/Los_Angeles"}).split(',')[0];
+  const pacificDate = new Date(today).toISOString().split('T')[0];
+
+  // Validate input
+  if (!stepsEarned || !distance) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // Insert or update shadow_steps for today
+  const query = `
+    INSERT INTO shadow_steps (user_id, date, trots, games_played, best_distance, hearts_used)
+    VALUES (?, ?, ?, 1, ?, 1)
+    ON CONFLICT(user_id, date) DO UPDATE SET
+      trots = trots + ?,
+      games_played = games_played + 1,
+      best_distance = MAX(best_distance, ?),
+      hearts_used = hearts_used + 1,
+      updated_at = CURRENT_TIMESTAMP
+  `;
+
+  db.run(query, [
+    userId, pacificDate, stepsEarned, distance,
+    stepsEarned, distance
+  ], function(err) {
+    if (err) {
+      console.error('Error saving shadow game result:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    res.json({ success: true });
+  });
+});
+
 module.exports = router;
