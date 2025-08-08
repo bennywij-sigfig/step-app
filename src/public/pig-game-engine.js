@@ -125,10 +125,46 @@ window.PigGameEngine = (function() {
     }
     
     function setupInputHandlers() {
+        // Double-tap detection for mobile
+        let lastTapTime = 0;
+        let tapCount = 0;
+        const DOUBLE_TAP_DELAY = 300; // 300ms window for double-tap
+        
         const jumpHandler = (e) => {
             e.preventDefault();
             if (!gameState.running) return;
             
+            const currentTime = Date.now();
+            
+            // Handle mobile touch double-tap detection
+            if (e.type === 'touchstart' || e.type === 'touchend') {
+                if (currentTime - lastTapTime < DOUBLE_TAP_DELAY) {
+                    tapCount++;
+                } else {
+                    tapCount = 1;
+                }
+                lastTapTime = currentTime;
+                
+                // Execute jump based on tap count and pig state
+                if (tapCount === 1 && gameState.pig.grounded) {
+                    // First jump on single tap when grounded
+                    gameState.pig.velocityY = CONFIG.JUMP_FORCE;
+                    gameState.pig.jumping = true;
+                    gameState.pig.grounded = false;
+                    gameState.pig.doubleJumpAvailable = true;
+                    gameState.pig.jumpsUsed = 1;
+                } else if (tapCount === 2 && gameState.pig.doubleJumpAvailable) {
+                    // Double jump on second tap
+                    gameState.pig.velocityY = CONFIG.DOUBLE_JUMP_FORCE;
+                    gameState.pig.doubleJumpAvailable = false;
+                    gameState.pig.jumpsUsed = 2;
+                    tapCount = 0; // Reset tap count after double jump
+                }
+                
+                return;
+            }
+            
+            // Handle keyboard and mouse clicks (non-touch events)
             if (gameState.pig.grounded) {
                 // First jump
                 gameState.pig.velocityY = CONFIG.JUMP_FORCE;
@@ -158,6 +194,7 @@ window.PigGameEngine = (function() {
         gameState.eventListeners.push(
             { element: canvas, event: 'click', handler: jumpHandler },
             { element: canvas, event: 'touchstart', handler: jumpHandler },
+            { element: canvas, event: 'touchend', handler: jumpHandler },
             { element: document, event: 'keydown', handler: keyHandler }
         );
         
@@ -165,7 +202,8 @@ window.PigGameEngine = (function() {
         if (gameContainer && gameContainer.classList.contains('game-canvas')) {
             gameState.eventListeners.push(
                 { element: gameContainer, event: 'click', handler: jumpHandler },
-                { element: gameContainer, event: 'touchstart', handler: jumpHandler }
+                { element: gameContainer, event: 'touchstart', handler: jumpHandler },
+                { element: gameContainer, event: 'touchend', handler: jumpHandler }
             );
         }
         
@@ -173,7 +211,8 @@ window.PigGameEngine = (function() {
         if (startButton) {
             gameState.eventListeners.push(
                 { element: startButton, event: 'click', handler: jumpHandler },
-                { element: startButton, event: 'touchstart', handler: jumpHandler }
+                { element: startButton, event: 'touchstart', handler: jumpHandler },
+                { element: startButton, event: 'touchend', handler: jumpHandler }
             );
         }
         
@@ -519,8 +558,20 @@ window.PigGameEngine = (function() {
         
         if (gameState && gameState.eventListeners) {
             gameState.eventListeners.forEach(({ element, event, handler }) => {
-                element.removeEventListener(event, handler);
+                try {
+                    element.removeEventListener(event, handler);
+                } catch (e) {
+                    // Ignore errors if element no longer exists
+                }
             });
+            gameState.eventListeners = [];
+        }
+        
+        if (gameState) {
+            gameState.running = false;
+            gameState.obstacles = [];
+            gameState.bonusHearts = [];
+            gameState.particles = [];
         }
         
         gameState = null;
@@ -529,15 +580,19 @@ window.PigGameEngine = (function() {
     // Public API
     return {
         startGame: function(canvasElement) {
-            cleanup(); // Clean up any existing game
+            // Force cleanup of any existing game state
+            cleanup();
             
-            gameState = createGameState(canvasElement);
-            gameState.running = true;
-            gameState.startTime = Date.now();
-            
-            initializeObstacles();
-            setupInputHandlers();
-            gameLoop();
+            // Wait a frame to ensure cleanup is complete
+            setTimeout(() => {
+                gameState = createGameState(canvasElement);
+                gameState.running = true;
+                gameState.startTime = Date.now();
+                
+                initializeObstacles();
+                setupInputHandlers();
+                gameLoop();
+            }, 16); // Wait one frame (16ms at 60fps)
             
             return gameState;
         },
