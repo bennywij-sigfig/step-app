@@ -1,4 +1,24 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // Setup subtle navigation back to dashboard
+    const adminHeader = document.getElementById('adminHeader');
+    if (adminHeader) {
+        // Subtle hover effect
+        adminHeader.addEventListener('mouseenter', function() {
+            adminHeader.style.transform = 'scale(1.01)';
+            adminHeader.style.opacity = '0.9';
+        });
+        
+        adminHeader.addEventListener('mouseleave', function() {
+            adminHeader.style.transform = 'scale(1)';
+            adminHeader.style.opacity = '1';
+        });
+        
+        // Click handler to navigate back to dashboard
+        adminHeader.addEventListener('click', function() {
+            window.location.href = '/dashboard';
+        });
+    }
+    
     // CSRF token management
     let csrfToken = null;
     

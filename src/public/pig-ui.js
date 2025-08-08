@@ -395,7 +395,7 @@ window.PigUI = (function() {
                             <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 15px; align-items: center; font-size: 0.9em;">
                                 <div style="font-weight: bold; color: #ff6b6b;">Rank</div>
                                 <div style="font-weight: bold; color: #ff6b6b;">Name</div>
-                                <div style="font-weight: bold; color: #ff6b6b;">Total Steps</div>
+                                <div style="font-weight: bold; color: #ff6b6b;">Total Trots</div>
                     `;
                     
                     data.forEach(player => {
@@ -450,16 +450,17 @@ window.PigUI = (function() {
                                 <div style="font-weight: bold; color: #ff6b6b;">Rank</div>
                                 <div style="font-weight: bold; color: #ff6b6b;">Team</div>
                                 <div style="font-weight: bold; color: #ff6b6b;">Active</div>
-                                <div style="font-weight: bold; color: #ff6b6b;">Total Trots</div>
+                                <div style="font-weight: bold; color: #ff6b6b;">Avg Trots</div>
                     `;
                     
                     data.forEach(team => {
                         const rankColor = team.rank <= 3 ? '#FFD700' : '#fff';
+                        const avgTrots = team.active_members > 0 ? Math.round(team.total_trots / team.active_members) : 0;
                         html += `
                             <div style="color: ${rankColor}; font-weight: bold;">#${team.rank}</div>
                             <div style="color: #fff;">${team.team}</div>
                             <div style="color: #aaa; font-size: 0.8em;">${team.active_members}/${team.member_count}</div>
-                            <div style="color: #fff; font-weight: bold;">${team.total_trots.toLocaleString()}</div>
+                            <div style="color: #fff; font-weight: bold;">${avgTrots.toLocaleString()}</div>
                         `;
                     });
                     

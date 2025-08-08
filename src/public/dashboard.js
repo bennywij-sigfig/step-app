@@ -1329,6 +1329,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update challenge info display
                 updateChallengeInfo(currentUser.current_challenge);
+                
+                // Setup admin navigation if user is admin
+                if (currentUser.is_admin) {
+                    setupAdminNavigation();
+                }
             } catch (error) {
                 console.error('Error loading user:', error);
                 window.location.href = '/';
@@ -2286,9 +2291,66 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('💡 Challenge Tips:\n\n• You can log steps for any date during the challenge period\n• Entries can be made retroactively (catch-up entries)\n• The challenge runs from start date to end date (inclusive)\n• Your steps count toward individual and team rankings\n\n📅 Use the date picker to select which day you want to log steps for!');
         }
         
+        // Setup subtle admin navigation
+        function setupAdminNavigation() {
+            const appIcon = document.getElementById('appIcon');
+            if (appIcon) {
+                // Make app icon clickable with subtle hover effect
+                appIcon.style.cursor = 'pointer';
+                appIcon.style.transition = 'all 0.2s ease';
+                appIcon.title = 'Admin Panel';
+                
+                // Subtle hover effect
+                appIcon.addEventListener('mouseenter', function() {
+                    appIcon.style.transform = 'scale(1.1)';
+                    appIcon.style.opacity = '0.8';
+                });
+                
+                appIcon.addEventListener('mouseleave', function() {
+                    appIcon.style.transform = 'scale(1)';
+                    appIcon.style.opacity = '1';
+                });
+                
+                // Click handler to navigate to admin
+                appIcon.addEventListener('click', function() {
+                    window.location.href = '/admin';
+                });
+            }
+        }
+        
+        // Tidbits section scroll handling
+        function handleTidbitsToggle() {
+            const tidbitsSection = document.getElementById('tidbitsSection');
+            if (!tidbitsSection) return;
+            
+            // Check if details element was just opened (not closed)
+            if (tidbitsSection.open) {
+                // Small delay to allow DOM to update with expanded content
+                setTimeout(() => {
+                    const rect = tidbitsSection.getBoundingClientRect();
+                    const viewportHeight = window.innerHeight;
+                    const sectionBottom = rect.bottom;
+                    
+                    // If Tidbits content extends below viewport, smoothly scroll minimal amount needed
+                    if (sectionBottom > viewportHeight) {
+                        tidbitsSection.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'nearest' 
+                        });
+                    }
+                }, 100);
+            }
+        }
+        
         // Initialize app icon on page load
         document.addEventListener('DOMContentLoaded', function() {
             applyAppIcon();
+            
+            // Add Tidbits scroll handling
+            const tidbitsSection = document.getElementById('tidbitsSection');
+            if (tidbitsSection) {
+                tidbitsSection.addEventListener('toggle', handleTidbitsToggle);
+            }
             
             // Restore challenge details expansion state
             const wasExpanded = localStorage.getItem('challengeDetailsExpanded') === 'true';
