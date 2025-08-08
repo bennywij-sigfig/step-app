@@ -304,4 +304,67 @@ router.post('/save-result-secure', requireShadowAuth, (req, res) => {
   });
 });
 
+// TEMPORARY: One-time heart reset endpoint (remove after use)
+router.post('/admin/reset-all-hearts-today', requireShadowAuth, (req, res) => {
+  // Only allow admins to use this endpoint
+  const userId = req.session.userId;
+  
+  // Check if user is admin
+  const adminCheckQuery = 'SELECT is_admin FROM users WHERE id = ?';
+  db.get(adminCheckQuery, [userId], (err, adminRow) => {
+    if (err || !adminRow || !adminRow.is_admin) {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+    
+    // Get today's date in Pacific Time
+    const today = new Date().toLocaleString("en-US", {timeZone: "America/Los_Angeles"}).split(',')[0];
+    const pacificDate = new Date(today).toISOString().split('T')[0];
+    
+    // Reset all users' hearts to 5 for today
+    const resetQuery = `
+      INSERT OR REPLACE INTO shadow_hearts (user_id, date, hearts_remaining, hearts_used, created_at, updated_at)
+      SELECT id, ?, 5, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      FROM users
+    `;
+    
+    db.run(resetQuery, [pacificDate], function(resetErr) {
+      if (resetErr) {
+        console.error('Error resetting hearts:', resetErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      console.log(`✅ Admin ${userId} reset hearts for ${this.changes} users on ${pacificDate}`);
+      
+      // Get sample of reset users for verification
+      const verifyQuery = `
+        SELECT u.name, sh.hearts_remaining, sh.hearts_used 
+        FROM shadow_hearts sh 
+        JOIN users u ON u.id = sh.user_id 
+        WHERE sh.date = ? 
+        ORDER BY u.name
+        LIMIT 10
+      `;
+      
+      db.all(verifyQuery, [pacificDate], (verifyErr, rows) => {
+        if (verifyErr) {
+          return res.json({ 
+            success: true, 
+            message: `Hearts reset for ${this.changes} users`,
+            date: pacificDate,
+            verification: 'Error loading verification data'
+          });
+        }
+        
+        res.json({
+          success: true,
+          message: `Hearts reset for ${this.changes} users`,
+          date: pacificDate,
+          usersAffected: this.changes,
+          sampleUsers: rows
+        });
+      });
+    });
+  });
+});
+
 module.exports = router;
