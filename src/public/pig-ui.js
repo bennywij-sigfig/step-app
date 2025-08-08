@@ -42,20 +42,19 @@ window.PigUI = (function() {
     
     function getHoursUntilPacificMidnight() {
         const now = new Date();
-        const pacificTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
         
-        // Get tomorrow's midnight in Pacific Time
-        const pacificMidnight = new Date(pacificTime);
-        pacificMidnight.setDate(pacificMidnight.getDate() + 1);
-        pacificMidnight.setHours(0, 0, 0, 0);
+        // Get current time in Pacific timezone 
+        const pacificNow = new Date(now.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
         
-        // Convert back to UTC for comparison
-        const pacificMidnightUTC = new Date(pacificMidnight.toLocaleString("en-US", {timeZone: "UTC"}));
+        // Calculate hours left in the current Pacific day
+        const hoursLeft = 23 - pacificNow.getHours();
+        const minutesLeft = 59 - pacificNow.getMinutes();
+        const secondsLeft = 59 - pacificNow.getSeconds();
         
-        const diffMs = pacificMidnightUTC - now;
-        const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+        // Convert to total hours until midnight
+        const totalHoursLeft = hoursLeft + (minutesLeft / 60) + (secondsLeft / 3600);
         
-        return Math.max(0, diffHours);
+        return Math.ceil(totalHoursLeft);
     }
     
     function loadGameData() {
