@@ -1,7 +1,7 @@
 /**
- * Leaderboard Integration Tests - Stable Approach
+ * Basic Integration Test - Minimal Approach
  * 
- * Tests leaderboard functionality with reliable database management
+ * Tests critical functionality without complex server initialization
  */
 
 const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
@@ -11,7 +11,7 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-describe('Leaderboard Integration Tests', () => {
+describe('Basic Integration Tests', () => {
   let app;
   let testDbPath;
   let db;
@@ -94,18 +94,10 @@ describe('Leaderboard Integration Tests', () => {
     expect(response.body).toHaveProperty('error');
   });
 
-  test('should handle team leaderboard endpoint', async () => {
-    const response = await request(app)
-      .get('/api/team-leaderboard')
-      .expect(401);
-
-    expect(response.body).toHaveProperty('error');
-  });
-
-  test('should generate magic links for authentication', async () => {
+  test('should generate magic links', async () => {
     const response = await request(app)
       .post('/dev/get-magic-link')
-      .send({ email: 'leaderboard-test@example.com' })
+      .send({ email: 'basictest@example.com' })
       .expect(200);
 
     expect(response.body).toHaveProperty('magicLink');

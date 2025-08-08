@@ -17,6 +17,13 @@ const APP_ICONS = {
 
 const APP_ICON_STORAGE_KEY = 'appIconConfig';
 
+// Shadow mode discovery system
+const SHADOW_MODE_KEY = 'shadowModeDiscovered';
+let shadowModeClickCount = 0;
+let shadowModeClickTimer = null;
+const SHADOW_DISCOVERY_CLICKS = 7; // Number of clicks needed to discover shadow mode
+const SHADOW_CLICK_TIMEOUT = 3000; // Reset click count after 3 seconds of inactivity
+
 function getRandomIcon() {
     const icons = Object.values(APP_ICONS);
     return icons[Math.floor(Math.random() * icons.length)];
@@ -57,6 +64,183 @@ function applyAppIcon() {
     
     // Update icon (always show as it's now the main branding element)
     iconElement.textContent = icon;
+}
+
+// Shadow mode discovery functions
+function isShadowModeDiscovered() {
+    return localStorage.getItem(SHADOW_MODE_KEY) === 'true';
+}
+
+function handleShadowModeClick() {
+    // Only count clicks if shadow mode hasn't been discovered yet
+    if (isShadowModeDiscovered()) return;
+    
+    shadowModeClickCount++;
+    
+    // Clear previous timer
+    if (shadowModeClickTimer) {
+        clearTimeout(shadowModeClickTimer);
+    }
+    
+    // Visual feedback for easter egg progress
+    const iconElement = document.getElementById('appIcon');
+    if (iconElement) {
+        // Subtle animation to hint at easter egg
+        iconElement.style.transform = `scale(${1 + shadowModeClickCount * 0.02})`;
+        iconElement.style.filter = `hue-rotate(${shadowModeClickCount * 20}deg)`;
+        
+        // Reset visual effects after a brief moment
+        setTimeout(() => {
+            if (!isShadowModeDiscovered()) {
+                iconElement.style.transform = '';
+                iconElement.style.filter = '';
+            }
+        }, 200);
+    }
+    
+    // Check if discovery threshold reached
+    if (shadowModeClickCount >= SHADOW_DISCOVERY_CLICKS) {
+        discoverShadowMode();
+    } else {
+        // Reset counter after timeout
+        shadowModeClickTimer = setTimeout(() => {
+            shadowModeClickCount = 0;
+            if (iconElement) {
+                iconElement.style.transform = '';
+                iconElement.style.filter = '';
+            }
+        }, SHADOW_CLICK_TIMEOUT);
+    }
+}
+
+function discoverShadowMode() {
+    localStorage.setItem(SHADOW_MODE_KEY, 'true');
+    shadowModeClickCount = 0;
+    
+    // Clear any pending timers
+    if (shadowModeClickTimer) {
+        clearTimeout(shadowModeClickTimer);
+    }
+    
+    // Dramatic discovery animation
+    const iconElement = document.getElementById('appIcon');
+    if (iconElement) {
+        iconElement.style.transform = 'scale(1.3)';
+        iconElement.style.filter = 'hue-rotate(180deg) brightness(1.5)';
+        iconElement.style.textShadow = '0 0 20px rgba(255,255,255,0.8)';
+    }
+    
+    // Show discovery message with confetti
+    setTimeout(() => {
+        createConfetti();
+        
+        // Show mystery message
+        const messageDiv = document.getElementById('stepsMessage') || document.body;
+        const shadowMsg = document.createElement('div');
+        shadowMsg.innerHTML = `
+            <div class="message" style="background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%); color: #fff; border: 2px solid #666; animation: pulse 2s ease-in-out 3; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+                🐷 You've discovered the Shadow Realm! A mysterious alternate dimension has been unlocked...
+                <br><small style="opacity: 0.8;">Look for the shadow toggle to enter</small>
+            </div>
+        `;
+        messageDiv.appendChild(shadowMsg);
+        
+        // Remove message after 5 seconds
+        setTimeout(() => {
+            if (shadowMsg.parentElement) {
+                shadowMsg.remove();
+            }
+        }, 5000);
+        
+        // Reveal shadow mode toggle
+        revealShadowModeToggle();
+    }, 500);
+}
+
+function revealShadowModeToggle() {
+    // Create shadow mode toggle button
+    const shadowToggle = document.createElement('button');
+    shadowToggle.id = 'shadowModeToggle';
+    shadowToggle.className = 'shadow-toggle-btn';
+    shadowToggle.innerHTML = '🌙 Shadow Mode';
+    shadowToggle.title = 'Enter the Shadow Realm';
+    
+    // Add styles for shadow toggle
+    shadowToggle.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+        color: #fff;
+        border: 2px solid #666;
+        border-radius: 25px;
+        padding: 8px 16px;
+        font-size: 14px;
+        cursor: pointer;
+        z-index: 1000;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        animation: shadowPulse 2s ease-in-out infinite;
+    `;
+    
+    shadowToggle.addEventListener('click', toggleShadowMode);
+    document.body.appendChild(shadowToggle);
+    
+    // Add CSS animation for pulsing effect
+    if (!document.getElementById('shadowModeStyles')) {
+        const style = document.createElement('style');
+        style.id = 'shadowModeStyles';
+        style.textContent = `
+            @keyframes shadowPulse {
+                0%, 100% { box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 0 0 rgba(45,45,45,0.4); }
+                50% { box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 0 0 8px rgba(45,45,45,0.0); }
+            }
+            
+            .shadow-toggle-btn:hover {
+                background: linear-gradient(135deg, #3d3d3d 0%, #2a2a2a 100%);
+                transform: scale(1.05);
+                box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            }
+            
+            .shadow-mode-active {
+                filter: invert(1) hue-rotate(180deg);
+                background: #000 !important;
+                color: #fff !important;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+let shadowModeActive = false;
+
+function toggleShadowMode() {
+    shadowModeActive = !shadowModeActive;
+    const body = document.body;
+    const toggle = document.getElementById('shadowModeToggle');
+    
+    if (shadowModeActive) {
+        // Enter shadow mode - invert everything
+        body.classList.add('shadow-mode-active');
+        if (toggle) {
+            toggle.innerHTML = '☀️ Light Mode';
+            toggle.title = 'Return to Light Realm';
+        }
+        
+        // Show shadow steps interface
+        showShadowStepsInterface();
+        
+    } else {
+        // Exit shadow mode
+        body.classList.remove('shadow-mode-active');
+        if (toggle) {
+            toggle.innerHTML = '🌙 Shadow Mode';
+            toggle.title = 'Enter the Shadow Realm';
+        }
+        
+        // Hide shadow steps interface
+        hideShadowStepsInterface();
+    }
 }
 
 // Mobile detection utility
