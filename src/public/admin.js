@@ -1107,6 +1107,57 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        // Fun features toggle management
+        function initializeFunToggle() {
+            const funToggle = document.getElementById('allowFunToggle');
+            const funStatus = document.getElementById('funToggleStatus');
+            
+            if (!funToggle || !funStatus) return;
+            
+            // Load current fun setting from server
+            loadFunSetting();
+            
+            // Fun toggle change handler
+            funToggle.addEventListener('change', function() {
+                const enabled = this.checked;
+                localStorage.setItem('allowFun', enabled.toString());
+                funStatus.textContent = enabled ? 'Enabled' : 'Disabled';
+                
+                // Update the main app fun setting
+                updateMainAppFunSetting(enabled);
+            });
+        }
+        
+        async function loadFunSetting() {
+            try {
+                const response = await authenticatedFetch('/api/admin/fun-setting');
+                if (response.ok) {
+                    const data = await response.json();
+                    const funEnabled = data.allowFun;
+                    
+                    const funToggle = document.getElementById('allowFunToggle');
+                    const funStatus = document.getElementById('funToggleStatus');
+                    
+                    if (funToggle && funStatus) {
+                        funToggle.checked = funEnabled;
+                        funStatus.textContent = funEnabled ? 'Enabled' : 'Disabled';
+                        localStorage.setItem('allowFun', funEnabled.toString());
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading fun setting:', error);
+                // Fallback to localStorage
+                const funEnabled = localStorage.getItem('allowFun') === 'true';
+                const funToggle = document.getElementById('allowFunToggle');
+                const funStatus = document.getElementById('funToggleStatus');
+                
+                if (funToggle && funStatus) {
+                    funToggle.checked = funEnabled;
+                    funStatus.textContent = funEnabled ? 'Enabled' : 'Disabled';
+                }
+            }
+        }
+        
         function applyTheme(themeName) {
             // Apply to current page
             document.documentElement.setAttribute('data-theme', themeName === 'default' ? '' : themeName);
@@ -1133,6 +1184,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             } catch (error) {
                 console.error('Error updating theme:', error);
+            }
+        }
+        
+        async function updateMainAppFunSetting(enabled) {
+            try {
+                const token = await getCSRFToken();
+                const response = await authenticatedFetch('/api/admin/fun-setting', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        allowFun: enabled,
+                        csrfToken: token
+                    })
+                });
+                
+                if (response.ok) {
+                    console.log('Fun setting updated successfully');
+                } else {
+                    console.error('Failed to update fun setting');
+                }
+            } catch (error) {
+                console.error('Error updating fun setting:', error);
             }
         }
         
@@ -2141,6 +2216,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Initialize themes
         initializeThemes();
+        initializeFunToggle();
         initializeAppIcon();
         
         window.deleteUser = deleteUser;

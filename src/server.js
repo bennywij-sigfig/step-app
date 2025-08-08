@@ -1920,6 +1920,42 @@ app.get('/api/admin/theme', adminApiLimiter, requireApiAdmin, (req, res) => {
   res.json({ theme: 'default' });
 });
 
+// Update fun setting
+app.post('/api/admin/fun-setting', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
+  const { allowFun } = req.body;
+  
+  if (typeof allowFun !== 'boolean') {
+    return res.status(400).json({ error: 'allowFun must be a boolean' });
+  }
+  
+  // Store in database settings table
+  db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', 
+    ['allow_fun', allowFun ? 'true' : 'false'], 
+    function(err) {
+      if (err) {
+        console.error('Error updating fun setting:', err);
+        return res.status(500).json({ error: 'Failed to update fun setting' });
+      }
+      
+      devLog('Fun setting updated:', allowFun);
+      res.json({ success: true, allowFun });
+    }
+  );
+});
+
+// Get fun setting
+app.get('/api/admin/fun-setting', adminApiLimiter, requireApiAdmin, (req, res) => {
+  db.get('SELECT value FROM settings WHERE key = ?', ['allow_fun'], (err, row) => {
+    if (err) {
+      console.error('Error fetching fun setting:', err);
+      return res.status(500).json({ error: 'Failed to fetch fun setting' });
+    }
+    
+    const allowFun = row ? row.value === 'true' : false;
+    res.json({ allowFun });
+  });
+});
+
 // Get confetti threshold settings
 app.get('/api/admin/confetti-thresholds', adminApiLimiter, requireApiAdmin, (req, res) => {
   db.all(`SELECT key, value FROM settings WHERE key IN ('confetti_regular_threshold', 'confetti_epic_threshold')`, [], (err, rows) => {

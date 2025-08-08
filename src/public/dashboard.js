@@ -1231,6 +1231,42 @@ window.addEventListener('resize', function() {
     resizeTimeout = setTimeout(handleCanvasResize, 150);
 });
 
+// Fun features initialization
+async function initializeFunFeatures() {
+    try {
+        // Check if fun is enabled from localStorage (set by admin)
+        const funEnabled = localStorage.getItem('allowFun') === 'true';
+        
+        const funGameSection = document.getElementById('funGameSection');
+        const pigGameBtn = document.getElementById('pigGameBtn');
+        
+        if (funEnabled && funGameSection && pigGameBtn) {
+            // Show the fun game section
+            funGameSection.style.display = 'block';
+            
+            // Random button text options
+            const randomTexts = [
+                "Hmmm?",
+                "Look what you made me do", 
+                "Hot to trot",
+                "What is this?",
+                "I can win this one"
+            ];
+            
+            // Set random text on the button
+            const randomText = randomTexts[Math.floor(Math.random() * randomTexts.length)];
+            pigGameBtn.textContent = randomText;
+            
+            // Add click handler to navigate to pig game
+            pigGameBtn.addEventListener('click', function() {
+                window.location.href = '/pig';
+            });
+        }
+    } catch (error) {
+        console.error('Error initializing fun features:', error);
+    }
+}
+
 // Load confetti thresholds from server
 async function loadConfettiThresholds() {
     try {
@@ -1254,6 +1290,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load confetti thresholds
     loadConfettiThresholds();
+    
+    // Initialize fun features
+    initializeFunFeatures();
     
     // Get user info from session
     let currentUser = null;
