@@ -37,19 +37,20 @@ window.PigGameEngine = (function() {
         { type: 'wide', height: 35, width: 30, color: '#ff4466' }
     ];
     
-    // Pixel art pig sprite data
+    // Pixel art pig sprite data - more pig-like design
     const PIG_SPRITE = [
         [0,0,1,1,1,1,0,0],
-        [0,1,2,1,1,2,1,0],
+        [0,1,1,2,2,1,1,0],
+        [1,1,3,1,1,3,1,1],
         [1,1,1,1,1,1,1,1],
-        [1,3,1,1,1,1,3,1],
+        [1,1,4,1,1,4,1,1],
         [1,1,1,4,4,1,1,1],
-        [1,1,4,4,4,4,1,1],
         [0,1,1,1,1,1,1,0],
-        [0,0,1,0,0,1,0,0]
+        [0,0,5,0,0,5,0,0]
     ];
     
-    const PIG_COLORS = ['transparent', '#FFB6C1', '#FF69B4', '#000', '#FF1493'];
+    // More pig-like colors: pink body, darker pink ears, black eyes, pink snout, little legs
+    const PIG_COLORS = ['transparent', '#FFC0CB', '#FFB6C1', '#000', '#FF91A4', '#D2691E'];
     
     function createGameState(canvasElement) {
         canvas = canvasElement;
@@ -187,8 +188,9 @@ window.PigGameEngine = (function() {
             }
         };
 
-        // Get mobile control button
+        // Get mobile control elements
         const jumpBtn = document.getElementById('jumpBtn');
+        const mobileTapArea = document.getElementById('mobileTapArea');
         
         // Mobile button handlers
         const mobileJumpHandler = (e) => {
@@ -231,8 +233,16 @@ window.PigGameEngine = (function() {
             );
         }
 
-        // Mobile touch button
-        if (jumpBtn) {
+        // Mobile touch area (larger tap target)
+        if (mobileTapArea) {
+            gameState.eventListeners.push(
+                { element: mobileTapArea, event: 'click', handler: mobileJumpHandler },
+                { element: mobileTapArea, event: 'touchstart', handler: mobileJumpHandler }
+            );
+        }
+        
+        // Fallback to button if tap area not found
+        if (jumpBtn && !mobileTapArea) {
             gameState.eventListeners.push(
                 { element: jumpBtn, event: 'click', handler: mobileJumpHandler },
                 { element: jumpBtn, event: 'touchstart', handler: mobileJumpHandler }
