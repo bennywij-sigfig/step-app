@@ -37,20 +37,20 @@ window.PigGameEngine = (function() {
         { type: 'wide', height: 35, width: 30, color: '#ff4466' }
     ];
     
-    // Pixel art pig sprite data - more pig-like design
+    // Pixel art pig sprite data - more pig-like design with visible ears
     const PIG_SPRITE = [
-        [0,0,1,1,1,1,0,0],
-        [0,1,1,2,2,1,1,0],
-        [1,1,3,1,1,3,1,1],
-        [1,1,1,1,1,1,1,1],
-        [1,1,4,1,1,4,1,1],
-        [1,1,1,4,4,1,1,1],
-        [0,1,1,1,1,1,1,0],
-        [0,0,5,0,0,5,0,0]
+        [0,2,1,1,1,1,2,0],  // Ears on top corners
+        [2,1,1,1,1,1,1,2],  // More ear area
+        [1,1,3,1,1,3,1,1],  // Eyes
+        [1,1,1,1,1,1,1,1],  // Body
+        [1,1,4,4,4,4,1,1],  // Snout area wider
+        [1,1,1,4,4,1,1,1],  // Snout
+        [0,1,1,1,1,1,1,0],  // Body
+        [0,0,5,0,0,5,0,0]   // Little legs
     ];
     
-    // More pig-like colors: pink body, darker pink ears, black eyes, pink snout, little legs
-    const PIG_COLORS = ['transparent', '#FFC0CB', '#FFB6C1', '#000', '#FF91A4', '#D2691E'];
+    // Pig colors: body pink, darker ears, black eyes, snout pink, brown legs  
+    const PIG_COLORS = ['transparent', '#FFC0CB', '#FF91A4', '#000', '#FF69B4', '#8B4513'];
     
     function createGameState(canvasElement) {
         canvas = canvasElement;
