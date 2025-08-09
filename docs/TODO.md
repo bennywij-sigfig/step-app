@@ -51,8 +51,14 @@
 - **Admin Pig Style Setting**: Added admin panel setting with 2 pig sprite versions:
   - **Head-On View (Default)**: Pig facing forward with big ears and direct eye contact
   - **Side View**: Pig profile running right with proper proportions, single eye, extended snout
-- **Local Storage Persistence**: Admin pig style choice saved locally and applies to new games immediately
+- **Global Database Persistence**: Admin pig style choice saved to database and applies globally to all users immediately
 - **Real-time Admin Feedback**: Confirmation messages in admin panel when pig style is changed
+- **🎯 CRITICAL RADIO BUTTON FIX (August 9, 2025)**: Fixed pig sprite radio button functionality
+  - **Root Cause**: Missing `Content-Type: application/json` header prevented Express from parsing request body
+  - **Issue**: Radio button would highlight momentarily then immediately revert to previous setting
+  - **Solution**: Added proper Content-Type header to match other API calls in the codebase
+  - **Result**: Radio buttons now work perfectly - admin can switch between Head-On and Side View with immediate database persistence
+  - **Commits**: a89c8a2 - Minimal surgical fix with zero impact on core functionality
 
 ### ✅ **PROGRESSIVE DIFFICULTY SYSTEM**
 - **Easy Start Gameplay**: Early game (0-30% progress) uses only short/medium obstacles with 50% larger gaps and 60% peaceful stretches
