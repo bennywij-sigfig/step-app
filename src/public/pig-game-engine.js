@@ -178,12 +178,29 @@ window.PigGameEngine = (function() {
         // Mobile button handlers
         const mobileJumpHandler = (e) => {
             e.preventDefault();
-            performJump();
+            // Single jump button: jump if grounded, OR add jump if in flight
+            if (gameState.pig.grounded) {
+                performJump();
+            } else if (gameState.pig.doubleJumpAvailable) {
+                performDoubleJump();
+            }
         };
 
         const mobileDoubleJumpHandler = (e) => {
             e.preventDefault();
-            performDoubleJump();
+            // Double jump button: double jump from baseline, OR second jump if already jumping
+            if (gameState.pig.grounded) {
+                // From baseline: do full double jump sequence
+                performJump();
+                setTimeout(() => {
+                    if (gameState.pig.doubleJumpAvailable) {
+                        performDoubleJump();
+                    }
+                }, 100);
+            } else if (gameState.pig.doubleJumpAvailable) {
+                // Already in flight: add the second jump
+                performDoubleJump();
+            }
         };
         
         // Get game container and start button for desktop interaction
@@ -245,21 +262,16 @@ window.PigGameEngine = (function() {
         
         if (jumpBtn && doubleJumpBtn && gameState) {
             const isRunning = gameState.running;
-            const canJump = gameState.pig && gameState.pig.grounded;
-            const canDoubleJump = gameState.pig && gameState.pig.doubleJumpAvailable;
+            const canJump = gameState.pig && (gameState.pig.grounded || gameState.pig.doubleJumpAvailable);
+            const canDoubleJump = gameState.pig && (gameState.pig.grounded || gameState.pig.doubleJumpAvailable);
             
             // Enable/disable buttons based on game state
             jumpBtn.disabled = !isRunning || !canJump;
             doubleJumpBtn.disabled = !isRunning || !canDoubleJump;
             
-            // Update button text based on state
-            if (!isRunning) {
-                jumpBtn.textContent = '⬆️';
-                doubleJumpBtn.textContent = '⬆️⬆️';
-            } else {
-                jumpBtn.textContent = canJump ? '🐷⬆️' : '⬆️';
-                doubleJumpBtn.textContent = canDoubleJump ? '🐷⬆️⬆️' : '⬆️⬆️';
-            }
+            // Keep button text simple and consistent
+            jumpBtn.textContent = '⬆️';
+            doubleJumpBtn.textContent = '⬆️⬆️';
         }
     }
     
