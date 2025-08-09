@@ -2299,12 +2299,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     resetUserShadowDataButton.textContent = '🗑️ Reset User\'s Trots';
                 }
             });
-        }
 
-        // Pig Style Setting Handlers
-        // Use setTimeout to ensure DOM is ready when this function runs
-        setTimeout(() => {
+            // Pig Style Setting Handlers
+            // Use setTimeout to ensure DOM is ready when this function runs
+            setTimeout(() => {
             const pigStyleRadios = document.querySelectorAll('input[name="pigStyle"]');
+            console.log('Pig style radios found:', pigStyleRadios.length);
             
             // Load saved pig style from server
             async function loadPigStyle() {
@@ -2329,8 +2329,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Handle pig style changes
-            pigStyleRadios.forEach(radio => {
+            pigStyleRadios.forEach((radio, index) => {
+                console.log(`Adding event listener to radio ${index}:`, radio.value);
                 radio.addEventListener('change', async function() {
+                    console.log('Pig style radio changed:', this.value);
                     if (this.checked) {
                         try {
                             const response = await apiCall('/api/admin/pig-sprite-setting', {
@@ -2363,6 +2365,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Load pig style on page load
             loadPigStyle();
         }, 100); // Small delay to ensure DOM elements are accessible
+        }
 
         // Initialize themes
         initializeThemes();
