@@ -85,8 +85,24 @@ window.PigGameEngine = (function() {
     }
     
     function createObstacle(x) {
-        // Select random obstacle type
-        const obstacleTemplate = OBSTACLE_TYPES[Math.floor(Math.random() * OBSTACLE_TYPES.length)];
+        // Progressive difficulty based on distance traveled
+        const difficulty = Math.min(gameState.distance / 2000, 1); // Ramp up over 2000 pixels
+        
+        // Early game: favor short/medium obstacles, late game: all types
+        let availableTypes;
+        if (difficulty < 0.3) {
+            // Early: only short and medium (easier)
+            availableTypes = OBSTACLE_TYPES.filter(t => ['short', 'medium'].includes(t.type));
+        } else if (difficulty < 0.7) {
+            // Mid: short, medium, and wide (no tall or spikes yet)
+            availableTypes = OBSTACLE_TYPES.filter(t => ['short', 'medium', 'wide'].includes(t.type));
+        } else {
+            // Late: all obstacle types (full difficulty)
+            availableTypes = OBSTACLE_TYPES;
+        }
+        
+        // Select random obstacle type from available set
+        const obstacleTemplate = availableTypes[Math.floor(Math.random() * availableTypes.length)];
         
         const obstacle = {
             x: x,
@@ -171,9 +187,8 @@ window.PigGameEngine = (function() {
             }
         };
 
-        // Get mobile control buttons
+        // Get mobile control button
         const jumpBtn = document.getElementById('jumpBtn');
-        const doubleJumpBtn = document.getElementById('doubleJumpBtn');
         
         // Mobile button handlers
         const mobileJumpHandler = (e) => {
@@ -186,22 +201,6 @@ window.PigGameEngine = (function() {
             }
         };
 
-        const mobileDoubleJumpHandler = (e) => {
-            e.preventDefault();
-            // Double jump button: double jump from baseline, OR second jump if already jumping
-            if (gameState.pig.grounded) {
-                // From baseline: do full double jump sequence
-                performJump();
-                setTimeout(() => {
-                    if (gameState.pig.doubleJumpAvailable) {
-                        performDoubleJump();
-                    }
-                }, 100);
-            } else if (gameState.pig.doubleJumpAvailable) {
-                // Already in flight: add the second jump
-                performDoubleJump();
-            }
-        };
         
         // Get game container and start button for desktop interaction
         const gameContainer = canvas.parentElement;
@@ -232,18 +231,11 @@ window.PigGameEngine = (function() {
             );
         }
 
-        // Mobile touch buttons
+        // Mobile touch button
         if (jumpBtn) {
             gameState.eventListeners.push(
                 { element: jumpBtn, event: 'click', handler: mobileJumpHandler },
                 { element: jumpBtn, event: 'touchstart', handler: mobileJumpHandler }
-            );
-        }
-
-        if (doubleJumpBtn) {
-            gameState.eventListeners.push(
-                { element: doubleJumpBtn, event: 'click', handler: mobileDoubleJumpHandler },
-                { element: doubleJumpBtn, event: 'touchstart', handler: mobileDoubleJumpHandler }
             );
         }
         
@@ -258,20 +250,16 @@ window.PigGameEngine = (function() {
 
     function updateMobileButtons() {
         const jumpBtn = document.getElementById('jumpBtn');
-        const doubleJumpBtn = document.getElementById('doubleJumpBtn');
         
-        if (jumpBtn && doubleJumpBtn && gameState) {
+        if (jumpBtn && gameState) {
             const isRunning = gameState.running;
             const canJump = gameState.pig && (gameState.pig.grounded || gameState.pig.doubleJumpAvailable);
-            const canDoubleJump = gameState.pig && (gameState.pig.grounded || gameState.pig.doubleJumpAvailable);
             
-            // Enable/disable buttons based on game state
+            // Enable/disable button based on game state
             jumpBtn.disabled = !isRunning || !canJump;
-            doubleJumpBtn.disabled = !isRunning || !canDoubleJump;
             
             // Keep button text simple and consistent
             jumpBtn.textContent = '⬆️';
-            doubleJumpBtn.textContent = '⬆️⬆️';
         }
     }
     
@@ -316,14 +304,31 @@ window.PigGameEngine = (function() {
             }
         }
         
-        // Add new obstacles with occasional obstacle-free stretches
+        // Add new obstacles with progressive gap sizing
         const lastObstacle = gameState.obstacles[gameState.obstacles.length - 1];
         if (!lastObstacle || lastObstacle.x < canvas.width + 100) {
-            let gap = CONFIG.OBSTACLE_MIN_GAP + Math.random() * (CONFIG.OBSTACLE_MAX_GAP - CONFIG.OBSTACLE_MIN_GAP);
+            const difficulty = Math.min(gameState.distance / 2000, 1);
             
-            // Occasionally create extended obstacle-free stretches
-            if (Math.random() < CONFIG.OBSTACLE_FREE_CHANCE) {
-                gap = gap * 2.5; // Much longer gap for breathing room
+            // Early game: much larger gaps and more frequent peaceful stretches
+            let baseGap = CONFIG.OBSTACLE_MIN_GAP + Math.random() * (CONFIG.OBSTACLE_MAX_GAP - CONFIG.OBSTACLE_MIN_GAP);
+            let peacefulChance = CONFIG.OBSTACLE_FREE_CHANCE;
+            
+            if (difficulty < 0.3) {
+                // Early: 50% larger base gaps, 60% chance of peaceful stretches
+                baseGap = baseGap * 1.5;
+                peacefulChance = 0.6;
+            } else if (difficulty < 0.7) {
+                // Mid: 25% larger base gaps, 40% chance of peaceful stretches  
+                baseGap = baseGap * 1.25;
+                peacefulChance = 0.4;
+            }
+            // Late: normal gaps and peaceful chances
+            
+            let gap = baseGap;
+            
+            // Create extended obstacle-free stretches based on difficulty
+            if (Math.random() < peacefulChance) {
+                gap = gap * (difficulty < 0.5 ? 3.0 : 2.5); // Longer peaceful stretches early game
             }
             
             gameState.obstacles.push(createObstacle(canvas.width + gap));
