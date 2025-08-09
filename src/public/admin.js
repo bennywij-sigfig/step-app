@@ -2301,6 +2301,43 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
+        // Pig Style Setting Handlers
+        const pigStyleRadios = document.querySelectorAll('input[name="pigStyle"]');
+        
+        // Load saved pig style
+        function loadPigStyle() {
+            try {
+                const savedStyle = localStorage.getItem('pigStyle') || 'head-on';
+                const radioToCheck = document.querySelector(`input[name="pigStyle"][value="${savedStyle}"]`);
+                if (radioToCheck) {
+                    radioToCheck.checked = true;
+                }
+            } catch (e) {
+                // Ignore localStorage errors
+            }
+        }
+        
+        // Handle pig style changes
+        pigStyleRadios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    try {
+                        localStorage.setItem('pigStyle', this.value);
+                        
+                        // Show confirmation message
+                        showExtrasMessage(`✅ Pig sprite style changed to ${this.value === 'side' ? 'Side View' : 'Head-On View'}. Start a new shadow pig game to see the change!`, 'success');
+                        
+                    } catch (e) {
+                        console.error('Failed to save pig style:', e);
+                        showExtrasMessage('❌ Failed to save pig style setting', 'error');
+                    }
+                }
+            });
+        });
+        
+        // Load pig style on page load
+        loadPigStyle();
+
         // Initialize themes
         initializeThemes();
         initializeFunToggle();

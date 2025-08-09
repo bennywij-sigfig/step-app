@@ -37,10 +37,10 @@ window.PigGameEngine = (function() {
         { type: 'wide', height: 35, width: 30, color: '#ff4466' }
     ];
     
-    // Pixel art pig sprite data - more pig-like design with visible ears
-    const PIG_SPRITE = [
-        [0,2,1,1,1,1,2,0],  // Ears on top corners
-        [2,1,1,1,1,1,1,2],  // More ear area
+    // Pixel art pig sprite data - head-on view with bigger ears
+    const PIG_SPRITE_HEAD_ON = [
+        [2,2,1,1,1,1,2,2],  // Bigger ears across top
+        [2,1,1,1,1,1,1,2],  // Ear area extended
         [1,1,3,1,1,3,1,1],  // Eyes
         [1,1,1,1,1,1,1,1],  // Body
         [1,1,4,4,4,4,1,1],  // Snout area wider
@@ -48,6 +48,42 @@ window.PigGameEngine = (function() {
         [0,1,1,1,1,1,1,0],  // Body
         [0,0,5,0,0,5,0,0]   // Little legs
     ];
+
+    // Side view pig sprite - facing right
+    const PIG_SPRITE_SIDE = [
+        [0,2,2,1,1,1,0,0],  // Ears on left side
+        [2,1,1,1,1,1,1,0],  // Ear and head
+        [1,1,3,1,1,1,1,1],  // Eye and snout start
+        [1,1,1,1,4,4,4,0],  // Body and snout
+        [1,1,1,1,4,4,0,0],  // Body and snout tip
+        [1,1,1,1,1,1,1,0],  // Body
+        [0,1,1,1,1,1,1,0],  // Body
+        [0,0,5,0,0,5,0,0]   // Little legs
+    ];
+
+    // Default to head-on view
+    let PIG_SPRITE = PIG_SPRITE_HEAD_ON;
+    
+    // Function to switch pig sprite style
+    function setPigStyle(style) {
+        if (style === 'side') {
+            PIG_SPRITE = PIG_SPRITE_SIDE;
+        } else {
+            PIG_SPRITE = PIG_SPRITE_HEAD_ON;
+        }
+    }
+    
+    // Check for pig style setting on initialization
+    function initializePigStyle() {
+        try {
+            const pigStyle = localStorage.getItem('pigStyle');
+            if (pigStyle === 'side') {
+                setPigStyle('side');
+            }
+        } catch (e) {
+            // Ignore localStorage errors
+        }
+    }
     
     // Pig colors: body pink, darker ears, black eyes, snout pink, brown legs  
     const PIG_COLORS = ['transparent', '#FFC0CB', '#FF91A4', '#000', '#FF69B4', '#8B4513'];
@@ -668,6 +704,9 @@ window.PigGameEngine = (function() {
             
             // Wait a frame to ensure cleanup is complete
             setTimeout(() => {
+                // Initialize pig style based on settings
+                initializePigStyle();
+                
                 gameState = createGameState(canvasElement);
                 gameState.running = true;
                 gameState.startTime = Date.now();

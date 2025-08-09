@@ -168,7 +168,7 @@ window.PigUI = (function() {
                 elements.heartsReset.title = 'Sandbox mode: Infinite hearts, no database writes';
                 elements.heartsReset.style.display = 'inline';
                 elements.heartsReset.style.color = '#FFD700';
-            } else if (todayData.hearts <= 0) {
+            } else if (todayData.hearts === 0) {
                 // Use server data if available, otherwise calculate locally
                 const hoursUntilReset = gameData.serverHeartData?.hoursUntilReset || getHoursUntilPacificMidnight();
                 if (hoursUntilReset <= 24) {
@@ -194,7 +194,7 @@ window.PigUI = (function() {
         
         // Update start button state
         if (elements.startGameBtn) {
-            if (todayData.hearts <= 0) {
+            if (todayData.hearts === 0) {
                 elements.startGameBtn.disabled = true;
                 elements.startGameBtn.textContent = 'No Hearts Left Today';
             } else if (PigGameEngine.isRunning()) {
@@ -213,7 +213,7 @@ window.PigUI = (function() {
         resultOverlay.className = 'game-result';
         
         const isGoodRun = stepsEarned >= 75;
-        const noHeartsLeft = gameData[today].hearts <= 0;
+        const noHeartsLeft = gameData[today].hearts === 0;
         
         let resultTitle;
         if (isSandboxMode) {
@@ -388,7 +388,7 @@ window.PigUI = (function() {
                 const today = getPacificDateString(); // Use Pacific Time
                 const todayData = gameData[today];
                 
-                if (todayData.hearts <= 0) {
+                if (todayData.hearts === 0) {
                     const hoursUntilReset = getHoursUntilPacificMidnight();
                     alert(`No hearts remaining today! Hearts reset in ${hoursUntilReset} hours (midnight Pacific Time).`);
                     return;
@@ -470,7 +470,7 @@ window.PigUI = (function() {
                 }
             } else {
                 // Fallback to client-side validation
-                if (todayData.hearts <= 0) {
+                if (todayData.hearts === 0) {
                     const hoursUntilReset = getHoursUntilPacificMidnight();
                     alert(`No hearts remaining today! Hearts reset in ${hoursUntilReset} hours (midnight Pacific Time).`);
                     return;
