@@ -49,16 +49,16 @@ window.PigGameEngine = (function() {
         [0,0,5,0,0,5,0,0]   // Little legs
     ];
 
-    // Side view pig sprite - facing right
+    // Side view pig sprite - facing right, more pig-like
     const PIG_SPRITE_SIDE = [
-        [0,2,2,1,1,1,0,0],  // Ears on left side
-        [2,1,1,1,1,1,1,0],  // Ear and head
-        [1,1,3,1,1,1,1,1],  // Eye and snout start
-        [1,1,1,1,4,4,4,0],  // Body and snout
-        [1,1,1,1,4,4,0,0],  // Body and snout tip
+        [0,0,2,2,1,1,0,0],  // Ears pointing back
+        [0,2,1,1,1,1,1,0],  // Ear and rounded head
+        [2,1,1,3,1,1,1,4],  // Ear, eye, body, snout start
+        [1,1,1,1,1,1,4,4],  // Body and prominent snout
+        [1,1,1,1,1,1,4,0],  // Body and snout tip
         [1,1,1,1,1,1,1,0],  // Body
-        [0,1,1,1,1,1,1,0],  // Body
-        [0,0,5,0,0,5,0,0]   // Little legs
+        [0,1,1,1,1,1,0,0],  // Body tapers
+        [0,0,5,0,0,5,0,0]   // Four little legs
     ];
 
     // Default to head-on view
@@ -598,15 +598,24 @@ window.PigGameEngine = (function() {
         }
     }
     
-    function isColliding(pig, obstacle) {
-        // Use the smaller hitbox for collision detection (more forgiving)
-        const hitboxOffsetX = (obstacle.width - obstacle.hitboxWidth) / 2;
-        const hitboxOffsetY = (obstacle.height - obstacle.hitboxHeight) / 2;
-        
-        return pig.x < obstacle.x + hitboxOffsetX + obstacle.hitboxWidth &&
-               pig.x + pig.width > obstacle.x + hitboxOffsetX &&
-               pig.y < obstacle.y + hitboxOffsetY + obstacle.hitboxHeight &&
-               pig.y + pig.height > obstacle.y + hitboxOffsetY;
+    function isColliding(pig, object) {
+        // Check if object has hitbox properties (obstacles) or use direct dimensions (bonus hearts)
+        if (object.hitboxWidth && object.hitboxHeight) {
+            // Use the smaller hitbox for collision detection (more forgiving for obstacles)
+            const hitboxOffsetX = (object.width - object.hitboxWidth) / 2;
+            const hitboxOffsetY = (object.height - object.hitboxHeight) / 2;
+            
+            return pig.x < object.x + hitboxOffsetX + object.hitboxWidth &&
+                   pig.x + pig.width > object.x + hitboxOffsetX &&
+                   pig.y < object.y + hitboxOffsetY + object.hitboxHeight &&
+                   pig.y + pig.height > object.y + hitboxOffsetY;
+        } else {
+            // Direct collision detection for bonus hearts (no hitbox offset)
+            return pig.x < object.x + object.width &&
+                   pig.x + pig.width > object.x &&
+                   pig.y < object.y + object.height &&
+                   pig.y + pig.height > object.y;
+        }
     }
     
     function gameLoop() {
