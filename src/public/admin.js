@@ -2333,6 +2333,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         const response = await authenticatedFetch('/api/admin/pig-sprite-setting', {
                             method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
                             body: JSON.stringify({
                                 pigStyle: value
                             })
