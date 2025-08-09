@@ -5,6 +5,26 @@ const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 
+// Import admin middleware for admin-only endpoints
+const { requireApiAdmin } = require('./middleware/auth');
+const { adminApiLimiter } = require('./middleware/rateLimiters');
+
+// Simple CSRF validation for shadow API admin endpoints
+function validateCSRFToken(req, res, next) {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') {
+    return next();
+  }
+  
+  const token = req.body.csrfToken || req.headers['x-csrf-token'];
+  const sessionToken = req.session?.csrfToken;
+  
+  if (!token || !sessionToken || token !== sessionToken) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
+  }
+  
+  next();
+}
+
 // Create separate router for shadow game API
 const router = express.Router();
 
@@ -304,5 +324,69 @@ router.post('/save-result-secure', requireShadowAuth, (req, res) => {
   });
 });
 
+// Admin endpoint: Reset user's shadow game data (requires admin auth from main app)
+router.post('/admin/reset-user-data', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
+  
+  const { email } = req.body;
+  
+  // Validate input
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Valid email address is required' });
+  }
+  
+  const trimmedEmail = email.trim().toLowerCase();
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (!emailRegex.test(trimmedEmail)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  
+  // First, find the user by email
+  db.get('SELECT id, email, name FROM users WHERE email = ?', [trimmedEmail], (err, user) => {
+    if (err) {
+      console.error('Shadow API - Error finding user:', err);
+      return res.status(500).json({ error: 'Database error while finding user' });
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found with that email address' });
+    }
+    
+    // Now delete shadow game data for this user
+    db.serialize(() => {
+      let totalRecordsDeleted = 0;
+      
+      // Delete from shadow_steps table
+      db.run('DELETE FROM shadow_steps WHERE user_id = ?', [user.id], function(err) {
+        if (err) {
+          console.error('Shadow API - Error deleting shadow_steps:', err);
+          return res.status(500).json({ error: 'Failed to reset shadow steps data' });
+        }
+        totalRecordsDeleted += this.changes;
+        
+        // Delete from shadow_hearts table
+        db.run('DELETE FROM shadow_hearts WHERE user_id = ?', [user.id], function(err) {
+          if (err) {
+            console.error('Shadow API - Error deleting shadow_hearts:', err);
+            return res.status(500).json({ error: 'Failed to reset shadow hearts data' });
+          }
+          totalRecordsDeleted += this.changes;
+          
+          console.log(`✅ Shadow API - Admin ${req.session.email || req.session.userId || 'unknown'} reset shadow game data for user: ${user.email} (${user.name || 'No name'}). Records deleted: ${totalRecordsDeleted}`);
+          
+          res.json({ 
+            success: true, 
+            message: `Successfully reset shadow game data for ${user.email}`,
+            user: {
+              email: user.email,
+              name: user.name
+            },
+            recordsDeleted: totalRecordsDeleted
+          });
+        });
+      });
+    });
+  });
+});
 
 module.exports = router;

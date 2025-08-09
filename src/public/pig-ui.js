@@ -7,6 +7,10 @@ window.PigUI = (function() {
     let elements = {};
     let gameData = {};
     
+    // Check for sandbox mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const isSandboxMode = urlParams.get('sandbox') === '1';
+    
     // UI element selectors
     const SELECTORS = {
         heartsRemaining: '#heartsRemaining',
@@ -59,6 +63,26 @@ window.PigUI = (function() {
     
     async function loadGameData() {
         const today = getPacificDateString(); // Use Pacific Time instead of browser timezone
+        
+        // In sandbox mode, skip server calls and provide infinite hearts
+        if (isSandboxMode) {
+            console.log('🛡️ Sandbox mode: Infinite hearts, no database writes');
+            gameData = {
+                [today]: {
+                    hearts: 999, // Infinite hearts
+                    steps: 0,
+                    gamesPlayed: 0,
+                    bestDistance: 0
+                },
+                overall: {
+                    totalSteps: 0,
+                    totalGames: 0,
+                    bestEverDistance: 0,
+                    totalPlayTime: 0
+                }
+            };
+            return gameData;
+        }
         
         // Try to get heart status from server first
         let serverHeartData = null;
@@ -128,22 +152,35 @@ window.PigUI = (function() {
         
         // Update stats display
         if (elements.heartsRemaining) {
-            elements.heartsRemaining.textContent = todayData.hearts;
+            if (isSandboxMode) {
+                elements.heartsRemaining.textContent = '∞';
+                elements.heartsRemaining.title = 'Sandbox mode: Infinite hearts';
+            } else {
+                elements.heartsRemaining.textContent = todayData.hearts;
+                elements.heartsRemaining.title = '';
+            }
         }
         
-        // Show hours until hearts reset (Pacific Time) - only when hearts are 0
+        // Show hours until hearts reset (Pacific Time) - only when hearts are 0 and not in sandbox mode
         if (elements.heartsReset) {
-            if (todayData.hearts <= 0) {
+            if (isSandboxMode) {
+                elements.heartsReset.textContent = '(Sandbox mode)';
+                elements.heartsReset.title = 'Sandbox mode: Infinite hearts, no database writes';
+                elements.heartsReset.style.display = 'inline';
+                elements.heartsReset.style.color = '#FFD700';
+            } else if (todayData.hearts <= 0) {
                 // Use server data if available, otherwise calculate locally
                 const hoursUntilReset = gameData.serverHeartData?.hoursUntilReset || getHoursUntilPacificMidnight();
                 if (hoursUntilReset <= 24) {
                     elements.heartsReset.textContent = `(${hoursUntilReset}h to reset)`;
                     elements.heartsReset.title = 'Hearts reset at midnight Pacific Time';
                     elements.heartsReset.style.display = 'inline';
+                    elements.heartsReset.style.color = '';
                 }
             } else {
                 elements.heartsReset.textContent = '';
                 elements.heartsReset.style.display = 'none';
+                elements.heartsReset.style.color = '';
             }
         }
         
@@ -170,11 +207,98 @@ window.PigUI = (function() {
         }
     }
     
+    function displayGameResult(stepsEarned, distance, today) {
+        // Create result overlay
+        const resultOverlay = document.createElement('div');
+        resultOverlay.className = 'game-result';
+        
+        const isGoodRun = stepsEarned >= 75;
+        const noHeartsLeft = gameData[today].hearts <= 0;
+        
+        let resultTitle;
+        if (isSandboxMode) {
+            resultTitle = isGoodRun ? '🎉 Excellent Run! (Sandbox)' : '🎮 Sandbox Mode';
+        } else if (noHeartsLeft) {
+            resultTitle = 'Out of Steps';
+        } else {
+            resultTitle = isGoodRun ? '🎉 Excellent Run!' : 'Out of Steps';
+        }
+        
+        const resultColor = isGoodRun ? '#4CAF50' : '#ff6b6b';
+        
+        resultOverlay.innerHTML = `
+            <h3 style="color: ${resultColor}; margin: 0;">${resultTitle}</h3>
+            <p style="color: #fff; margin: 8px 0;">
+                Distance: <strong>${distance}m</strong>
+            </p>
+            <p style="color: #fff; margin: 8px 0;">
+                Trots: <strong>+${stepsEarned.toLocaleString()}</strong>
+            </p>
+            <p style="color: ${isSandboxMode ? '#FFD700' : '#ff6b6b'}; margin: 8px 0; font-size: 0.9em;">
+                Hearts remaining: ${isSandboxMode ? '∞ (Infinite)' : gameData[today].hearts}
+            </p>
+            ${gameData[today].bestDistance === distance ? '<p style="color: #FFD700; margin: 4px 0; font-size: 0.9em;">New personal best!</p>' : ''}
+            ${isSandboxMode ? '<p style="color: #888; margin: 4px 0; font-size: 0.8em;">🛡️ Sandbox mode - no data saved</p>' : ''}
+        `;
+        
+        elements.gameCanvas.appendChild(resultOverlay);
+        
+        // Auto-dismiss result overlay after 3 seconds
+        setTimeout(() => {
+            if (resultOverlay && resultOverlay.parentElement) {
+                resultOverlay.remove();
+                updateUI();
+            }
+        }, 3000);
+        
+        // Update UI after result
+        setTimeout(() => {
+            updateUI();
+            
+            // Only refresh leaderboards in non-sandbox mode
+            if (!isSandboxMode) {
+                // Refresh leaderboards with new data
+                if (elements.individualLeaderboard && elements.individualLeaderboard.style.display !== 'none') {
+                    loadIndividualLeaderboard();
+                }
+                if (elements.teamLeaderboard && elements.teamLeaderboard.style.display !== 'none') {
+                    loadTeamLeaderboard();
+                }
+            }
+            
+            // Trigger confetti for good runs (if available)
+            if (isGoodRun && typeof createConfetti === 'function') {
+                createConfetti();
+            }
+        }, 1000); // Delay a bit to allow database save to complete (non-sandbox only)
+    }
+    
     async function showGameResult(stepsEarned, distance) {
         const today = getPacificDateString(); // Use Pacific Time
         const gameToken = window.currentGameToken;
         
-        // Try server-side result submission first
+        // In sandbox mode, skip all database operations
+        if (isSandboxMode) {
+            console.log('🛡️ Sandbox mode: Skipping database writes for game result');
+            
+            // Update local data for UI display only
+            gameData[today].steps += stepsEarned;
+            gameData[today].gamesPlayed += 1;
+            gameData[today].bestDistance = Math.max(gameData[today].bestDistance, distance);
+            
+            gameData.overall.totalSteps += stepsEarned;
+            gameData.overall.totalGames += 1;
+            gameData.overall.bestEverDistance = Math.max(gameData.overall.bestEverDistance, distance);
+            
+            // Hearts stay at 999 (infinite)
+            gameData[today].hearts = 999;
+            
+            // Skip to result display
+            displayGameResult(stepsEarned, distance, today);
+            return;
+        }
+        
+        // Try server-side result submission first (non-sandbox mode)
         let serverSuccess = false;
         if (window.PigAPI && gameData.serverHeartData && gameToken) {
             try {
@@ -232,63 +356,8 @@ window.PigUI = (function() {
             });
         }
         
-        // Create result overlay
-        const resultOverlay = document.createElement('div');
-        resultOverlay.className = 'game-result';
-        
-        const isGoodRun = stepsEarned >= 75;
-        const noHeartsLeft = gameData[today].hearts <= 0;
-        
-        let resultTitle;
-        if (noHeartsLeft) {
-            resultTitle = 'Out of Steps';
-        } else {
-            resultTitle = isGoodRun ? '🎉 Excellent Run!' : 'Out of Steps';
-        }
-        
-        const resultColor = isGoodRun ? '#4CAF50' : '#ff6b6b';
-        
-        resultOverlay.innerHTML = `
-            <h3 style="color: ${resultColor}; margin: 0;">${resultTitle}</h3>
-            <p style="color: #fff; margin: 8px 0;">
-                Distance: <strong>${distance}m</strong>
-            </p>
-            <p style="color: #fff; margin: 8px 0;">
-                Trots: <strong>+${stepsEarned.toLocaleString()}</strong>
-            </p>
-            <p style="color: #ff6b6b; margin: 8px 0; font-size: 0.9em;">
-                Hearts remaining: ${gameData[today].hearts}
-            </p>
-            ${gameData[today].bestDistance === distance ? '<p style="color: #FFD700; margin: 4px 0; font-size: 0.9em;">New personal best!</p>' : ''}
-        `;
-        
-        elements.gameCanvas.appendChild(resultOverlay);
-        
-        // Auto-dismiss result overlay after 3 seconds
-        setTimeout(() => {
-            if (resultOverlay && resultOverlay.parentElement) {
-                resultOverlay.remove();
-                updateUI();
-            }
-        }, 3000);
-        
-        // Update UI after result
-        setTimeout(() => {
-            updateUI();
-            
-            // Refresh leaderboards with new data
-            if (elements.individualLeaderboard && elements.individualLeaderboard.style.display !== 'none') {
-                loadIndividualLeaderboard();
-            }
-            if (elements.teamLeaderboard && elements.teamLeaderboard.style.display !== 'none') {
-                loadTeamLeaderboard();
-            }
-            
-            // Trigger confetti for good runs (if available)
-            if (isGoodRun && typeof createConfetti === 'function') {
-                createConfetti();
-            }
-        }, 1000); // Delay a bit to allow database save to complete
+        // Display game result
+        displayGameResult(stepsEarned, distance, today);
     }
     
     function resetGameCanvas() {
@@ -297,7 +366,12 @@ window.PigUI = (function() {
             const todayData = gameData[today];
             const heartsLeft = todayData ? todayData.hearts : 5;
             
-            const message = heartsLeft > 0 ? 'Ready to <s>step</s> trot...' : 'Time to rest';
+            let message;
+            if (isSandboxMode) {
+                message = 'Ready to <s>step</s> trot... 🛡️ Sandbox Mode';
+            } else {
+                message = heartsLeft > 0 ? 'Ready to <s>step</s> trot...' : 'Time to rest';
+            }
             
             elements.gameCanvas.innerHTML = `
                 <div class="loading">
@@ -372,30 +446,35 @@ window.PigUI = (function() {
         const today = getPacificDateString();
         const todayData = gameData[today];
         
-        // Try server-side heart validation first
+        // In sandbox mode, skip all server validation
         let gameToken = null;
-        if (window.PigAPI && gameData.serverHeartData) {
-            try {
-                const gameSession = await PigAPI.startSecureGame();
-                if (gameSession && gameSession.success) {
-                    gameToken = gameSession.gameToken;
-                    // Update local hearts to match server
-                    gameData[today].hearts = gameSession.heartsRemaining;
-                    console.log('🔒 Started secure game with server validation');
-                } else {
-                    throw new Error('Server rejected game start');
-                }
-            } catch (error) {
-                console.warn('Server-side validation failed:', error.message);
-                alert(`Cannot start game: ${error.message}`);
-                return;
-            }
+        if (isSandboxMode) {
+            console.log('🛡️ Sandbox mode: Skipping server validation, infinite hearts available');
         } else {
-            // Fallback to client-side validation
-            if (todayData.hearts <= 0) {
-                const hoursUntilReset = getHoursUntilPacificMidnight();
-                alert(`No hearts remaining today! Hearts reset in ${hoursUntilReset} hours (midnight Pacific Time).`);
-                return;
+            // Try server-side heart validation first
+            if (window.PigAPI && gameData.serverHeartData) {
+                try {
+                    const gameSession = await PigAPI.startSecureGame();
+                    if (gameSession && gameSession.success) {
+                        gameToken = gameSession.gameToken;
+                        // Update local hearts to match server
+                        gameData[today].hearts = gameSession.heartsRemaining;
+                        console.log('🔒 Started secure game with server validation');
+                    } else {
+                        throw new Error('Server rejected game start');
+                    }
+                } catch (error) {
+                    console.warn('Server-side validation failed:', error.message);
+                    alert(`Cannot start game: ${error.message}`);
+                    return;
+                }
+            } else {
+                // Fallback to client-side validation
+                if (todayData.hearts <= 0) {
+                    const hoursUntilReset = getHoursUntilPacificMidnight();
+                    alert(`No hearts remaining today! Hearts reset in ${hoursUntilReset} hours (midnight Pacific Time).`);
+                    return;
+                }
             }
         }
         

@@ -2233,6 +2233,73 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Sandbox Pig Game functionality
+        const launchSandboxButton = document.getElementById('launchSandboxPigGame');
+        if (launchSandboxButton) {
+            launchSandboxButton.addEventListener('click', function() {
+                // Open pig game in new tab with sandbox mode
+                window.open('/pig?sandbox=1', '_blank');
+            });
+        }
+
+        // Shadow Game Data Reset functionality
+        const resetUserShadowDataButton = document.getElementById('resetUserShadowData');
+        const resetUserEmailInput = document.getElementById('resetUserEmail');
+        
+        if (resetUserShadowDataButton && resetUserEmailInput) {
+            resetUserShadowDataButton.addEventListener('click', async function() {
+                const email = resetUserEmailInput.value.trim();
+                
+                if (!email) {
+                    alert('Please enter a user email address.');
+                    return;
+                }
+                
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                    alert('Please enter a valid email address.');
+                    return;
+                }
+                
+                // Double confirmation for destructive action
+                const confirmMessage = `⚠️ CONFIRM SHADOW GAME DATA RESET\n\nThis will permanently reset ALL shadow pig game data for:\n${email}\n\nThis includes:\n• All pig game trots (steps)\n• Game statistics (games played, best distance)\n• Heart usage data\n\nMain app step data will NOT be affected.\n\nThis action cannot be undone!\n\nType "RESET" to confirm:`;
+                
+                const confirmation = prompt(confirmMessage);
+                if (confirmation !== 'RESET') {
+                    showExtrasMessage('Reset cancelled.', 'info');
+                    return;
+                }
+                
+                try {
+                    resetUserShadowDataButton.disabled = true;
+                    resetUserShadowDataButton.textContent = 'Resetting...';
+                    
+                    const response = await authenticatedFetch('/api/shadow/admin/reset-user-data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ email: email })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        showExtrasMessage(`✅ Successfully reset shadow game data for ${email}. ${result.recordsDeleted || 0} records removed.`, 'success');
+                        resetUserEmailInput.value = '';
+                    } else {
+                        throw new Error(result.error || 'Failed to reset shadow game data');
+                    }
+                } catch (error) {
+                    console.error('Error resetting shadow game data:', error);
+                    showExtrasMessage(`❌ Error: ${error.message}`, 'error');
+                } finally {
+                    resetUserShadowDataButton.disabled = false;
+                    resetUserShadowDataButton.textContent = '🗑️ Reset User\'s Trots';
+                }
+            });
+        }
 
         // Initialize themes
         initializeThemes();
