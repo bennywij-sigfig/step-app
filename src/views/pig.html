@@ -295,6 +295,67 @@
             font-size: 1.2em;
             margin-bottom: 10px;
         }
+
+        /* Mobile Touch Controls */
+        .mobile-controls {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .mobile-control-btn {
+            width: 80px;
+            height: 80px;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.3);
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .jump-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .double-jump-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff5252 100%);
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .mobile-control-btn:active {
+            transform: scale(0.9);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .mobile-control-btn:disabled {
+            opacity: 0.5;
+            background: linear-gradient(135deg, #666 0%, #555 100%);
+            box-shadow: none;
+        }
+
+        /* Show mobile controls on touch devices */
+        @media (hover: none) and (pointer: coarse) {
+            .mobile-controls {
+                display: flex;
+            }
+            
+            /* Hide the instruction text on mobile since we have buttons */
+            .game-canvas canvas {
+                cursor: default;
+            }
+        }
     </style>
 </head>
 <body>
@@ -367,6 +428,16 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Mobile Touch Controls -->
+    <div class="mobile-controls" id="mobileControls">
+        <button class="mobile-control-btn jump-btn" id="jumpBtn" type="button">
+            ⬆️
+        </button>
+        <button class="mobile-control-btn double-jump-btn" id="doubleJumpBtn" type="button">
+            ⬆️⬆️
+        </button>
     </div>
 
     <!-- Include separate game logic files -->

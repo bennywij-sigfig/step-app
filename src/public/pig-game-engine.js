@@ -125,46 +125,10 @@ window.PigGameEngine = (function() {
     }
     
     function setupInputHandlers() {
-        // Double-tap detection for mobile
-        let lastTapTime = 0;
-        let tapCount = 0;
-        const DOUBLE_TAP_DELAY = 300; // 300ms window for double-tap
-        
-        const jumpHandler = (e) => {
-            e.preventDefault();
-            if (!gameState.running) return;
+        // Separate handlers for jump and double jump
+        const performJump = () => {
+            if (!gameState.running) return false;
             
-            const currentTime = Date.now();
-            
-            // Handle mobile touch double-tap detection
-            if (e.type === 'touchstart' || e.type === 'touchend') {
-                if (currentTime - lastTapTime < DOUBLE_TAP_DELAY) {
-                    tapCount++;
-                } else {
-                    tapCount = 1;
-                }
-                lastTapTime = currentTime;
-                
-                // Execute jump based on tap count and pig state
-                if (tapCount === 1 && gameState.pig.grounded) {
-                    // First jump on single tap when grounded
-                    gameState.pig.velocityY = CONFIG.JUMP_FORCE;
-                    gameState.pig.jumping = true;
-                    gameState.pig.grounded = false;
-                    gameState.pig.doubleJumpAvailable = true;
-                    gameState.pig.jumpsUsed = 1;
-                } else if (tapCount === 2 && gameState.pig.doubleJumpAvailable) {
-                    // Double jump on second tap
-                    gameState.pig.velocityY = CONFIG.DOUBLE_JUMP_FORCE;
-                    gameState.pig.doubleJumpAvailable = false;
-                    gameState.pig.jumpsUsed = 2;
-                    tapCount = 0; // Reset tap count after double jump
-                }
-                
-                return;
-            }
-            
-            // Handle keyboard and mouse clicks (non-touch events)
             if (gameState.pig.grounded) {
                 // First jump
                 gameState.pig.velocityY = CONFIG.JUMP_FORCE;
@@ -172,47 +136,97 @@ window.PigGameEngine = (function() {
                 gameState.pig.grounded = false;
                 gameState.pig.doubleJumpAvailable = true;
                 gameState.pig.jumpsUsed = 1;
-            } else if (gameState.pig.doubleJumpAvailable) {
+                return true;
+            }
+            return false;
+        };
+
+        const performDoubleJump = () => {
+            if (!gameState.running) return false;
+            
+            if (gameState.pig.doubleJumpAvailable) {
                 // Double jump
                 gameState.pig.velocityY = CONFIG.DOUBLE_JUMP_FORCE;
                 gameState.pig.doubleJumpAvailable = false;
                 gameState.pig.jumpsUsed = 2;
+                return true;
+            }
+            return false;
+        };
+
+        // Desktop/keyboard handler - smart jump logic
+        const smartJumpHandler = (e) => {
+            e.preventDefault();
+            if (!gameState.running) return;
+            
+            // Try jump first, then double jump if jump isn't available
+            if (!performJump()) {
+                performDoubleJump();
             }
         };
         
         const keyHandler = (e) => {
             if (e.code === 'Space' || e.code === 'ArrowUp') {
-                jumpHandler(e);
+                smartJumpHandler(e);
             }
         };
+
+        // Get mobile control buttons
+        const jumpBtn = document.getElementById('jumpBtn');
+        const doubleJumpBtn = document.getElementById('doubleJumpBtn');
         
-        // Get game container and start button for expanded tap detection
+        // Mobile button handlers
+        const mobileJumpHandler = (e) => {
+            e.preventDefault();
+            performJump();
+        };
+
+        const mobileDoubleJumpHandler = (e) => {
+            e.preventDefault();
+            performDoubleJump();
+        };
+        
+        // Get game container and start button for desktop interaction
         const gameContainer = canvas.parentElement;
         const startButton = document.getElementById('startGameBtn');
         
         // Store event listeners for cleanup
         gameState.eventListeners.push(
-            { element: canvas, event: 'click', handler: jumpHandler },
-            { element: canvas, event: 'touchstart', handler: jumpHandler },
-            { element: canvas, event: 'touchend', handler: jumpHandler },
             { element: document, event: 'keydown', handler: keyHandler }
         );
-        
-        // Add expanded tap detection for game container if it exists
+
+        // Desktop mouse/click handlers (fallback for non-touch devices)
         if (gameContainer && gameContainer.classList.contains('game-canvas')) {
             gameState.eventListeners.push(
-                { element: gameContainer, event: 'click', handler: jumpHandler },
-                { element: gameContainer, event: 'touchstart', handler: jumpHandler },
-                { element: gameContainer, event: 'touchend', handler: jumpHandler }
+                { element: gameContainer, event: 'click', handler: smartJumpHandler }
             );
         }
         
-        // Add tap detection for start button during gameplay
+        if (canvas) {
+            gameState.eventListeners.push(
+                { element: canvas, event: 'click', handler: smartJumpHandler }
+            );
+        }
+        
+        // Add click detection for start button during gameplay (desktop)
         if (startButton) {
             gameState.eventListeners.push(
-                { element: startButton, event: 'click', handler: jumpHandler },
-                { element: startButton, event: 'touchstart', handler: jumpHandler },
-                { element: startButton, event: 'touchend', handler: jumpHandler }
+                { element: startButton, event: 'click', handler: smartJumpHandler }
+            );
+        }
+
+        // Mobile touch buttons
+        if (jumpBtn) {
+            gameState.eventListeners.push(
+                { element: jumpBtn, event: 'click', handler: mobileJumpHandler },
+                { element: jumpBtn, event: 'touchstart', handler: mobileJumpHandler }
+            );
+        }
+
+        if (doubleJumpBtn) {
+            gameState.eventListeners.push(
+                { element: doubleJumpBtn, event: 'click', handler: mobileDoubleJumpHandler },
+                { element: doubleJumpBtn, event: 'touchstart', handler: mobileDoubleJumpHandler }
             );
         }
         
@@ -220,6 +234,33 @@ window.PigGameEngine = (function() {
         gameState.eventListeners.forEach(({ element, event, handler }) => {
             element.addEventListener(event, handler);
         });
+
+        // Update mobile button states initially
+        updateMobileButtons();
+    }
+
+    function updateMobileButtons() {
+        const jumpBtn = document.getElementById('jumpBtn');
+        const doubleJumpBtn = document.getElementById('doubleJumpBtn');
+        
+        if (jumpBtn && doubleJumpBtn && gameState) {
+            const isRunning = gameState.running;
+            const canJump = gameState.pig && gameState.pig.grounded;
+            const canDoubleJump = gameState.pig && gameState.pig.doubleJumpAvailable;
+            
+            // Enable/disable buttons based on game state
+            jumpBtn.disabled = !isRunning || !canJump;
+            doubleJumpBtn.disabled = !isRunning || !canDoubleJump;
+            
+            // Update button text based on state
+            if (!isRunning) {
+                jumpBtn.textContent = '⬆️';
+                doubleJumpBtn.textContent = '⬆️⬆️';
+            } else {
+                jumpBtn.textContent = canJump ? '🐷⬆️' : '⬆️';
+                doubleJumpBtn.textContent = canDoubleJump ? '🐷⬆️⬆️' : '⬆️⬆️';
+            }
+        }
     }
     
     function updateGame() {
@@ -510,11 +551,15 @@ window.PigGameEngine = (function() {
         
         updateGame();
         drawGame();
+        updateMobileButtons(); // Keep button states synchronized during gameplay
         
         animationId = requestAnimationFrame(gameLoop);
     }
     
     function gameOver() {
+        // Prevent multiple gameOver calls
+        if (!gameState.running) return;
+        
         gameState.running = false;
         
         // Calculate steps based on distance traveled
@@ -532,10 +577,21 @@ window.PigGameEngine = (function() {
             });
         }
         
-        // Continue drawing particles for a moment
+        // Continue drawing particles for a moment with safety counter
+        let particleAnimationCount = 0;
+        const MAX_PARTICLE_FRAMES = 180; // Max 3 seconds at 60fps
+        
         const finalAnimationLoop = () => {
+            if (particleAnimationCount >= MAX_PARTICLE_FRAMES) {
+                // Force end the particle animation
+                gameState.particles = [];
+                return;
+            }
+            
+            particleAnimationCount++;
             drawGame();
-            if (gameState.particles.length > 0) {
+            
+            if (gameState.particles.length > 0 && particleAnimationCount < MAX_PARTICLE_FRAMES) {
                 requestAnimationFrame(finalAnimationLoop);
             }
         };
