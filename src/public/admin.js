@@ -2300,71 +2300,121 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Pig Style Setting Handlers
-            // Use setTimeout to ensure DOM is ready when this function runs
+            // Pig Style Setting Handlers - Simplified Direct Approach
             setTimeout(() => {
-            const pigStyleRadios = document.querySelectorAll('input[name="pigStyle"]');
-            console.log('Pig style radios found:', pigStyleRadios.length);
-            
-            // Load saved pig style from server
-            async function loadPigStyle() {
-                try {
-                    const response = await apiCall('/api/admin/pig-sprite-setting');
-                    const data = await response.json();
-                    
-                    if (data.pigStyle) {
-                        const radioToCheck = document.querySelector(`input[name="pigStyle"][value="${data.pigStyle}"]`);
-                        if (radioToCheck) {
-                            radioToCheck.checked = true;
+                console.log('Initializing pig style handlers...');
+                
+                // Load saved pig style from server
+                async function loadPigStyle() {
+                    try {
+                        console.log('Loading pig style from server...');
+                        const response = await apiCall('/api/admin/pig-sprite-setting');
+                        const data = await response.json();
+                        console.log('Pig style data:', data);
+                        
+                        if (data.pigStyle) {
+                            if (data.pigStyle === 'head-on') {
+                                document.getElementById('pigStyleHeadOn').checked = true;
+                            } else if (data.pigStyle === 'side') {
+                                document.getElementById('pigStyleSide').checked = true;
+                            }
                         }
-                    }
-                } catch (e) {
-                    console.error('Failed to load pig style:', e);
-                    // Default to head-on if loading fails
-                    const radioToCheck = document.querySelector(`input[name="pigStyle"][value="head-on"]`);
-                    if (radioToCheck) {
-                        radioToCheck.checked = true;
+                    } catch (e) {
+                        console.error('Failed to load pig style:', e);
+                        document.getElementById('pigStyleHeadOn').checked = true;
                     }
                 }
-            }
-            
-            // Handle pig style changes
-            pigStyleRadios.forEach((radio, index) => {
-                console.log(`Adding event listener to radio ${index}:`, radio.value);
-                radio.addEventListener('change', async function() {
-                    console.log('Pig style radio changed:', this.value);
-                    if (this.checked) {
-                        try {
-                            const response = await apiCall('/api/admin/pig-sprite-setting', {
-                                method: 'POST',
-                                body: JSON.stringify({
-                                    pigStyle: this.value,
-                                    csrf_token: window.csrfToken
-                                })
-                            });
-                            
-                            const result = await response.json();
-                            
-                            if (result.success) {
-                                // Show confirmation message
-                                showExtrasMessage(`✅ Pig sprite style changed to ${this.value === 'side' ? 'Side View' : 'Head-On View'}. This change applies to all users immediately!`, 'success');
-                            } else {
-                                throw new Error(result.error || 'Failed to save pig style');
-                            }
-                        } catch (e) {
-                            console.error('Failed to save pig style:', e);
-                            showExtrasMessage('❌ Failed to save pig style setting', 'error');
-                            // Revert the radio button
-                            this.checked = false;
-                            await loadPigStyle(); // Reload the correct value
+                
+                // Function to handle pig style change
+                async function handlePigStyleChange(value) {
+                    console.log('Handling pig style change to:', value);
+                    try {
+                        showExtrasMessage('🔄 Saving pig sprite style...', 'success');
+                        
+                        const response = await apiCall('/api/admin/pig-sprite-setting', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                pigStyle: value,
+                                csrf_token: window.csrfToken
+                            })
+                        });
+                        
+                        const result = await response.json();
+                        console.log('API response:', result);
+                        
+                        if (result.success) {
+                            showExtrasMessage(`✅ Pig sprite style changed to ${value === 'side' ? 'Side View' : 'Head-On View'}. This change applies to all users immediately!`, 'success');
+                        } else {
+                            throw new Error(result.error || 'Failed to save pig style');
                         }
+                    } catch (e) {
+                        console.error('Failed to save pig style:', e);
+                        showExtrasMessage(`❌ Failed to save pig style: ${e.message}`, 'error');
+                        // Reload the correct value
+                        await loadPigStyle();
                     }
-                });
-            });
-            
-            // Load pig style on page load
-            loadPigStyle();
-        }, 100); // Small delay to ensure DOM elements are accessible
+                }
+                
+                // Direct event listeners by ID
+                const headOnRadio = document.getElementById('pigStyleHeadOn');
+                const sideRadio = document.getElementById('pigStyleSide');
+                
+                console.log('Head-on radio found:', !!headOnRadio);
+                console.log('Side radio found:', !!sideRadio);
+                
+                if (headOnRadio) {
+                    headOnRadio.addEventListener('change', function() {
+                        console.log('Head-on radio changed');
+                        if (this.checked) {
+                            handlePigStyleChange('head-on');
+                        }
+                    });
+                    
+                    headOnRadio.addEventListener('click', function() {
+                        console.log('Head-on radio clicked');
+                    });
+                }
+                
+                if (sideRadio) {
+                    sideRadio.addEventListener('change', function() {
+                        console.log('Side radio changed');
+                        if (this.checked) {
+                            handlePigStyleChange('side');
+                        }
+                    });
+                    
+                    sideRadio.addEventListener('click', function() {
+                        console.log('Side radio clicked');
+                    });
+                }
+                
+                // Also add click handlers to the labels for better UX
+                const headOnLabel = headOnRadio?.closest('label');
+                const sideLabel = sideRadio?.closest('label');
+                
+                if (headOnLabel) {
+                    headOnLabel.addEventListener('click', function(e) {
+                        console.log('Head-on label clicked');
+                        if (!headOnRadio.checked) {
+                            headOnRadio.checked = true;
+                            handlePigStyleChange('head-on');
+                        }
+                    });
+                }
+                
+                if (sideLabel) {
+                    sideLabel.addEventListener('click', function(e) {
+                        console.log('Side label clicked');
+                        if (!sideRadio.checked) {
+                            sideRadio.checked = true;
+                            handlePigStyleChange('side');
+                        }
+                    });
+                }
+                
+                // Load initial pig style
+                loadPigStyle();
+            }, 200); // Slightly longer delay
         }
 
         // Initialize themes
