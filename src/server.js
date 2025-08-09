@@ -359,8 +359,8 @@ function validateCSRFToken(req, res, next) {
     return next();
   }
   
-  const token = req.body.csrfToken || req.headers['x-csrf-token'];
-  const sessionToken = req.session.csrfToken;
+  const token = req.body?.csrfToken || req.headers?.['x-csrf-token'];
+  const sessionToken = req.session?.csrfToken;
   
   if (!token || !sessionToken || token !== sessionToken) {
     return res.status(403).json({ error: 'Invalid CSRF token' });

@@ -2308,7 +2308,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 async function loadPigStyle() {
                     try {
                         console.log('Loading pig style from server...');
-                        const response = await apiCall('/api/admin/pig-sprite-setting');
+                        const response = await authenticatedFetch('/api/admin/pig-sprite-setting');
                         const data = await response.json();
                         console.log('Pig style data:', data);
                         
@@ -2331,11 +2331,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     try {
                         showExtrasMessage('🔄 Saving pig sprite style...', 'success');
                         
-                        const response = await apiCall('/api/admin/pig-sprite-setting', {
+                        const response = await authenticatedFetch('/api/admin/pig-sprite-setting', {
                             method: 'POST',
                             body: JSON.stringify({
-                                pigStyle: value,
-                                csrf_token: window.csrfToken
+                                pigStyle: value
                             })
                         });
                         
