@@ -16,6 +16,10 @@
             --text-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         body {
             background: var(--primary-gradient);
             min-height: 100vh;
@@ -23,6 +27,9 @@
             color: white;
             margin: 0;
             padding: 20px;
+            /* Enhanced scrolling for high FPS mobile devices */
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
         }
         
         .main-container {

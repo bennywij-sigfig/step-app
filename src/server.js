@@ -1956,6 +1956,55 @@ app.get('/api/admin/fun-setting', adminApiLimiter, requireApiAdmin, (req, res) =
   });
 });
 
+// Update pig sprite setting
+app.post('/api/admin/pig-sprite-setting', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
+  const { pigStyle } = req.body;
+  
+  if (!['head-on', 'side'].includes(pigStyle)) {
+    return res.status(400).json({ error: 'pigStyle must be either "head-on" or "side"' });
+  }
+  
+  // Store in database settings table
+  db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', 
+    ['pig_style', pigStyle], 
+    function(err) {
+      if (err) {
+        console.error('Error updating pig sprite setting:', err);
+        return res.status(500).json({ error: 'Failed to update pig sprite setting' });
+      }
+      
+      devLog('Pig sprite setting updated:', pigStyle);
+      res.json({ success: true, pigStyle });
+    }
+  );
+});
+
+// Get pig sprite setting
+app.get('/api/admin/pig-sprite-setting', adminApiLimiter, requireApiAdmin, (req, res) => {
+  db.get('SELECT value FROM settings WHERE key = ?', ['pig_style'], (err, row) => {
+    if (err) {
+      console.error('Error fetching pig sprite setting:', err);
+      return res.status(500).json({ error: 'Failed to fetch pig sprite setting' });
+    }
+    
+    const pigStyle = row ? row.value : 'head-on'; // default to head-on
+    res.json({ pigStyle });
+  });
+});
+
+// Public endpoint to get pig sprite setting (accessible to all users)
+app.get('/api/pig-sprite-setting', apiLimiter, (req, res) => {
+  db.get('SELECT value FROM settings WHERE key = ?', ['pig_style'], (err, row) => {
+    if (err) {
+      console.error('Error fetching pig sprite setting:', err);
+      return res.status(500).json({ error: 'Failed to fetch pig sprite setting' });
+    }
+    
+    const pigStyle = row ? row.value : 'head-on'; // default to head-on
+    res.json({ pigStyle });
+  });
+});
+
 
 // Get confetti threshold settings
 app.get('/api/admin/confetti-thresholds', adminApiLimiter, requireApiAdmin, (req, res) => {

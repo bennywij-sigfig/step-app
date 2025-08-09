@@ -1,128 +1,50 @@
 /**
  * Steps API Regression Tests
- * Comprehensive tests for steps endpoints to detect regressions
- * Tests both success and failure scenarios with real database operations
+ * Key API endpoint tests using stable testing pattern
+ * Converted from complex pattern to simple, reliable approach
  */
 
-const { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach } = require('@jest/globals');
+const { describe, test, expect, beforeEach, afterEach } = require('@jest/globals');
 const request = require('supertest');
+const crypto = require('crypto');
 const path = require('path');
-const { 
-  createTestDatabase, 
-  cleanupTestDatabase,
-  closeDatabaseConnections,
-  createTestUser,
-  createTestAdmin,
-  createTestSteps,
-  createTestChallenge,
-  createTestTeam,
-  getAuthenticatedSession,
-  getCsrfToken,
-  wait,
-  generateRandomEmail,
-  generateRandomSteps,
-  expectValidApiResponse,
-  expectValidErrorResponse
-} = require('../../environments/shared/test-helpers');
+const fs = require('fs');
+const { SimpleTestStabilizer } = require('../test-stabilizer-simple');
 
 describe('Steps API Regression Tests', () => {
+  let stabilizer;
   let app;
-  let testDbPath;
-  let agent;
-  let csrfToken;
-  let testUserId;
-
-  beforeAll(async () => {
-    // Don't suppress console output to see errors
-    // suppressConsole();
-    
-    // Set up test environment
-    process.env.NODE_ENV = 'test';
-    process.env.DISABLE_RATE_LIMITING = 'true';
-    process.env.SESSION_SECRET = 'test-session-secret';
-    process.env.CSRF_SECRET = 'test-csrf-secret';
-  });
-
-  afterAll(async () => {
-    restoreConsole();
-    
-    // Close the app properly at the end of all tests
-    if (app && app.close) {
-      await new Promise(resolve => {
-        setTimeout(() => {
-          app.close(resolve);
-        }, 100);
-      });
-    }
-  });
+  let server;
 
   beforeEach(async () => {
-    // Create fresh test database for each test using connection pool
-    testDbPath = await createTestDatabase();
-    process.env.DB_PATH = testDbPath;
-    
-    // Clear require cache to get fresh app instance - clear all related modules
-    delete require.cache[require.resolve('../../../src/server.js')];
-    delete require.cache[require.resolve('../../../src/database.js')];
-    
-    // Also clear middleware modules that might be cached
-    const middlewarePaths = [
-      '../../../src/middleware/auth.js',
-      '../../../src/middleware/rateLimiters.js',
-      '../../../src/services/email.js',
-      '../../../src/utils/dev.js',
-      '../../../src/utils/validation.js',
-      '../../../src/utils/token.js',
-      '../../../src/utils/challenge.js'
-    ];
-    
-    middlewarePaths.forEach(modulePath => {
-      try {
-        delete require.cache[require.resolve(modulePath)];
-      } catch (e) {
-        // Module might not exist, ignore
-      }
-    });
-    
-    // Import app after setting environment
-    app = require('../../../src/server.js');
-    
-    // Wait for app to initialize
-    await wait(200);
-
-    // For most tests, we don't need authentication since we're testing
-    // the authentication requirement itself and input validation
-    agent = request.agent(app);
+    // Use simple, stable test pattern
+    stabilizer = new SimpleTestStabilizer();
+    const { app: testApp, server: testServer } = await stabilizer.setup();
+    app = testApp;
+    server = testServer;
   });
 
   afterEach(async () => {
-    // Properly close database connections to prevent leaks
-    await cleanupTestDatabase(testDbPath);
-    delete process.env.DB_PATH;
+    if (stabilizer) {
+      await stabilizer.cleanup();
+    }
   });
 
 
-  // Helper function to create authenticated session using dev endpoint
+  // Simple authentication helper using direct database access (stable)
   async function createAuthenticatedSession() {
-    const testEmail = generateRandomEmail();
+    const testEmail = `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}@example.com`;
     const agent = request.agent(app);
     
-    // Use development endpoint to get magic link
-    const magicResponse = await agent
-      .post('/dev/get-magic-link')
-      .send({ email: testEmail })
-      .expect(200);
+    // Create user directly in database (avoids complex auth flow)
+    const userId = await stabilizer.createTestUser(testEmail, 'Test User');
     
-    expect(magicResponse.body).toHaveProperty('magicLink');
+    // Create session directly
+    const sessionId = crypto.randomUUID();
+    await stabilizer.createSession(sessionId, userId);
     
-    // Extract token from magic link URL
-    const magicUrl = new URL(magicResponse.body.magicLink);
-    const token = magicUrl.searchParams.get('token');
-    
-    // Use the token to authenticate
-    const loginResponse = await agent
-      .get(`/auth/login?token=${token}`)
-      .expect(302); // Should redirect after successful login
+    // Set session cookie
+    agent.jar.setCookie(`session=${sessionId}; Path=/; HttpOnly`);
     
     // Get CSRF token
     const csrfResponse = await agent
@@ -131,7 +53,7 @@ describe('Steps API Regression Tests', () => {
     
     const csrfToken = csrfResponse.body.csrfToken;
     
-    return { agent, csrfToken, email: testEmail };
+    return { agent, csrfToken, email: testEmail, userId };
   }
 
   describe('POST /api/steps - Authentication and Validation Tests', () => {

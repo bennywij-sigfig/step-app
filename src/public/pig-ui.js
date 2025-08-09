@@ -505,7 +505,7 @@ window.PigUI = (function() {
         }
         
         // Start the game
-        PigGameEngine.startGame(canvas);
+        await PigGameEngine.startGame(canvas);
         updateUI();
     }
     

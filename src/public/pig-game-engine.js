@@ -74,14 +74,19 @@ window.PigGameEngine = (function() {
     }
     
     // Check for pig style setting on initialization
-    function initializePigStyle() {
+    async function initializePigStyle() {
         try {
-            const pigStyle = localStorage.getItem('pigStyle');
-            if (pigStyle === 'side') {
+            const response = await fetch('/api/pig-sprite-setting');
+            const data = await response.json();
+            
+            if (data.pigStyle && data.pigStyle === 'side') {
                 setPigStyle('side');
+            } else {
+                setPigStyle('head-on'); // default
             }
         } catch (e) {
-            // Ignore localStorage errors
+            console.warn('Failed to load pig style setting, using default head-on view:', e);
+            setPigStyle('head-on'); // fallback to default
         }
     }
     
@@ -707,14 +712,14 @@ window.PigGameEngine = (function() {
     
     // Public API
     return {
-        startGame: function(canvasElement) {
+        startGame: async function(canvasElement) {
             // Force cleanup of any existing game state
             cleanup();
             
             // Wait a frame to ensure cleanup is complete
-            setTimeout(() => {
+            setTimeout(async () => {
                 // Initialize pig style based on settings
-                initializePigStyle();
+                await initializePigStyle();
                 
                 gameState = createGameState(canvasElement);
                 gameState.running = true;

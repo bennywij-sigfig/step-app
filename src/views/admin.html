@@ -50,6 +50,10 @@
             box-sizing: border-box;
         }
         
+        html {
+            scroll-behavior: smooth;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             margin: 0;
@@ -58,6 +62,9 @@
             min-height: 100vh;
             color: #333;
             transition: background 0.3s ease;
+            /* Enhanced scrolling for high FPS mobile devices */
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
         }
         
         .container {
@@ -487,6 +494,21 @@
                 padding: 8px 6px;
                 font-size: 13px;
             }
+            
+            /* Confetti physics controls responsive adjustments */
+            .confetti-physics-grid {
+                grid-template-columns: 1fr !important;
+                gap: 12px !important;
+            }
+            
+            .particle-size-grid {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Shorten physics parameter descriptions on mobile */
+            .physics-description {
+                display: none !important;
+            }
         }
         
         /* Landscape orientation optimizations */
@@ -609,16 +631,94 @@
             </div>
         </div>
 
-        <!-- Fun Features Toggle -->
+        <!-- Fun Features & Games -->
         <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
-            <h3>Fun Features</h3>
-            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
-                <label style="font-weight: 500; color: #555;">Allow Fun:</label>
-                <input type="checkbox" id="allowFunToggle" style="transform: scale(1.2); margin-right: 5px;">
-                <span id="funToggleStatus" style="font-size: 14px; color: #666;">Disabled</span>
+            <h3>🎮 Fun Features & Games</h3>
+            
+            <!-- Allow Fun Toggle -->
+            <div style="margin-bottom: 25px;">
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                    <label style="font-weight: 500; color: #555;">Allow Fun:</label>
+                    <input type="checkbox" id="allowFunToggle" style="transform: scale(1.2); margin-right: 5px;">
+                    <span id="funToggleStatus" style="font-size: 14px; color: #666;">Disabled</span>
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                    Enable fun features and games for all users. When disabled, extra game buttons are hidden from the dashboard.
+                </div>
             </div>
-            <div style="font-size: 12px; color: #666; margin-top: 10px;">
-                Enable fun features and games for all users. When disabled, extra game buttons are hidden from the dashboard.
+            
+            <!-- Pig Sprite Style -->
+            <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 20px;">
+                <h4 style="margin: 0 0 15px 0; color: #555; font-size: 16px;">🐷 Shadow Pig Game Settings</h4>
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">Global pig appearance settings that apply to all users</p>
+                
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; transition: all 0.3s ease;">
+                            <input type="radio" name="pigStyle" value="head-on" id="pigStyleHeadOn" checked style="margin: 0;">
+                            <span style="font-weight: 500; color: #555;">Head-On View (Default)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; transition: all 0.3s ease;">
+                            <input type="radio" name="pigStyle" value="side" id="pigStyleSide" style="margin: 0;">
+                            <span style="font-weight: 500; color: #555;">Side View (Running)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div style="background: rgba(76, 175, 80, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; border: 1px solid rgba(76, 175, 80, 0.2);">
+                    <div style="color: #2e7d32; font-size: 13px; line-height: 1.4;">
+                        <strong>🎨 Sprite Styles:</strong><br>
+                        <strong>Head-On:</strong> Forward-facing pig with big ears • <strong>Side View:</strong> Running pig profile<br>
+                        <em>This global setting applies to all users immediately in new games.</em>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Admin Pig Game Management -->
+            <div style="border-top: 1px solid rgba(0,0,0,0.1); padding-top: 20px;">
+                <h4 style="margin: 0 0 15px 0; color: #555; font-size: 16px;">🔧 Admin Game Management</h4>
+                
+                <!-- Sandbox Game -->
+                <div style="margin-bottom: 20px;">
+                    <h5 style="margin: 0 0 10px 0; color: #666; font-size: 14px;">🐷 Sandbox Mode</h5>
+                    <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Test gameplay with infinite hearts and no database writes</p>
+                    
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
+                        <button id="launchSandboxPigGame" style="padding: 10px 16px; background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s ease;">
+                            🎮 Launch Sandbox Game
+                        </button>
+                    </div>
+                    
+                    <div style="background: rgba(255, 193, 7, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 193, 7, 0.2);">
+                        <div style="color: #856404; font-size: 12px; line-height: 1.4;">
+                            <strong>🛡️ Features:</strong> Infinite hearts • No database writes • Full game mechanics<br>
+                            <em>Perfect for testing game balance and mobile compatibility without affecting production data.</em>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Data Management -->
+                <div>
+                    <h5 style="margin: 0 0 10px 0; color: #666; font-size: 14px;">🗑️ User Data Reset</h5>
+                    <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Reset individual user's pig game progress (preserves main step data)</p>
+                    
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 10px;">
+                        <div style="flex: 1; min-width: 180px;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: 500; color: #555; font-size: 13px;">User Email</label>
+                            <input type="email" id="resetUserEmail" placeholder="user@example.com"
+                                   style="width: 100%; padding: 10px 12px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 8px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 13px;">
+                        </div>
+                        <button id="resetUserShadowData" style="padding: 10px 16px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.3s ease;">
+                            🗑️ Reset Trots
+                        </button>
+                    </div>
+                    
+                    <div style="background: rgba(255, 62, 62, 0.1); backdrop-filter: blur(10px); padding: 10px; border-radius: 8px; border: 1px solid rgba(255, 62, 62, 0.2);">
+                        <div style="color: #721c24; font-size: 12px; line-height: 1.4;">
+                            <strong>⚠️ Warning:</strong> Only resets pig game data • Main step data unaffected • Irreversible action
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -714,7 +814,7 @@
             <h3>⚙️ Advanced Confetti Physics</h3>
             <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Fine-tune the confetti physics system parameters</p>
             
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+            <div class="confetti-physics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 15px;">
                 <!-- Particle Count -->
                 <div>
                     <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">
@@ -726,7 +826,7 @@
                                style="flex: 1; accent-color: var(--primary-color);">
                         <span id="particleCountValue" style="min-width: 50px; font-weight: 600; color: var(--primary-color);">600</span>
                     </div>
-                    <div style="font-size: 12px; color: #888; margin-top: 4px;">More particles = more impressive but uses more CPU</div>
+                    <div class="physics-description" style="font-size: 12px; color: #888; margin-top: 4px;">More particles = more impressive but uses more CPU</div>
                 </div>
 
                 <!-- Lifetime -->
@@ -740,7 +840,7 @@
                                style="flex: 1; accent-color: var(--primary-color);">
                         <span id="lifetimeValue" style="min-width: 50px; font-weight: 600; color: var(--primary-color);">10s</span>
                     </div>
-                    <div style="font-size: 12px; color: #888; margin-top: 4px;">How long particles stay before fading out</div>
+                    <div class="physics-description" style="font-size: 12px; color: #888; margin-top: 4px;">How long particles stay before fading out</div>
                 </div>
 
                 <!-- Tilt Sensitivity -->
@@ -754,7 +854,7 @@
                                style="flex: 1; accent-color: var(--primary-color);">
                         <span id="tiltSensitivityValue" style="min-width: 50px; font-weight: 600; color: var(--primary-color);">0.3</span>
                     </div>
-                    <div style="font-size: 12px; color: #888; margin-top: 4px;">How much device tilt affects particle movement</div>
+                    <div class="physics-description" style="font-size: 12px; color: #888; margin-top: 4px;">How much device tilt affects particle movement</div>
                 </div>
 
                 <!-- Max Tilt Force -->
@@ -768,7 +868,7 @@
                                style="flex: 1; accent-color: var(--primary-color);">
                         <span id="maxTiltForceValue" style="min-width: 50px; font-weight: 600; color: var(--primary-color);">2.0</span>
                     </div>
-                    <div style="font-size: 12px; color: #888; margin-top: 4px;">Maximum force applied from device tilt</div>
+                    <div class="physics-description" style="font-size: 12px; color: #888; margin-top: 4px;">Maximum force applied from device tilt</div>
                 </div>
 
                 <!-- Bounciness -->
@@ -782,11 +882,11 @@
                                style="flex: 1; accent-color: var(--primary-color);">
                         <span id="bouncinessValue" style="min-width: 50px; font-weight: 600; color: var(--primary-color);">0.7</span>
                     </div>
-                    <div style="font-size: 12px; color: #888; margin-top: 4px;">How bouncy particles are when hitting edges (0=thud, 1=super bouncy)</div>
+                    <div class="physics-description" style="font-size: 12px; color: #888; margin-top: 4px;">How bouncy particles are when hitting edges (0=thud, 1=super bouncy)</div>
                 </div>
 
                 <!-- Particle Size Range -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="particle-size-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                     <div>
                         <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">
                             Min Size
@@ -810,7 +910,7 @@
                         </div>
                     </div>
                 </div>
-                <div style="font-size: 12px; color: #888; margin-top: 4px;">Size range for confetti particles - bigger range = more variety</div>
+                <div class="physics-description" style="font-size: 12px; color: #888; margin-top: 4px;">Size range for confetti particles - bigger range = more variety</div>
 
                 <!-- Shape Variety -->
                 <div>
@@ -823,7 +923,7 @@
                                style="flex: 1; accent-color: var(--primary-color);">
                         <span id="shapeVarietyValue" style="min-width: 50px; font-weight: 600; color: var(--primary-color);">All</span>
                     </div>
-                    <div style="font-size: 12px; color: #888; margin-top: 4px;">Variety of shapes: 0.25=circles only, 0.5=circles+squares, 0.75=+strips, 1.0=all shapes</div>
+                    <div class="physics-description" style="font-size: 12px; color: #888; margin-top: 4px;">Variety of shapes: 0.25=circles only, 0.5=circles+squares, 0.75=+strips, 1.0=all shapes</div>
                 </div>
             </div>
 
@@ -880,90 +980,7 @@
             </div>
         </div>
 
-        <!-- Sandbox Pig Game (Admin Only) -->
-        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
-            <h3>🐷 Shadow Pig Game Sandbox</h3>
-            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Admin-only playtesting mode with infinite hearts and no database writes</p>
-            
-            <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
-                <button id="launchSandboxPigGame" style="padding: 12px 20px; background: linear-gradient(135deg, #ff6b6b 0%, #ff8e8e 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
-                    🎮 Launch Sandbox Game
-                </button>
-            </div>
-            
-            <div style="background: rgba(255, 193, 7, 0.1); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 193, 7, 0.2);">
-                <div style="color: #856404; font-size: 14px; line-height: 1.5;">
-                    <strong>🛡️ Sandbox Features:</strong><br>
-                    <ul style="margin: 8px 0; padding-left: 20px;">
-                        <li><strong>Infinite Hearts:</strong> Never run out of tries</li>
-                        <li><strong>No Database Writes:</strong> Results don't affect leaderboards or user data</li>
-                        <li><strong>Admin Only:</strong> Only visible to admin users for testing</li>
-                        <li><strong>Full Game Features:</strong> All game mechanics work (double jump, bonus hearts, physics)</li>
-                    </ul>
-                    <em>Perfect for testing game balance, mechanics, and mobile compatibility without affecting production data.</em>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Shadow Game Data Management -->
-        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
-            <h3>🗑️ Shadow Game Data Management</h3>
-            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Reset individual user's shadow pig game data (trots only, does not affect main app step data)</p>
-            
-            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 15px;">
-                <div style="flex: 1; min-width: 200px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">User Email</label>
-                    <input type="email" id="resetUserEmail" placeholder="user@example.com"
-                           style="width: 100%; padding: 12px 16px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px;">
-                </div>
-                <button id="resetUserShadowData" style="padding: 12px 20px; background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%); color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease;">
-                    🗑️ Reset User's Trots
-                </button>
-            </div>
-            
-            <div style="background: rgba(255, 62, 62, 0.1); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 62, 62, 0.2);">
-                <div style="color: #721c24; font-size: 14px; line-height: 1.5;">
-                    <strong>⚠️ Warning:</strong><br>
-                    <ul style="margin: 8px 0; padding-left: 20px;">
-                        <li><strong>Shadow Game Only:</strong> This only resets pig game trots, hearts, and game statistics</li>
-                        <li><strong>Main App Safe:</strong> User's main step tracking data is completely unaffected</li>
-                        <li><strong>Irreversible:</strong> This action cannot be undone</li>
-                        <li><strong>User Specific:</strong> Only affects the specified user's shadow game data</li>
-                    </ul>
-                    <em>Use this to reset a user's pig game progress while preserving their main step challenge data.</em>
-                </div>
-            </div>
-        </div>
 
-        <!-- Pig Sprite Style Setting -->
-        <div style="margin-bottom: 30px; padding: 20px; background: rgba(255, 255, 255, 0.4); backdrop-filter: blur(10px); border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.2);">
-            <h3>🐷 Pig Sprite Style</h3>
-            <p style="color: #666; font-size: 14px; margin-bottom: 20px;">Choose pig appearance for the Shadow Pig game</p>
-            
-            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-bottom: 15px;">
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; transition: all 0.3s ease;">
-                        <input type="radio" name="pigStyle" value="head-on" id="pigStyleHeadOn" checked style="margin: 0;">
-                        <span style="font-weight: 500; color: #555;">Head-On View (Default)</span>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 15px; background: rgba(255, 255, 255, 0.6); border-radius: 8px; transition: all 0.3s ease;">
-                        <input type="radio" name="pigStyle" value="side" id="pigStyleSide" style="margin: 0;">
-                        <span style="font-weight: 500; color: #555;">Side View (Running)</span>
-                    </label>
-                </div>
-            </div>
-            
-            <div style="background: rgba(76, 175, 80, 0.1); backdrop-filter: blur(10px); padding: 15px; border-radius: 8px; border: 1px solid rgba(76, 175, 80, 0.2);">
-                <div style="color: #2e7d32; font-size: 14px; line-height: 1.5;">
-                    <strong>🎨 Sprite Styles:</strong><br>
-                    <ul style="margin: 8px 0; padding-left: 20px;">
-                        <li><strong>Head-On View:</strong> Pig facing forward with big ears and direct eye contact</li>
-                        <li><strong>Side View:</strong> Pig profile running to the right, more dynamic look</li>
-                    </ul>
-                    <em>Setting is saved locally and applies immediately to new games.</em>
-                </div>
-            </div>
-        </div>
 
         <div id="extrasMessage"></div>
     </div>
