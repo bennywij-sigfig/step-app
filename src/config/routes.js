@@ -38,7 +38,6 @@ const ROUTES = {
     mcpTokens: '/api/admin/mcp-tokens',
     mcpAudit: '/api/admin/mcp-audit',
     confetti: '/api/admin/confetti-threshold',
-    magicLink: '/api/admin/magic-link',
     export: '/api/admin/export'
   },
 

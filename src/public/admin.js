@@ -1,3 +1,14 @@
+// HTML escaping function to prevent XSS vulnerabilities
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Setup subtle navigation back to dashboard
     const adminHeader = document.getElementById('adminHeader');
@@ -160,13 +171,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     <tbody>
                         ${users.map(user => `
                             <tr>
-                                <td>${user.name}</td>
-                                <td>${user.email}</td>
+                                <td>${escapeHtml(user.name)}</td>
+                                <td>${escapeHtml(user.email)}</td>
                                 <td>
                                     <select id="team-${user.id}" class="team-select" data-user-id="${user.id}">
                                         <option value="">No Team</option>
                                         ${teams.map(team => 
-                                            `<option value="${team.name}" ${user.team === team.name ? 'selected' : ''}>${team.name}</option>`
+                                            `<option value="${escapeHtml(team.name)}" ${user.team === team.name ? 'selected' : ''}>${escapeHtml(team.name)}</option>`
                                         ).join('')}
                                     </select>
                                 </td>
@@ -177,13 +188,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <button class="action-btn save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled title="Save team assignment">
                                         💾
                                     </button>
-                                    <button class="action-btn magic-link-btn" data-user-id="${user.id}" data-user-name="${user.name}" data-user-email="${user.email}" title="Generate magic login link">
-                                        🔗
-                                    </button>
-                                    <button class="action-btn clear-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Clear all steps for this user">
+                                    <button class="action-btn clear-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" title="Clear all steps for this user">
                                         🗑️
                                     </button>
-                                    <button class="action-btn delete-btn delete-user-btn" data-user-id="${user.id}" data-user-name="${user.name}" title="Delete user account">
+                                    <button class="action-btn delete-btn delete-user-btn" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" title="Delete user account">
                                         ❌
                                     </button>
                                 </td>
@@ -352,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             ${teams.map(team => `
                                 <tr>
                                     <td>
-                                        <input type="text" id="teamName-${team.id}" value="${team.name}" 
+                                        <input type="text" id="teamName-${team.id}" value="${escapeHtml(team.name)}" 
                                                style="width: 100%; padding: 10px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;"
                                                class="team-name-input" data-team-id="${team.id}">
                                     </td>
@@ -557,185 +565,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Generate magic link for user (admin only) with enhanced security
-        async function generateMagicLink(userId, userName, userEmail) {
-            // First, show confirmation dialog as required by security review
-            const confirmed = confirm(
-                `⚠️ SECURITY WARNING ⚠️\n\n` +
-                `You are about to generate a temporary login link for:\n` +
-                `• User: ${userName} (${userEmail})\n\n` +
-                `This action will:\n` +
-                `• Create a direct login link that bypasses email authentication\n` +
-                `• Grant immediate access to the user's account\n` +
-                `• Be logged for security audit purposes\n\n` +
-                `Are you sure you want to proceed?`
-            );
-            
-            if (!confirmed) {
-                return;
-            }
-            
-            const messageDiv = document.getElementById('usersMessage');
-            messageDiv.innerHTML = '<div class="message info">Generating magic link...</div>';
-            
-            try {
-                // First call without confirmation to trigger security prompt
-                let response = await authenticatedFetch('/api/admin/generate-magic-link', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: userId })
-                });
-                
-                let data = await response.json();
-                
-                // If requires confirmation, make the confirmed call
-                if (data.requiresConfirmation) {
-                    response = await authenticatedFetch('/api/admin/generate-magic-link', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ userId: userId, confirmed: true })
-                    });
-                    
-                    data = await response.json();
-                }
-                
-                if (response.ok) {
-                    // Show success message
-                    messageDiv.innerHTML = '<div class="message success">Magic link generated successfully!</div>';
-                    
-                    // Show secure modal with magic link
-                    showMagicLinkModal(data);
-                    
-                    setTimeout(() => messageDiv.innerHTML = '', 5000);
-                } else {
-                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
-                }
-            } catch (error) {
-                console.error('Error generating magic link:', error);
-                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
-            }
-        }
 
-        // Show magic link in secure modal with enhanced security features
-        function showMagicLinkModal(linkData) {
-            // Create modal HTML with security enhancements
-            const modalHTML = `
-                <div id="magicLinkModal" style="
-                    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-                    background: rgba(0, 0, 0, 0.8); z-index: 10000; 
-                    display: flex; align-items: center; justify-content: center;
-                ">
-                    <div style="
-                        background: white; padding: 30px; border-radius: 15px; 
-                        max-width: 600px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-                        position: relative;
-                    ">
-                        <h2 style="color: #d9534f; margin: 0 0 20px 0; display: flex; align-items: center;">
-                            🔗 Magic Link Generated
-                            <span style="
-                                background: #f8d7da; color: #721c24; font-size: 12px; 
-                                padding: 4px 8px; border-radius: 4px; margin-left: 10px;
-                            ">SECURITY SENSITIVE</span>
-                        </h2>
-                        
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                            <strong>Target User:</strong> ${linkData.targetUser.name} (${linkData.targetUser.email})<br>
-                            <strong>Expires:</strong> ${linkData.expiresAtLocal}<br>
-                            <strong>Token ID:</strong> ${linkData.maskedToken}
-                        </div>
-                        
-                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #ffc107;">
-                            <strong>⚠️ Security Notice:</strong><br>
-                            ${linkData.securityNotice}
-                        </div>
-                        
-                        <div style="margin-bottom: 20px;">
-                            <label style="font-weight: bold; display: block; margin-bottom: 8px;">Magic Link:</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="text" id="magicLinkInput" value="${linkData.magicLink}" 
-                                       style="flex: 1; padding: 12px; border: 2px solid #007bff; border-radius: 6px; font-family: monospace;" 
-                                       readonly>
-                                <button id="copyLinkBtn" style="
-                                    background: #007bff; color: white; border: none; padding: 12px 20px; 
-                                    border-radius: 6px; cursor: pointer; white-space: nowrap;
-                                ">📋 Copy</button>
-                            </div>
-                        </div>
-                        
-                        <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                            <button id="closeMagicLinkModal" style="
-                                background: #6c757d; color: white; border: none; padding: 12px 20px; 
-                                border-radius: 6px; cursor: pointer;
-                            ">Close</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            // Add modal to DOM
-            document.body.insertAdjacentHTML('beforeend', modalHTML);
-            
-            // Auto-select the link text for easy copying
-            const linkInput = document.getElementById('magicLinkInput');
-            linkInput.select();
-            linkInput.setSelectionRange(0, 99999); // For mobile devices
-            
-            // Copy button functionality with secure clipboard handling
-            document.getElementById('copyLinkBtn').addEventListener('click', async () => {
-                try {
-                    await navigator.clipboard.writeText(linkData.magicLink);
-                    
-                    // Show success feedback
-                    const copyBtn = document.getElementById('copyLinkBtn');
-                    const originalText = copyBtn.textContent;
-                    copyBtn.textContent = '✅ Copied!';
-                    copyBtn.style.background = '#28a745';
-                    
-                    // Auto-clear clipboard after 60 seconds for security
-                    setTimeout(async () => {
-                        try {
-                            await navigator.clipboard.writeText('');
-                            console.log('🔒 Clipboard cleared for security');
-                        } catch (e) {
-                            console.log('Could not clear clipboard automatically');
-                        }
-                    }, 60000);
-                    
-                    setTimeout(() => {
-                        if (document.getElementById('copyLinkBtn')) {
-                            copyBtn.textContent = originalText;
-                            copyBtn.style.background = '#007bff';
-                        }
-                    }, 2000);
-                } catch (err) {
-                    console.error('Could not copy to clipboard:', err);
-                    // Fallback: select text for manual copy
-                    linkInput.select();
-                    alert('Please copy the link manually (Ctrl+C or Cmd+C)');
-                }
-            });
-            
-            // Close modal functionality
-            document.getElementById('closeMagicLinkModal').addEventListener('click', () => {
-                document.getElementById('magicLinkModal').remove();
-            });
-            
-            // Close on background click
-            document.getElementById('magicLinkModal').addEventListener('click', (e) => {
-                if (e.target.id === 'magicLinkModal') {
-                    document.getElementById('magicLinkModal').remove();
-                }
-            });
-            
-            // Close on Escape key
-            const escapeHandler = (e) => {
-                if (e.key === 'Escape') {
-                    document.getElementById('magicLinkModal').remove();
-                    document.removeEventListener('keydown', escapeHandler);
-                }
-            };
-            document.addEventListener('keydown', escapeHandler);
-        }
 
         // Export CSV function
         async function exportCSV() {
@@ -815,7 +645,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 ${challenges.map(challenge => `
                                     <tr>
                                         <td>
-                                            <input type="text" id="challengeName-${challenge.id}" value="${challenge.name}" 
+                                            <input type="text" id="challengeName-${challenge.id}" value="${escapeHtml(challenge.name)}" 
                                                    style="width: 100%; padding: 10px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;"
                                                    class="challenge-name-input" data-challenge-id="${challenge.id}">
                                         </td>
@@ -845,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <button class="save-btn save-challenge-btn" id="saveChallenge-${challenge.id}" data-challenge-id="${challenge.id}" disabled>
                                                 Save
                                             </button>
-                                            <button class="delete-challenge-btn" data-challenge-id="${challenge.id}" data-challenge-name="${challenge.name}" 
+                                            <button class="delete-challenge-btn" data-challenge-id="${challenge.id}" data-challenge-name="${escapeHtml(challenge.name)}" 
                                                     style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px;">
                                                 Delete
                                             </button>
@@ -1070,13 +900,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 deleteUser(parseInt(userId), userName);
             }
             
-            // Generate magic link buttons
-            if (e.target.classList.contains('magic-link-btn')) {
-                const userId = e.target.dataset.userId;
-                const userName = e.target.dataset.userName;
-                const userEmail = e.target.dataset.userEmail;
-                generateMagicLink(parseInt(userId), userName, userEmail);
-            }
             
             // Save team name buttons
             if (e.target.classList.contains('save-team-name-btn')) {
@@ -1322,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const userSelect = document.getElementById('newTokenUserId');
                 userSelect.innerHTML = '<option value="">Select User...</option>';
                 users.forEach(user => {
-                    userSelect.innerHTML += `<option value="${user.id}">${user.name} (${user.email})</option>`;
+                    userSelect.innerHTML += `<option value="${user.id}">${escapeHtml(user.name)} (${escapeHtml(user.email)})</option>`;
                 });
                 
                 // Load tokens table
@@ -1382,8 +1205,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             return `
                                 <tr ${isExpired ? 'style="opacity: 0.6; background: rgba(255,0,0,0.05);"' : ''}>
-                                    <td><strong>${token.user_name}</strong><br><small>${token.user_email}</small></td>
-                                    <td>${token.name}</td>
+                                    <td><strong>${escapeHtml(token.user_name)}</strong><br><small>${escapeHtml(token.user_email)}</small></td>
+                                    <td>${escapeHtml(token.name)}</td>
                                     <td><span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: ${token.permissions === 'read_write' ? '#e8f5e8; color: #2d7d2d' : '#fff3cd; color: #856404'};">${token.permissions === 'read_write' ? 'Read+Write' : 'Read Only'}</span></td>
                                     <td><code style="font-size: 11px; background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 3px;">${token.scopes || 'default'}</code></td>
                                     <td>${createdDate}</td>
@@ -1391,7 +1214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <td>${lastUsed}</td>
                                     <td style="text-align: center;">${token.usage_count || 0}</td>
                                     <td class="actions-cell">
-                                        <button class="action-btn delete-btn mcp-revoke-btn" data-token-id="${token.id}" data-token-name="${token.name}" data-user-name="${token.user_name}" title="Revoke token">
+                                        <button class="action-btn delete-btn mcp-revoke-btn" data-token-id="${token.id}" data-token-name="${escapeHtml(token.name)}" data-user-name="${escapeHtml(token.user_name)}" title="Revoke token">
                                             🗑️
                                         </button>
                                         <button class="action-btn mcp-copy-btn" data-token-value="${token.token}" title="Copy token" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);">
@@ -1434,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             return `
                                 <tr>
                                     <td style="font-size: 12px;">${timestamp}</td>
-                                    <td><strong>${entry.user_name}</strong></td>
+                                    <td><strong>${escapeHtml(entry.user_name)}</strong></td>
                                     <td><code style="font-size: 12px; background: rgba(0,0,0,0.05); padding: 2px 4px; border-radius: 3px;">${entry.method}</code></td>
                                     <td><span style="padding: 2px 6px; border-radius: 3px; font-size: 11px; font-weight: bold; background: ${isSuccess ? '#d4edda; color: #155724' : '#f8d7da; color: #721c24'};">${entry.status_code}</span></td>
                                     <td style="font-size: 12px; max-width: 200px; word-wrap: break-word;">${entry.details || '-'}</td>

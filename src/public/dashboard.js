@@ -1,3 +1,14 @@
+// HTML escaping function to prevent XSS vulnerabilities
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // Team disclosure functionality - must be global
 let expandedTeams = new Set(); // Track expanded state
 
@@ -1678,8 +1689,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         return `<div class="leaderboard-item${highlightClass}">
                             <div>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
+                                <strong>${escapeHtml(user.name)}</strong>
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
                                 ${formatReportingRate(user.personal_reporting_rate, '#28a745')}
                             </div>
                             <div>
@@ -1704,8 +1715,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         return `<div class="leaderboard-item${highlightClass}" style="opacity: 0.8;">
                             <div>
                                 <span class="rank">-</span>
-                                <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
+                                <strong>${escapeHtml(user.name)}</strong>
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
                                 ${formatReportingRate(user.personal_reporting_rate, '#ffc107')}
                             </div>
                             <div>
@@ -1728,8 +1739,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         return `<div class="leaderboard-item${highlightClass}">
                             <div>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
+                                <strong>${escapeHtml(user.name)}</strong>
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
                             </div>
                             <div>
                                 <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
@@ -1895,7 +1906,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <span class="team-disclosure" data-team="${team.team}">▶</span>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${team.team}</strong>
+                                <strong>${escapeHtml(team.team)}</strong>
                                 ${formatMemberCount(team.member_count)}
                                 ${formatReportingRate(team.team_reporting_rate, '#28a745')}
                             </div>
@@ -1922,7 +1933,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <span class="team-disclosure" data-team="${team.team}">▶</span>
                                 <span class="rank">-</span>
-                                <strong>${team.team}</strong>
+                                <strong>${escapeHtml(team.team)}</strong>
                                 ${formatMemberCount(team.member_count)}
                                 ${formatReportingRate(team.team_reporting_rate, '#ffc107')}
                             </div>
@@ -1950,7 +1961,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div>
                                     <span class="team-disclosure" data-team="${team.team}">▶</span>
                                     <span class="rank">#${index + 1}</span>
-                                    <strong>${team.team}</strong>
+                                    <strong>${escapeHtml(team.team)}</strong>
                                     ${formatMemberCount(team.member_count)}
                                 </div>
                                 <div>
@@ -2054,7 +2065,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const membersHtml = members.map(member => `
                 <div class="member-item">
                     <div class="member-info">
-                        <span class="member-name">${member.name}</span>
+                        <span class="member-name">${escapeHtml(member.name)}</span>
                         ${member.personal_reporting_rate !== undefined ? 
                             `<span class="member-reporting">${member.personal_reporting_rate >= 1 ? Math.round(member.personal_reporting_rate) : member.personal_reporting_rate}% reporting</span>` 
                             : ''}

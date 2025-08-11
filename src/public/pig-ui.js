@@ -1,11 +1,24 @@
 // Shadow Pig Game UI Management
 // Handles all UI interactions and state management for the pig game
 
+// HTML escaping function to prevent XSS vulnerabilities
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 window.PigUI = (function() {
     'use strict';
     
     let elements = {};
     let gameData = {};
+    let heartSyncInterval = null;
+    let isHeartLoading = false;
     
     // Check for sandbox mode
     const urlParams = new URLSearchParams(window.location.search);
@@ -84,16 +97,20 @@ window.PigUI = (function() {
             return gameData;
         }
         
-        // Try to get heart status from server first
+        // Try to get heart status from server first - always prioritize server data
         let serverHeartData = null;
         if (window.PigAPI) {
             try {
+                isHeartLoading = true;
+                updateUI(); // Show loading state
                 serverHeartData = await PigAPI.getHeartStatus();
                 if (serverHeartData) {
                     console.log('✅ Using server-side heart tracking');
                 }
             } catch (error) {
                 console.warn('Server heart tracking unavailable, falling back to localStorage');
+            } finally {
+                isHeartLoading = false;
             }
         }
         
@@ -106,7 +123,7 @@ window.PigUI = (function() {
             gameData = {};
         }
         
-        // Initialize today's data if not exists
+        // Initialize today's data - prioritize server data over localStorage
         if (!gameData[today]) {
             gameData[today] = {
                 hearts: serverHeartData ? serverHeartData.hearts : 5,
@@ -114,9 +131,11 @@ window.PigUI = (function() {
                 gamesPlayed: 0,
                 bestDistance: 0
             };
-        } else if (serverHeartData) {
-            // Update hearts from server (server is authoritative)
-            gameData[today].hearts = serverHeartData.hearts;
+        } else {
+            // ALWAYS update hearts from server when available (server is authoritative)
+            if (serverHeartData) {
+                gameData[today].hearts = serverHeartData.hearts;
+            }
         }
         
         // Initialize overall stats if not exists
@@ -137,6 +156,51 @@ window.PigUI = (function() {
         return gameData;
     }
     
+    // Periodic heart synchronization to prevent drift
+    async function syncHeartCount() {
+        if (isSandboxMode || !window.PigAPI) return;
+        
+        try {
+            const serverHeartData = await PigAPI.getHeartStatus();
+            if (serverHeartData) {
+                const today = getPacificDateString();
+                const oldHearts = gameData[today]?.hearts || 0;
+                const newHearts = serverHeartData.hearts;
+                
+                // Only update if there's a difference
+                if (oldHearts !== newHearts) {
+                    console.log(`🔄 Heart sync: ${oldHearts} → ${newHearts}`);
+                    gameData[today].hearts = newHearts;
+                    gameData.serverHeartData = serverHeartData;
+                    saveGameData();
+                    updateUI();
+                }
+            }
+        } catch (error) {
+            console.warn('Heart sync failed:', error);
+        }
+    }
+    
+    function startHeartSync() {
+        if (heartSyncInterval) {
+            clearInterval(heartSyncInterval);
+        }
+        
+        // Sync every 30 seconds to catch changes from other tabs/windows
+        if (!isSandboxMode && window.PigAPI) {
+            heartSyncInterval = setInterval(syncHeartCount, 30000);
+            console.log('🔄 Started periodic heart synchronization (30s intervals)');
+        }
+    }
+    
+    function stopHeartSync() {
+        if (heartSyncInterval) {
+            clearInterval(heartSyncInterval);
+            heartSyncInterval = null;
+            console.log('🔄 Stopped periodic heart synchronization');
+        }
+    }
+    
     function saveGameData() {
         try {
             localStorage.setItem('shadowPigGameData', JSON.stringify(gameData));
@@ -155,9 +219,15 @@ window.PigUI = (function() {
             if (isSandboxMode) {
                 elements.heartsRemaining.textContent = '∞';
                 elements.heartsRemaining.title = 'Sandbox mode: Infinite hearts';
+                elements.heartsRemaining.style.opacity = '1';
+            } else if (isHeartLoading) {
+                elements.heartsRemaining.textContent = '...';
+                elements.heartsRemaining.title = 'Syncing heart count with server...';
+                elements.heartsRemaining.style.opacity = '0.6';
             } else {
                 elements.heartsRemaining.textContent = todayData.hearts;
-                elements.heartsRemaining.title = '';
+                elements.heartsRemaining.title = gameData.serverHeartData ? 'Server-synced hearts' : 'Local hearts (offline mode)';
+                elements.heartsRemaining.style.opacity = '1';
             }
         }
         
@@ -311,11 +381,13 @@ window.PigUI = (function() {
             }
         }
         
-        // Update local game data
+        // Update local game data - server manages hearts, don't double-decrement
         if (!serverSuccess) {
             // Only decrement hearts if server didn't handle it
             gameData[today].hearts = Math.max(0, gameData[today].hearts - 1);
         }
+        // Note: If server handled it, hearts were already updated in startGame()
+        // No need to refresh here to avoid race conditions
         
         gameData[today].steps += stepsEarned;
         gameData[today].gamesPlayed += 1;
@@ -457,8 +529,12 @@ window.PigUI = (function() {
                     const gameSession = await PigAPI.startSecureGame();
                     if (gameSession && gameSession.success) {
                         gameToken = gameSession.gameToken;
-                        // Update local hearts to match server
+                        // Update local hearts to match server IMMEDIATELY
                         gameData[today].hearts = gameSession.heartsRemaining;
+                        // Update server data cache
+                        gameData.serverHeartData.hearts = gameSession.heartsRemaining;
+                        // Update UI immediately with new heart count
+                        updateUI();
                         console.log('🔒 Started secure game with server validation');
                     } else {
                         throw new Error('Server rejected game start');
@@ -566,7 +642,7 @@ window.PigUI = (function() {
                         const rankColor = player.rank <= 3 ? '#FFD700' : '#fff';
                         html += `
                             <div style="color: ${rankColor}; font-weight: bold;">#${player.rank}</div>
-                            <div style="color: #fff;">${player.name}</div>
+                            <div style="color: #fff;">${escapeHtml(player.name)}</div>
                             <div style="color: #fff; font-weight: bold;">${player.total_trots.toLocaleString()}</div>
                         `;
                     });
@@ -655,10 +731,33 @@ window.PigUI = (function() {
     // Set up global callback for game engine
     window.PigGameCallbacks = {
         onGameOver: showGameResult,
-        onBonusHeart: function() {
+        onBonusHeart: async function() {
             const today = getPacificDateString();
             if (gameData[today] && gameData[today].hearts < 5) {
-                gameData[today].hearts += 1;
+                let serverSuccess = false;
+                
+                // Try server-side bonus heart first (non-blocking for UI responsiveness)
+                if (!isSandboxMode && window.PigAPI && gameData.serverHeartData) {
+                    try {
+                        const bonusResult = await PigAPI.awardBonusHeart();
+                        if (bonusResult && bonusResult.success) {
+                            // Update local hearts to match server
+                            gameData[today].hearts = bonusResult.heartsRemaining;
+                            gameData.serverHeartData.hearts = bonusResult.heartsRemaining;
+                            serverSuccess = true;
+                            console.log('💖 Bonus heart awarded by server:', bonusResult.heartsRemaining, 'hearts');
+                        }
+                    } catch (error) {
+                        console.warn('Failed to award bonus heart on server:', error);
+                    }
+                }
+                
+                // Fallback to local increment if server failed
+                if (!serverSuccess) {
+                    gameData[today].hearts += 1;
+                    console.log('💖 Bonus heart awarded locally (server unavailable)');
+                }
+                
                 saveGameData();
                 updateUI();
                 
@@ -685,6 +784,9 @@ window.PigUI = (function() {
         }
     };
     
+    // Cleanup function to be called when page unloads
+    window.addEventListener('beforeunload', stopHeartSync);
+    
     // Public API
     return {
         init: async function() {
@@ -695,16 +797,25 @@ window.PigUI = (function() {
             resetGameCanvas();
             loadLeaderboard();
             
+            // Start periodic heart synchronization
+            startHeartSync();
+            
             console.log('Shadow Pig Game UI initialized');
         },
         
         updateUI: updateUI,
         showGameResult: showGameResult,
         loadLeaderboard: loadLeaderboard,
+        syncHeartCount: syncHeartCount,
         
         // For testing/debugging
         getGameData: function() {
             return gameData;
+        },
+        
+        // Cleanup function
+        destroy: function() {
+            stopHeartSync();
         }
     };
 })();
