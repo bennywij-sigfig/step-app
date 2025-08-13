@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         const bodyData = JSON.parse(options.body);
                         bodyData.csrfToken = token;
                         options.body = JSON.stringify(bodyData);
-                    } else if (options.method === 'DELETE') {
-                        // For DELETE requests without body, create one with just the CSRF token
+                    } else if (options.method === 'DELETE' || options.method === 'POST') {
+                        // For DELETE and POST requests without body, create one with just the CSRF token
                         options.body = JSON.stringify({ csrfToken: token });
                         options.headers = options.headers || {};
                         options.headers['Content-Type'] = 'application/json';
