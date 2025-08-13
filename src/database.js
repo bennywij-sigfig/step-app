@@ -304,6 +304,25 @@ if (!shouldDelayInit) {
       console.log('✅ Added scopes column to mcp_tokens table');
     }
   });
+
+  // Add archived_at column to users table for user archiving functionality
+  db.run(`ALTER TABLE users ADD COLUMN archived_at DATETIME DEFAULT NULL`, (err) => {
+    // Ignore error if column already exists
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding archived_at column:', err);
+    } else if (!err) {
+      console.log('✅ Added archived_at column to users table');
+    }
+  });
+
+  // Add index for archived_at column for performance
+  db.run(`CREATE INDEX IF NOT EXISTS idx_users_archived_at ON users (archived_at)`, (err) => {
+    if (err) {
+      console.error('Error creating archived_at index:', err);
+    } else {
+      console.log('✅ Created index on users.archived_at column');
+    }
+  });
   
   // Update existing tokens to have default scopes if they don't already
   db.run(`UPDATE mcp_tokens SET scopes = 'steps:read,steps:write,profile:read' WHERE scopes IS NULL OR scopes = ''`, (err) => {

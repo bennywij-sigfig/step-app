@@ -165,12 +165,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <th class="sortable" data-column="total_steps">Total Steps <span class="sort-indicator"></span></th>
                             <th class="sortable" data-column="days_logged">Days Logged <span class="sort-indicator"></span></th>
                             <th class="sortable" data-column="is_admin">Admin <span class="sort-indicator"></span></th>
+                            <th class="sortable" data-column="archived_at">Archive Status <span class="sort-indicator"></span></th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${users.map(user => `
-                            <tr>
+                            <tr class="${user.archived_at ? 'archived-user' : ''}">
                                 <td>${escapeHtml(user.name)}</td>
                                 <td>${escapeHtml(user.email)}</td>
                                 <td>
@@ -184,10 +185,26 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td>${user.total_steps.toLocaleString()}</td>
                                 <td>${user.days_logged}</td>
                                 <td><span style="font-weight: bold; color: ${user.is_admin ? '#28a745' : '#dc3545'}">${user.is_admin ? 'Yes' : 'No'}</span></td>
+                                <td>
+                                    ${user.archived_at ? 
+                                        `<span style="color: #dc3545; font-weight: bold;">🗃️ Archived</span><br><small>${new Date(user.archived_at).toLocaleDateString()}</small>` : 
+                                        `<span style="color: #28a745; font-weight: bold;">✅ Active</span>`
+                                    }
+                                </td>
                                 <td class="actions-cell">
                                     <button class="action-btn save-btn save-team-btn" id="save-${user.id}" data-user-id="${user.id}" disabled title="Save team assignment">
                                         💾
                                     </button>
+                                    ${user.archived_at ?
+                                        `<button class="action-btn unarchive-btn" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" title="Unarchive user - restore access">
+                                            📤
+                                        </button>` :
+                                        user.is_admin ? 
+                                            `<button class="action-btn disabled" title="Cannot archive admin users" disabled>📥</button>` :
+                                            `<button class="action-btn archive-btn" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" title="Archive user - block step input">
+                                                📥
+                                            </button>`
+                                    }
                                     <button class="action-btn clear-btn clear-steps-btn" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" title="Clear all steps for this user">
                                         🗑️
                                     </button>
@@ -525,6 +542,62 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => messageDiv.innerHTML = '', 3000);
                 } else {
                     messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+            }
+        }
+        
+        // Archive user function
+        async function archiveUser(userId, userName) {
+            if (!confirm(`Archive user "${userName}"?\n\nThis will:\n• Block them from adding new steps\n• Remove them from leaderboards\n• They can still view their data\n• Can be reversed by unarchiving\n\nContinue?`)) {
+                return;
+            }
+            
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = '<div class="message">Archiving user...</div>';
+            
+            try {
+                const response = await authenticatedFetch(`/api/admin/users/${userId}/archive`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `<div class="message success">${data.message}</div>`;
+                    loadUsers(); // Reload the users table
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else {
+                    messageDiv.innerHTML = `<div class="message error">${data.error}</div>`;
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+            }
+        }
+        
+        // Unarchive user function
+        async function unarchiveUser(userId, userName) {
+            if (!confirm(`Unarchive user "${userName}"?\n\nThis will:\n• Restore their ability to add steps\n• Include them in leaderboards again\n• Restore full access\n\nContinue?`)) {
+                return;
+            }
+            
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = '<div class="message">Unarchiving user...</div>';
+            
+            try {
+                const response = await authenticatedFetch(`/api/admin/users/${userId}/unarchive`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `<div class="message success">${data.message}</div>`;
+                    loadUsers(); // Reload the users table
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else {
+                    messageDiv.innerHTML = `<div class="message error">${data.error}</div>`;
                 }
             } catch (error) {
                 messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
@@ -900,6 +973,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 deleteUser(parseInt(userId), userName);
             }
             
+            // Archive user buttons
+            if (e.target.classList.contains('archive-btn')) {
+                const userId = e.target.dataset.userId;
+                const userName = e.target.dataset.userName;
+                archiveUser(parseInt(userId), userName);
+            }
+            
+            // Unarchive user buttons
+            if (e.target.classList.contains('unarchive-btn')) {
+                const userId = e.target.dataset.userId;
+                const userName = e.target.dataset.userName;
+                unarchiveUser(parseInt(userId), userName);
+            }
             
             // Save team name buttons
             if (e.target.classList.contains('save-team-name-btn')) {

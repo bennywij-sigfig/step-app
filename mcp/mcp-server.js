@@ -368,6 +368,23 @@ const stepTools = {
       const operationUserId = target_user_id || tokenUserId;
       securityUtils.enforceUserAccess(tokenUserId, operationUserId);
 
+      // Check if user is archived
+      const user = await new Promise((resolve, reject) => {
+        db.get('SELECT archived_at FROM users WHERE id = ?', [tokenUserId], (err, result) => {
+          if (err) reject(err);
+          else resolve(result);
+        });
+      });
+      
+      if (user && user.archived_at !== null) {
+        return {
+          error: true,
+          message: 'Account archived: Cannot add steps. Contact admin to restore access.',
+          archived: true,
+          archived_date: user.archived_at
+        };
+      }
+
       // Validate token scope for write operations
       securityUtils.validateTokenScope(tokenInfo, 'steps:write');
 

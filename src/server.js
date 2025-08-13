@@ -278,7 +278,7 @@ async function getIndividualLeaderboardWithRates(challengeId, currentDay, thresh
         END as meets_threshold
       FROM users u
       LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
-      WHERE u.id IN (SELECT DISTINCT user_id FROM steps WHERE challenge_id = ?)
+      WHERE u.archived_at IS NULL AND u.id IN (SELECT DISTINCT user_id FROM steps WHERE challenge_id = ?)
       GROUP BY u.id
       ORDER BY meets_threshold DESC, steps_per_day_reported DESC, u.name ASC
     `;
@@ -328,7 +328,7 @@ async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold) {
         END as meets_threshold
       FROM users u
       LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
-      WHERE u.team IS NOT NULL AND u.team != ''
+      WHERE u.archived_at IS NULL AND u.team IS NOT NULL AND u.team != ''
       GROUP BY u.team
       ORDER BY meets_threshold DESC, team_steps_per_day_reported DESC, u.team ASC
     `;
@@ -971,6 +971,26 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
   const { date, count } = req.body;
   const userId = req.session.userId;
   
+  // First check if user is archived
+  db.get('SELECT archived_at FROM users WHERE id = ?', [userId], (err, user) => {
+    if (err) {
+      console.error('Error checking user archive status:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (user && user.archived_at !== null) {
+      return res.status(403).json({ 
+        error: 'Your account is archived. You cannot add steps. Contact admin to restore access.',
+        archived: true,
+        archived_at: user.archived_at
+      });
+    }
+    
+    // Continue with step input processing
+    processStepInput();
+  });
+  
+  function processStepInput() {
   try {
     // Validate inputs with strict type checking
     if (!date) {
@@ -1055,6 +1075,7 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
     console.log(`Input validation failed for user ${userId}: ${error.message}`);
     return res.status(400).json({ error: error.message });
   }
+  } // End processStepInput function
 });
 
 // Challenge-aware individual leaderboard
@@ -1080,6 +1101,7 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
           END as steps_per_day_reported
         FROM users u
         LEFT JOIN steps s ON u.id = s.user_id
+        WHERE u.archived_at IS NULL
         GROUP BY u.id
         ORDER BY steps_per_day_reported DESC
       `, (err, rows) => {
@@ -1420,12 +1442,13 @@ app.get('/api/admin/users', adminApiLimiter, requireApiAdmin, (req, res) => {
       u.name,
       u.team,
       u.is_admin,
+      u.archived_at,
       COALESCE(SUM(s.count), 0) as total_steps,
       COUNT(s.id) as days_logged
     FROM users u
     LEFT JOIN steps s ON u.id = s.user_id
     GROUP BY u.id
-    ORDER BY u.name
+    ORDER BY u.archived_at ASC, u.name ASC
   `, (err, rows) => {
     if (err) {
       console.error('Error fetching users:', err);
@@ -1656,7 +1679,108 @@ app.delete('/api/admin/users/:userId/steps', adminApiLimiter, requireApiAdmin, v
   );
 });
 
+// Archive user (admin only)
+app.post('/api/admin/users/:userId/archive', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
+  const { userId } = req.params;
+  
+  if (!userId || isNaN(userId)) {
+    return res.status(400).json({ error: 'Valid user ID required' });
+  }
 
+  // First check if user exists and if they're an admin
+  db.get('SELECT id, name, email, is_admin FROM users WHERE id = ?', [userId], (err, user) => {
+    if (err) {
+      console.error('Error checking user for archive:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Prevent archiving admin users
+    if (user.is_admin) {
+      return res.status(400).json({ error: 'Cannot archive admin users' });
+    }
+
+    // Archive the user
+    db.run(
+      'UPDATE users SET archived_at = datetime("now") WHERE id = ?',
+      [userId],
+      function(err) {
+        if (err) {
+          console.error('Error archiving user:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        console.log(`Admin archived user: ${user.name} (${user.email})`);
+        res.json({ 
+          message: `User "${user.name}" has been archived successfully`,
+          archived_user: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+          }
+        });
+      }
+    );
+  });
+});
+
+// Unarchive user (admin only)
+app.post('/api/admin/users/:userId/unarchive', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
+  const { userId } = req.params;
+  
+  if (!userId || isNaN(userId)) {
+    return res.status(400).json({ error: 'Valid user ID required' });
+  }
+
+  // First check if user exists
+  db.get('SELECT id, name, email, archived_at FROM users WHERE id = ?', [userId], (err, user) => {
+    if (err) {
+      console.error('Error checking user for unarchive:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    if (!user.archived_at) {
+      return res.status(400).json({ error: 'User is not archived' });
+    }
+
+    // Unarchive the user
+    db.run(
+      'UPDATE users SET archived_at = NULL WHERE id = ?',
+      [userId],
+      function(err) {
+        if (err) {
+          console.error('Error unarchiving user:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'User not found' });
+        }
+
+        console.log(`Admin unarchived user: ${user.name} (${user.email})`);
+        res.json({ 
+          message: `User "${user.name}" has been unarchived successfully`,
+          unarchived_user: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+          }
+        });
+      }
+    );
+  });
+});
 
 // Export all step data as CSV (admin only)
 app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) => {
@@ -1740,7 +1864,7 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
           END as team_steps_per_day_reported
         FROM users u
         LEFT JOIN steps s ON u.id = s.user_id
-        WHERE u.team IS NOT NULL AND u.team != ''
+        WHERE u.archived_at IS NULL AND u.team IS NOT NULL AND u.team != ''
         GROUP BY u.team
         ORDER BY team_steps_per_day_reported DESC
       `, (err, rows) => {
@@ -2017,7 +2141,7 @@ app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, 
           END as steps_per_day_reported
         FROM users u
         LEFT JOIN steps s ON u.id = s.user_id
-        WHERE u.team = ?
+        WHERE u.archived_at IS NULL AND u.team = ?
         GROUP BY u.id
         ORDER BY steps_per_day_reported DESC, u.name ASC
       `, [teamName], (err, rows) => {
@@ -2048,7 +2172,7 @@ app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, 
         END as personal_reporting_rate
       FROM users u
       LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
-      WHERE u.team = ?
+      WHERE u.archived_at IS NULL AND u.team = ?
       GROUP BY u.id
       ORDER BY steps_per_day_reported DESC, u.name ASC
     `, [currentDay, currentDay, activeChallenge.id, teamName], (err, rows) => {
