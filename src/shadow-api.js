@@ -389,4 +389,56 @@ router.post('/admin/reset-user-data', adminApiLimiter, requireApiAdmin, validate
   });
 });
 
+// Award bonus heart to user
+router.post('/bonus-heart', requireShadowAuth, (req, res) => {
+  const userId = req.session.userId;
+  
+  // Use Pacific Time to match main app
+  const today = new Date().toLocaleString("en-US", {timeZone: "America/Los_Angeles"}).split(',')[0];
+  const pacificDate = new Date(today).toISOString().split('T')[0];
+
+  // Atomic operation: only add bonus heart if hearts_remaining < 5
+  const atomicUpdateQuery = `
+    UPDATE shadow_hearts 
+    SET hearts_remaining = hearts_remaining + 1,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE user_id = ? AND date = ? AND hearts_remaining < 5
+  `;
+  
+  db.run(atomicUpdateQuery, [userId, pacificDate], function(err) {
+    if (err) {
+      console.error('Error awarding bonus heart:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Check if the update actually affected a row
+    if (this.changes === 0) {
+      // No rows affected means either no record exists or hearts_remaining >= 5
+      return res.status(400).json({ error: 'Cannot award bonus heart - already at maximum hearts' });
+    }
+    
+    // Get the updated heart count
+    const getHeartsQuery = `
+      SELECT hearts_remaining 
+      FROM shadow_hearts 
+      WHERE user_id = ? AND date = ?
+    `;
+    
+    db.get(getHeartsQuery, [userId, pacificDate], (selectErr, row) => {
+      if (selectErr) {
+        console.error('Error fetching updated hearts after bonus:', selectErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      console.log(`Bonus heart awarded to user ${userId}: ${row ? row.hearts_remaining : 'unknown'} hearts`);
+      
+      res.json({
+        success: true,
+        heartsRemaining: row ? row.hearts_remaining : 0,
+        message: 'Bonus heart awarded!'
+      });
+    });
+  });
+});
+
 module.exports = router;

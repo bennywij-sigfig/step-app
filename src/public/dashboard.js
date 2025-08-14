@@ -1,5 +1,19 @@
+// HTML escaping function to prevent XSS vulnerabilities
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 // Team disclosure functionality - must be global
 let expandedTeams = new Set(); // Track expanded state
+
+// Individual user disclosure functionality
+let expandedUsers = new Set(); // Track expanded user data state
 
 // Confetti thresholds - loaded from server
 let confettiThresholds = {
@@ -1553,6 +1567,70 @@ document.addEventListener('DOMContentLoaded', function() {
             loadTeamLeaderboard();
         });
         
+        // CSV Download functionality
+        document.getElementById('csvDownloadBtn').addEventListener('click', async () => {
+            const button = document.getElementById('csvDownloadBtn');
+            const originalText = button.textContent;
+            
+            try {
+                // Show loading state
+                button.disabled = true;
+                button.textContent = '📊 Preparing...';
+                button.style.opacity = '0.6';
+                
+                // Download the CSV file
+                const response = await fetch('/api/steps/csv');
+                
+                if (!response.ok) {
+                    throw new Error('Failed to download CSV');
+                }
+                
+                // Create download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                // Extract filename from Content-Disposition header if available
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'my_step_data.csv';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch) {
+                        filename = filenameMatch[1];
+                    }
+                }
+                a.download = filename;
+                
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Show success feedback
+                button.textContent = '✅ Downloaded!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                    button.style.opacity = '1';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('CSV download error:', error);
+                
+                // Show error feedback
+                button.textContent = '❌ Error';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                    button.disabled = false;
+                    button.style.opacity = '1';
+                }, 3000);
+            }
+        });
+        
         // Load user's steps
         async function loadSteps() {
             try {
@@ -1646,6 +1724,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Load leaderboard
         async function loadLeaderboard() {
+            // Clear expanded user state when reloading individual leaderboard
+            expandedUsers.clear();
+            
             try {
                 const response = await fetch('/api/leaderboard');
                 const data = await response.json();
@@ -1677,9 +1758,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         return `<div class="leaderboard-item${highlightClass}">
                             <div>
+                                <span class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}">▶</span>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
+                                <strong>${escapeHtml(user.name)}</strong>
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
                                 ${formatReportingRate(user.personal_reporting_rate, '#28a745')}
                             </div>
                             <div>
@@ -1703,9 +1785,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         return `<div class="leaderboard-item${highlightClass}" style="opacity: 0.8;">
                             <div>
+                                <span class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}">▶</span>
                                 <span class="rank">-</span>
-                                <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
+                                <strong>${escapeHtml(user.name)}</strong>
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
                                 ${formatReportingRate(user.personal_reporting_rate, '#ffc107')}
                             </div>
                             <div>
@@ -1727,9 +1810,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         return `<div class="leaderboard-item${highlightClass}">
                             <div>
+                                <span class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}">▶</span>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${user.name}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${user.team}</span>` : ''}
+                                <strong>${escapeHtml(user.name)}</strong>
+                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
                             </div>
                             <div>
                                 <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
@@ -1750,6 +1834,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 leaderboardDiv.innerHTML = html;
+                
+                // Attach disclosure listeners for individual leaderboard
+                attachDisclosureListeners();
             } catch (error) {
                 console.error('Leaderboard error:', error);
                 document.getElementById('leaderboard').innerHTML = '<p>Error loading leaderboard</p>';
@@ -1895,7 +1982,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <span class="team-disclosure" data-team="${team.team}">▶</span>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${team.team}</strong>
+                                <strong>${escapeHtml(team.team)}</strong>
                                 ${formatMemberCount(team.member_count)}
                                 ${formatReportingRate(team.team_reporting_rate, '#28a745')}
                             </div>
@@ -1922,7 +2009,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <span class="team-disclosure" data-team="${team.team}">▶</span>
                                 <span class="rank">-</span>
-                                <strong>${team.team}</strong>
+                                <strong>${escapeHtml(team.team)}</strong>
                                 ${formatMemberCount(team.member_count)}
                                 ${formatReportingRate(team.team_reporting_rate, '#ffc107')}
                             </div>
@@ -1950,7 +2037,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div>
                                     <span class="team-disclosure" data-team="${team.team}">▶</span>
                                     <span class="rank">#${index + 1}</span>
-                                    <strong>${team.team}</strong>
+                                    <strong>${escapeHtml(team.team)}</strong>
                                     ${formatMemberCount(team.member_count)}
                                 </div>
                                 <div>
@@ -1980,13 +2067,22 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Attach event listeners to disclosure triangles
+        // Attach event listeners to disclosure triangles (both team and user)
         function attachDisclosureListeners() {
             const disclosureTriangles = document.querySelectorAll('.team-disclosure');
             disclosureTriangles.forEach(triangle => {
                 triangle.addEventListener('click', function() {
                     const teamName = this.getAttribute('data-team');
-                    toggleTeamDisclosure(teamName, this);
+                    const userId = this.getAttribute('data-user-id');
+                    const userName = this.getAttribute('data-user-name');
+                    
+                    if (teamName) {
+                        // This is a team disclosure
+                        toggleTeamDisclosure(teamName, this);
+                    } else if (userId && userName) {
+                        // This is a user disclosure
+                        toggleUserDisclosure(userId, userName, this);
+                    }
                 });
             });
         }
@@ -2054,7 +2150,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const membersHtml = members.map(member => `
                 <div class="member-item">
                     <div class="member-info">
-                        <span class="member-name">${member.name}</span>
+                        <span class="member-name">${escapeHtml(member.name)}</span>
                         ${member.personal_reporting_rate !== undefined ? 
                             `<span class="member-reporting">${member.personal_reporting_rate >= 1 ? Math.round(member.personal_reporting_rate) : member.personal_reporting_rate}% reporting</span>` 
                             : ''}
@@ -2070,6 +2166,148 @@ document.addEventListener('DOMContentLoaded', function() {
             
             membersList.innerHTML = membersHtml;
             return membersList;
+        }
+
+
+        // Toggle user daily data disclosure
+        async function toggleUserDisclosure(userId, userName, disclosureElement) {
+            console.log('toggleUserDisclosure called with:', userId, userName, disclosureElement);
+            const isExpanded = expandedUsers.has(userId);
+            
+            if (isExpanded) {
+                // Collapse
+                const userDataList = document.getElementById(`user-data-${userId}`);
+                if (userDataList) {
+                    userDataList.style.maxHeight = userDataList.scrollHeight + 'px';
+                    userDataList.style.overflow = 'hidden';
+                    requestAnimationFrame(() => {
+                        userDataList.style.maxHeight = '0px';
+                        setTimeout(() => {
+                            userDataList.remove();
+                        }, 300);
+                    });
+                }
+                
+                disclosureElement.classList.remove('expanded');
+                expandedUsers.delete(userId);
+            } else {
+                // Expand - show loading state
+                const userItem = disclosureElement.closest('.leaderboard-item');
+                const loadingIndicator = createUserDataLoading(userId, userName);
+                userItem.insertAdjacentElement('afterend', loadingIndicator);
+                
+                try {
+                    const response = await fetch(`/api/user/${userId}/daily-steps`);
+                    const userData = await response.json();
+                    
+                    // Remove loading indicator
+                    loadingIndicator.remove();
+                    
+                    if (response.ok) {
+                        const userDataList = createUserDataList(userId, userName, userData);
+                        userItem.insertAdjacentElement('afterend', userDataList);
+                        
+                        // Animate expansion
+                        userDataList.style.maxHeight = '0px';
+                        userDataList.style.overflow = 'hidden';
+                        requestAnimationFrame(() => {
+                            userDataList.style.maxHeight = userDataList.scrollHeight + 'px';
+                            setTimeout(() => {
+                                userDataList.style.maxHeight = 'none';
+                                userDataList.style.overflow = 'visible';
+                            }, 300);
+                        });
+                        
+                        disclosureElement.classList.add('expanded');
+                        expandedUsers.add(userId);
+                    } else {
+                        console.error('Error loading user daily data:', userData.error);
+                        // Show error state
+                        const errorDiv = createUserDataError(userId, userName, userData.error || 'Failed to load data');
+                        userItem.insertAdjacentElement('afterend', errorDiv);
+                        setTimeout(() => errorDiv.remove(), 3000); // Auto-remove after 3 seconds
+                    }
+                } catch (error) {
+                    // Remove loading indicator
+                    loadingIndicator.remove();
+                    console.error('Error fetching user daily data:', error);
+                    // Show error state
+                    const errorDiv = createUserDataError(userId, userName, 'Network error');
+                    userItem.insertAdjacentElement('afterend', errorDiv);
+                    setTimeout(() => errorDiv.remove(), 3000); // Auto-remove after 3 seconds
+                }
+            }
+        }
+
+        function createUserDataLoading(userId, userName) {
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = `user-data-${userId}`;
+            loadingDiv.className = 'user-data-list';
+            loadingDiv.style.transition = 'max-height 0.3s ease-out';
+            
+            loadingDiv.innerHTML = `
+                <div class="user-data-item" style="padding: 12px 16px; text-align: center; color: #666; font-style: italic;">
+                    <span class="loading"></span> Loading ${userName}'s daily data...
+                </div>
+            `;
+            
+            return loadingDiv;
+        }
+
+        function createUserDataError(userId, userName, errorMessage) {
+            const errorDiv = document.createElement('div');
+            errorDiv.id = `user-data-error-${userId}`;
+            errorDiv.className = 'user-data-list';
+            errorDiv.style.background = 'rgba(220, 53, 69, 0.1)';
+            errorDiv.style.borderLeft = '3px solid #dc3545';
+            
+            errorDiv.innerHTML = `
+                <div class="user-data-item" style="padding: 12px 16px; text-align: center; color: #dc3545; font-size: 0.9em;">
+                    ⚠️ ${errorMessage}
+                </div>
+            `;
+            
+            return errorDiv;
+        }
+
+        function createUserDataList(userId, userName, userData) {
+            const userDataList = document.createElement('div');
+            userDataList.id = `user-data-${userId}`;
+            userDataList.className = 'user-data-list';
+            userDataList.style.transition = 'max-height 0.3s ease-out';
+            
+            if (userData.daily_steps.length === 0) {
+                userDataList.innerHTML = `
+                    <div class="user-data-item" style="padding: 12px 16px; text-align: center; color: #666; font-style: italic;">
+                        No step data available for ${userName}
+                    </div>
+                `;
+            } else {
+                const dailyDataHtml = userData.daily_steps.slice(0, 14).map((day, index) => `
+                    <div class="user-data-item" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: rgba(255, 255, 255, 0.4); border-bottom: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.9em;">
+                        <div>
+                            <span style="font-weight: 500;">${day.formatted_date}</span>
+                            <span style="color: #888; margin-left: 8px; font-size: 0.85em;">${day.date}</span>
+                        </div>
+                        <div style="font-weight: 600; color: #333;">
+                            ${day.steps.toLocaleString()} steps
+                        </div>
+                    </div>
+                `).join('');
+                
+                const showingText = userData.daily_steps.length > 14 ? ` (showing latest 14 of ${userData.total_days} days)` : ` (${userData.total_days} days total)`;
+                
+                userDataList.innerHTML = `
+                    <div style="background: rgba(102, 126, 234, 0.05); border-left: 3px solid rgba(102, 126, 234, 0.3); border-radius: 0 8px 8px 0; overflow: hidden;">
+                        <div style="padding: 8px 16px; background: rgba(102, 126, 234, 0.1); font-size: 0.85em; color: #666; font-weight: 500;">
+                            ${userName}'s Daily Steps${showingText}
+                        </div>
+                        ${dailyDataHtml}
+                    </div>
+                `;
+            }
+            
+            return userDataList;
         }
 
         // Handle responsive leaderboard updates on window resize with enhanced scroll detection

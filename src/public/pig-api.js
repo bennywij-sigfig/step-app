@@ -204,6 +204,32 @@ window.PigAPI = (function() {
         }
     }
     
+    // Award bonus heart to user
+    async function awardBonusHeart() {
+        try {
+            const token = await getCSRFToken();
+            const response = await fetch(`${API_BASE}/bonus-heart`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    csrfToken: token
+                })
+            });
+            
+            if (response.ok) {
+                return await response.json();
+            } else {
+                const error = await response.json();
+                throw new Error(error.error || 'Failed to award bonus heart');
+            }
+        } catch (error) {
+            console.warn('Failed to award bonus heart:', error);
+            throw error;
+        }
+    }
+    
     // Public API
     return {
         // Authentication
@@ -218,6 +244,7 @@ window.PigAPI = (function() {
         getHeartStatus: getHeartStatus,
         startSecureGame: startSecureGame,
         submitSecureGameResult: submitSecureGameResult,
+        awardBonusHeart: awardBonusHeart,
         
         // Discovery
         markShadowDiscovered: markShadowDiscovered,
