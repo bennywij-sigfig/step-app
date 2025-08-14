@@ -259,6 +259,7 @@ async function getIndividualLeaderboardWithRates(challengeId, currentDay, thresh
   return new Promise((resolve, reject) => {
     const query = `
       SELECT 
+        u.id,
         u.name, 
         u.team,
         COALESCE(SUM(s.count), 0) as total_steps,
@@ -1090,6 +1091,7 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
     if (!activeChallenge) {
       activeDb.all(`
         SELECT 
+          u.id,
           u.name, 
           u.team,
           COALESCE(SUM(s.count), 0) as total_steps,
