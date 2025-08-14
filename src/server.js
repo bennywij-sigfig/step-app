@@ -995,13 +995,20 @@ app.get('/api/user/:userId/daily-steps', apiLimiter, requireApiAuth, (req, res) 
             return res.status(500).json({ error: 'Database error' });
           }
           
+          // Process step data to add formatted_date and calculate total_days
+          const processedStepData = (stepData || []).map(day => ({
+            ...day,
+            formatted_date: day.display_date  // Add the expected field name
+          }));
+          
           // Format the response
           res.json({
             user: {
               id: user.id,
               name: user.name
             },
-            daily_steps: stepData || []
+            daily_steps: processedStepData,
+            total_days: processedStepData.length
           });
         }
       );
