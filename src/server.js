@@ -950,6 +950,65 @@ app.get('/api/user/mcp-tokens', apiLimiter, requireApiAuth, (req, res) => {
   });
 });
 
+// API endpoint to get daily steps for a specific user (individual leaderboard disclosure)
+app.get('/api/user/:userId/daily-steps', apiLimiter, requireApiAuth, (req, res) => {
+  const requestedUserId = req.params.userId;
+  
+  // Validate userId parameter
+  if (!requestedUserId || isNaN(requestedUserId)) {
+    return res.status(400).json({ error: 'Invalid user ID' });
+  }
+  
+  // First verify the requested user exists and is not archived
+  db.get(
+    'SELECT id, name, archived_at FROM users WHERE id = ?',
+    [requestedUserId],
+    (err, user) => {
+      if (err) {
+        console.error('Error checking user for daily steps:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      if (user.archived_at) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Get the user's daily step data
+      db.all(
+        `SELECT 
+           date,
+           count as steps,
+           strftime('%w', date) as day_of_week,
+           strftime('%m/%d', date) as display_date
+         FROM steps 
+         WHERE user_id = ? 
+         ORDER BY date DESC 
+         LIMIT 30`,
+        [requestedUserId],
+        (err, stepData) => {
+          if (err) {
+            console.error('Error fetching user daily steps:', err);
+            return res.status(500).json({ error: 'Database error' });
+          }
+          
+          // Format the response
+          res.json({
+            user: {
+              id: user.id,
+              name: user.name
+            },
+            daily_steps: stepData || []
+          });
+        }
+      );
+    }
+  );
+});
+
 // Get user steps (protected - only own steps)
 app.get('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
   const userId = req.session.userId;
