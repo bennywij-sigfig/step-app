@@ -1033,6 +1033,68 @@ app.get('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
   );
 });
 
+// Download user's own step data as CSV (protected - only own steps)
+app.get('/api/steps/csv', apiLimiter, requireApiAuth, (req, res) => {
+  const userId = req.session.userId;
+  
+  // Get user info and their step data
+  db.get('SELECT name, email FROM users WHERE id = ?', [userId], (err, user) => {
+    if (err) {
+      console.error('Error fetching user for CSV:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Get user's step data
+    db.all(
+      `SELECT date, count, created_at, updated_at FROM steps 
+       WHERE user_id = ? 
+       ORDER BY date DESC`,
+      [userId],
+      (err, stepData) => {
+        if (err) {
+          console.error('Error fetching user steps for CSV:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        
+        // Generate CSV content
+        const csvHeader = 'Date,Steps,Created At,Updated At\n';
+        const csvRows = stepData.map(row => {
+          // Escape any commas or quotes in the data
+          const escapeCsvField = (field) => {
+            if (field === null || field === undefined) return '';
+            const str = String(field);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+              return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+          };
+          
+          return [
+            escapeCsvField(row.date),
+            escapeCsvField(row.count),
+            escapeCsvField(row.created_at),
+            escapeCsvField(row.updated_at)
+          ].join(',');
+        }).join('\n');
+        
+        const csvContent = csvHeader + csvRows;
+        
+        // Set headers for CSV download
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `my_step_data_${timestamp}.csv`;
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        
+        res.send(csvContent);
+      }
+    );
+  });
+});
+
 // Add/update steps (protected - only own steps)
 app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { date, count } = req.body;
