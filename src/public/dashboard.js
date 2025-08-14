@@ -2287,7 +2287,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="user-data-item" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: rgba(255, 255, 255, 0.4); border-bottom: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.9em;">
                         <div>
                             <span style="font-weight: 500;">${day.formatted_date}</span>
-                            <span style="color: #888; margin-left: 8px; font-size: 0.85em;">${day.date}</span>
                         </div>
                         <div style="font-weight: 600; color: #333;">
                             ${day.steps.toLocaleString()} steps
