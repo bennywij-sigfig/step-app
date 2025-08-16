@@ -1391,8 +1391,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="challenge-details" id="challengeDetails">
                         <p><strong>Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
-                        <p>You can log steps from the start date onwards, including catch-up entries.</p>
-                        ${!isWithinPeriod ? '<p style="color: #666; font-size: 14px; margin-top: 4px;">You can still log steps for dates during this challenge period.</p>' : ''}
+                        <p>You can log steps for any date within the challenge period, including retroactive entries.</p>
+                        ${!isWithinPeriod ? '<p style="color: #28a745; font-size: 14px; margin-top: 4px;">✓ Challenge ended - retroactive step entry available for dates within challenge period.</p>' : ''}
                     </div>
                 `;
                 
@@ -1406,16 +1406,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 challengeInfo.className = isWithinPeriod ? 'challenge-info active' : 'challenge-info inactive';
                 challengeInfo.classList.remove('hidden');
                 
-                // Disable form if outside challenge period
-                if (!isWithinPeriod) {
-                    form.classList.add('form-disabled');
-                    submitBtn.textContent = 'Challenge Period Inactive';
-                    submitBtn.disabled = true;
-                } else {
-                    form.classList.remove('form-disabled');
-                    submitBtn.textContent = 'Save Steps';
-                    submitBtn.disabled = false;
-                }
+                // Always enable form for retroactive entry within challenge period
+                // Users can enter steps for any date within the challenge period
+                form.classList.remove('form-disabled');
+                submitBtn.textContent = 'Save Steps';
+                submitBtn.disabled = false;
                 
                 // Set date input constraints (works in most browsers)
                 dateInput.min = challenge.start_date;
@@ -1426,9 +1421,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 maxAllowedDate.setDate(maxAllowedDate.getDate() + 1);
                 const maxDateString = maxAllowedDate.toISOString().split('T')[0];
                 
-                // Use the earlier of challenge end date or max allowed date
-                const challengeEndDate = new Date(challenge.end_date + 'T12:00:00');
-                dateInput.max = (maxAllowedDate.getTime() < challengeEndDate.getTime()) ? maxDateString : challenge.end_date;
+                // Allow retroactive entry up to challenge end date, even after challenge period
+                // Only limit by current date + 1 day (for timezone flexibility), not by challenge end date
+                dateInput.max = maxDateString;
                 
                 // Add real-time validation for Safari and other browsers
                 dateInput.addEventListener('change', function() {
@@ -1488,16 +1483,26 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Use getTime() for reliable cross-browser date comparison
-            // Only block dates before challenge start - allow historical catch-up entries within challenge period
+            // Block dates before challenge start
             if (stepDate.getTime() < startDate.getTime()) {
                 dateInput.style.borderColor = '#dc3545';
                 dateInput.style.backgroundColor = '#fff5f5';
                 messageDiv.innerHTML = `<div class="message error">Date must be on or after the challenge start date (${formatDate(challenge.start_date)})</div>`;
-            } else {
-                dateInput.style.borderColor = '#667eea';
-                dateInput.style.backgroundColor = '#f8fff8';
-                messageDiv.innerHTML = '<div class="message success">Date is valid</div>';
+                return;
             }
+            
+            // Block dates after challenge end date (no retroactive entry beyond challenge period)
+            if (stepDate.getTime() > endDate.getTime()) {
+                dateInput.style.borderColor = '#dc3545';
+                dateInput.style.backgroundColor = '#fff5f5';
+                messageDiv.innerHTML = `<div class="message error">Date must be within the challenge period (${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)})</div>`;
+                return;
+            }
+            
+            // Date is valid - within challenge period
+            dateInput.style.borderColor = '#667eea';
+            dateInput.style.backgroundColor = '#f8fff8';
+            messageDiv.innerHTML = '<div class="message success">Date is valid</div>';
         }
         
         // Format date for display
@@ -1518,20 +1523,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const day = String(now.getDate()).padStart(2, '0');
             let targetDate = `${year}-${month}-${day}`;
             
-            // If there's a challenge and today exceeds the challenge end date, use challenge end date as ceiling
-            if (challenge && challenge.end_date) {
-                const todayDate = new Date(targetDate + 'T00:00:00');
-                const challengeEndDate = new Date(challenge.end_date + 'T23:59:59');
-                
-                if (todayDate > challengeEndDate) {
-                    targetDate = challenge.end_date;
-                    console.log(`📅 Date selector: Challenge ended, using challenge end date ${targetDate} instead of today`);
-                } else {
-                    console.log(`📅 Date selector: Set to today ${targetDate} (within challenge period)`);
-                }
-            } else {
-                console.log(`📅 Date selector: Set to today ${targetDate} (no active challenge)`);
-            }
+            // Always use today's date as default, regardless of challenge status
+            // Users can manually select dates within the challenge period for retroactive entry
+            console.log(`📅 Date selector: Set to today ${targetDate} (allows retroactive entry within challenge period)`);
             
             const dateInput = document.getElementById('date');
             dateInput.value = targetDate;
@@ -1883,9 +1877,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Compare dates using getTime() for cross-browser compatibility
-                // Only block dates before challenge start - allow historical catch-up entries within challenge period
+                // Block dates before challenge start
                 if (stepDate.getTime() < startDate.getTime()) {
                     messageDiv.innerHTML = `<div class="message error">Step logging is only allowed from the challenge start date onwards (${formatDate(challenge.start_date)}).</div>`;
+                    return;
+                }
+                
+                // Block dates after challenge end date (no retroactive entry beyond challenge period)
+                if (stepDate.getTime() > endDate.getTime()) {
+                    messageDiv.innerHTML = `<div class="message error">Step logging is only allowed within the challenge period (${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}).</div>`;
                     return;
                 }
             }
