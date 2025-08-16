@@ -977,7 +977,8 @@ app.get('/api/user/:userId/daily-steps', apiLimiter, requireApiAuth, (req, res) 
         return res.status(404).json({ error: 'User not found' });
       }
       
-      // Get the user's daily step data
+      // Get the user's daily step data - fetch more data to cover full challenge periods
+      // Most challenges are 30-60 days, so we'll fetch up to 90 days to be safe
       db.all(
         `SELECT 
            date,
@@ -987,7 +988,7 @@ app.get('/api/user/:userId/daily-steps', apiLimiter, requireApiAuth, (req, res) 
          FROM steps 
          WHERE user_id = ? 
          ORDER BY date DESC 
-         LIMIT 30`,
+         LIMIT 90`,
         [requestedUserId],
         (err, stepData) => {
           if (err) {

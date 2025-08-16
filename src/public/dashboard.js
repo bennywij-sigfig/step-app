@@ -2283,7 +2283,29 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             } else {
-                const dailyDataHtml = userData.daily_steps.slice(0, 14).map((day, index) => `
+                // Calculate how many days to show based on active challenge period
+                let daysToShow = userData.daily_steps.length; // Show all available by default
+                let showingText = ` (${userData.total_days} days total)`;
+                
+                // If there's an active challenge, calculate the challenge duration and show all challenge days
+                if (currentUser && currentUser.current_challenge) {
+                    const challenge = currentUser.current_challenge;
+                    const startDate = new Date(challenge.start_date);
+                    const endDate = new Date(challenge.end_date);
+                    const challengeDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1; // +1 because end date is inclusive
+                    
+                    // Show all days within the challenge period (not limited to 14)
+                    daysToShow = Math.min(challengeDays, userData.daily_steps.length);
+                    showingText = daysToShow < userData.daily_steps.length 
+                        ? ` (showing latest ${daysToShow} of ${userData.total_days} days - full active challenge period)` 
+                        : ` (${userData.total_days} days total - full active challenge period)`;
+                } else {
+                    // No active challenge - use old behavior but without 14-day limit
+                    daysToShow = userData.daily_steps.length;
+                    showingText = ` (${userData.total_days} days total)`;
+                }
+                
+                const dailyDataHtml = userData.daily_steps.slice(0, daysToShow).map((day, index) => `
                     <div class="user-data-item" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: rgba(255, 255, 255, 0.4); border-bottom: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.9em;">
                         <div>
                             <span style="font-weight: 500;">${day.formatted_date}</span>
@@ -2293,8 +2315,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 `).join('');
-                
-                const showingText = userData.daily_steps.length > 14 ? ` (showing latest 14 of ${userData.total_days} days)` : ` (${userData.total_days} days total)`;
                 
                 userDataList.innerHTML = `
                     <div style="background: rgba(102, 126, 234, 0.05); border-left: 3px solid rgba(102, 126, 234, 0.3); border-radius: 0 8px 8px 0; overflow: hidden;">
