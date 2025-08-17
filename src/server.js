@@ -987,7 +987,7 @@ app.get('/api/user/:userId/daily-steps', apiLimiter, requireApiAuth, (req, res) 
          FROM steps 
          WHERE user_id = ? 
          ORDER BY date DESC 
-         LIMIT 30`,
+         LIMIT 45`,  /* Increased from 30 to 45 days to accommodate longer challenges */
         [requestedUserId],
         (err, stepData) => {
           if (err) {

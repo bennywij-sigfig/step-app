@@ -2283,7 +2283,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             } else {
-                const dailyDataHtml = userData.daily_steps.slice(0, 14).map((day, index) => `
+                // Calculate how many days to show - use full active challenge period if available
+                let daysToShow = 14; // Default fallback
+                let periodDescription = 'latest 14';
+                
+                if (currentUser && currentUser.current_challenge) {
+                    // Calculate challenge duration using normalized dates (strip hours/minutes, no timezone conversion)
+                    const challenge = currentUser.current_challenge;
+                    const startDate = new Date(challenge.start_date);
+                    startDate.setHours(0, 0, 0, 0);
+                    const endDate = new Date(challenge.end_date);
+                    endDate.setHours(0, 0, 0, 0);
+                    
+                    // Calculate challenge duration (inclusive)
+                    const challengeDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+                    daysToShow = challengeDays;
+                    periodDescription = 'full active challenge period';
+                }
+                
+                const dailyDataHtml = userData.daily_steps.slice(0, daysToShow).map((day, index) => `
                     <div class="user-data-item" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: rgba(255, 255, 255, 0.4); border-bottom: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.9em;">
                         <div>
                             <span style="font-weight: 500;">${day.formatted_date}</span>
@@ -2294,7 +2312,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `).join('');
                 
-                const showingText = userData.daily_steps.length > 14 ? ` (showing latest 14 of ${userData.total_days} days)` : ` (${userData.total_days} days total)`;
+                const showingText = userData.daily_steps.length > daysToShow ? ` (showing ${periodDescription} - ${daysToShow} of ${userData.total_days} days)` : ` (${userData.total_days} days total)`;
                 
                 userDataList.innerHTML = `
                     <div style="background: rgba(102, 126, 234, 0.05); border-left: 3px solid rgba(102, 126, 234, 0.3); border-radius: 0 8px 8px 0; overflow: hidden;">
