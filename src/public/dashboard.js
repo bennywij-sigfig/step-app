@@ -1679,20 +1679,38 @@ document.addEventListener('DOMContentLoaded', function() {
                 stepsByDate[step.date] = step.count;
             });
             
-            // Generate last 10 days (or all available data if less)
+            // Determine date range based on active challenge
             const today = new Date();
-            const days = [];
-            const maxDays = Math.min(10, steps.length + 5); // Show some empty days too
+            let startDate, endDate, maxDays;
             
-            for (let i = maxDays - 1; i >= 0; i--) {
-                const date = new Date(today);
-                date.setDate(date.getDate() - i);
+            if (currentUser && currentUser.current_challenge) {
+                // Use active challenge date range
+                const challenge = currentUser.current_challenge;
+                startDate = new Date(challenge.start_date + 'T00:00:00');
+                endDate = new Date(challenge.end_date + 'T00:00:00');
+                maxDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+            } else {
+                // Show last 30 days when no active challenge
+                maxDays = 30;
+                endDate = new Date(today);
+                endDate.setHours(0, 0, 0, 0);
+                startDate = new Date(endDate);
+                startDate.setDate(startDate.getDate() - (maxDays - 1));
+            }
+            
+            // Generate days for the determined range
+            const days = [];
+            for (let i = 0; i < maxDays; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
                 const dateStr = date.toISOString().split('T')[0];
                 
                 days.push({
                     date: dateStr,
                     displayDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                    steps: stepsByDate[dateStr] || 0
+                    steps: stepsByDate[dateStr] || 0,
+                    isFirst: i === 0,
+                    isLast: i === maxDays - 1
                 });
             }
             
@@ -1704,10 +1722,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const heightPercent = day.steps > 0 ? (day.steps / maxSteps) * 90 + 10 : 5; // Min 5% height for empty days
                 const isToday = day.date === today.toISOString().split('T')[0];
                 const hasData = day.steps > 0;
+                const showLabel = day.isFirst || day.isLast;
                 
-                return `<div class="step-bar ${!hasData ? 'no-data' : ''}" 
+                return `<div class="step-bar ${!hasData ? 'no-data' : ''} ${showLabel ? 'show-label' : ''}" 
                              style="height: ${heightPercent}%${isToday ? '; border: 2px solid #667eea;' : ''}"
-                             data-date="${day.displayDate}" 
+                             data-date="${showLabel ? day.displayDate : ''}" 
                              data-steps="${hasData ? day.steps.toLocaleString() + ' steps' : 'No data'}"
                              title="${day.displayDate}: ${hasData ? day.steps.toLocaleString() + ' steps' : 'No data'}">
                         </div>`;
