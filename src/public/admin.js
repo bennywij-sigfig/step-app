@@ -859,6 +859,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            // Check if challenge is being deactivated (was active, now unchecked)
+            const wasActive = document.getElementById(`challengeActive-${challengeId}`).defaultChecked;
+            const isBeingDeactivated = wasActive && !isActive;
+            
+            if (isBeingDeactivated) {
+                // Offer to create archive before deactivating
+                const shouldArchive = confirm(`You are about to deactivate the challenge "${name.trim()}".\n\nWould you like to create an archive first?\n\nThis will preserve all challenge data and step records before deactivating.\n\n• Click OK to archive first, then deactivate\n• Click Cancel to deactivate without archiving\n• Click Cancel and then the "x" to cancel the deactivation entirely`);
+                
+                if (shouldArchive) {
+                    try {
+                        // First create the archive
+                        saveBtn.disabled = true;
+                        saveBtn.textContent = 'Creating archive...';
+                        messageDiv.innerHTML = '<div class="message info">Creating archive before deactivating...</div>';
+                        
+                        const archiveResponse = await authenticatedFetch(`/api/admin/challenges/${challengeId}/archive`, {
+                            method: 'POST'
+                        });
+                        
+                        const archiveData = await archiveResponse.json();
+                        
+                        if (!archiveResponse.ok) {
+                            messageDiv.innerHTML = '<div class="message error">Failed to create archive: ' + archiveData.error + '</div>';
+                            saveBtn.disabled = false;
+                            saveBtn.textContent = 'Save';
+                            return;
+                        }
+                        
+                        messageDiv.innerHTML = '<div class="message success">Archive created successfully! Now deactivating challenge...</div>';
+                        
+                        // Brief delay to show archive success message
+                        await new Promise(resolve => setTimeout(resolve, 1500));
+                        
+                    } catch (error) {
+                        messageDiv.innerHTML = '<div class="message error">Failed to create archive. Deactivation cancelled.</div>';
+                        saveBtn.disabled = false;
+                        saveBtn.textContent = 'Save';
+                        return;
+                    }
+                }
+            }
+            
             saveBtn.disabled = true;
             saveBtn.textContent = 'Saving...';
             
@@ -929,7 +971,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Archive challenge
         async function archiveChallenge(challengeId, challengeName) {
-            if (!confirm(`Are you sure you want to archive the challenge "${challengeName}"?\n\nThis will:\n• Create a permanent snapshot of all challenge data\n• Preserve user step records and team information\n• Make the data available for download\n• This action cannot be undone\n\nDo you want to proceed?`)) {
+            if (!confirm(`Are you sure you want to archive the challenge "${challengeName}"?\n\nThis will:\n• Create a permanent snapshot of all challenge data\n• Preserve user step records and team information\n• Make the data available for download\n• The challenge will REMAIN ACTIVE (users can continue logging steps)\n• This action cannot be undone\n\nNote: To end the challenge, use the "Deactivate" option after archiving.\n\nDo you want to proceed?`)) {
                 return;
             }
             
