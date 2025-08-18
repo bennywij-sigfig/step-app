@@ -2457,6 +2457,247 @@ app.delete('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFTo
   );
 });
 
+// Archive challenge (admin only) 
+app.post('/api/admin/challenges/:challengeId/archive', requireApiAdmin, validateCSRFToken, (req, res) => {
+  const { challengeId } = req.params;
+  const adminUserId = req.session.userId;
+  
+  if (!adminUserId) {
+    return res.status(401).json({ error: 'Admin user not found in session' });
+  }
+
+  // First, get the challenge details
+  db.get(`SELECT * FROM challenges WHERE id = ?`, [challengeId], (err, challenge) => {
+    if (err) {
+      console.error('Error fetching challenge for archive:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!challenge) {
+      return res.status(404).json({ error: 'Challenge not found' });
+    }
+    
+    // Check if challenge is already archived
+    db.get(`SELECT id FROM challenge_archives WHERE challenge_id = ?`, [challengeId], (archiveCheckErr, existingArchive) => {
+      if (archiveCheckErr) {
+        console.error('Error checking existing archive:', archiveCheckErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      if (existingArchive) {
+        return res.status(400).json({ error: 'Challenge has already been archived' });
+      }
+
+      // Count participants for this challenge
+      db.get(`
+        SELECT COUNT(DISTINCT user_id) as participant_count 
+        FROM steps 
+        WHERE challenge_id = ?
+      `, [challengeId], (countErr, participantResult) => {
+        if (countErr) {
+          console.error('Error counting participants:', countErr);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        
+        const totalParticipants = participantResult ? participantResult.participant_count : 0;
+        
+        // Create archive record
+        db.run(`
+          INSERT INTO challenge_archives (
+            challenge_id, challenge_name, challenge_start_date, challenge_end_date,
+            reporting_threshold, created_by_user_id, total_participants
+          ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        `, [challengeId, challenge.name, challenge.start_date, challenge.end_date, 
+            challenge.reporting_threshold, adminUserId, totalParticipants], 
+        function(archiveInsertErr) {
+          if (archiveInsertErr) {
+            console.error('Error creating archive record:', archiveInsertErr);
+            return res.status(500).json({ error: 'Failed to create archive' });
+          }
+          
+          const archiveId = this.lastID;
+          
+          // Now copy all step data for this challenge with user information
+          db.all(`
+            SELECT s.*, u.name as user_name, u.team as user_team, u.email as user_email,
+                   s.updated_at as original_updated_at
+            FROM steps s 
+            JOIN users u ON s.user_id = u.id 
+            WHERE s.challenge_id = ?
+            ORDER BY s.user_id, s.date
+          `, [challengeId], (stepsFetchErr, stepsData) => {
+            if (stepsFetchErr) {
+              console.error('Error fetching steps for archive:', stepsFetchErr);
+              // Rollback archive creation
+              db.run(`DELETE FROM challenge_archives WHERE id = ?`, [archiveId]);
+              return res.status(500).json({ error: 'Failed to fetch step data' });
+            }
+            
+            if (stepsData.length === 0) {
+              // Archive created but no step data to copy
+              console.log(`Archive created for challenge "${challenge.name}" but no step data found`);
+              return res.json({ 
+                success: true, 
+                archiveId,
+                message: 'Challenge archived successfully (no step data found)',
+                totalParticipants: 0,
+                stepsArchived: 0
+              });
+            }
+            
+            // Insert step data in batches to avoid overwhelming the database
+            const batchSize = 100;
+            const batches = [];
+            for (let i = 0; i < stepsData.length; i += batchSize) {
+              batches.push(stepsData.slice(i, i + batchSize));
+            }
+            
+            let batchesProcessed = 0;
+            let totalStepsInserted = 0;
+            
+            const processBatch = (batch) => {
+              return new Promise((resolve, reject) => {
+                const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?)').join(', ');
+                const values = [];
+                
+                batch.forEach(step => {
+                  values.push(
+                    archiveId, step.user_id, step.user_name, step.user_team,
+                    step.user_email, step.date, step.count, step.original_updated_at
+                  );
+                });
+                
+                db.run(`
+                  INSERT INTO challenge_archive_steps (
+                    archive_id, user_id, user_name, user_team, 
+                    user_email, date, count, original_updated_at
+                  ) VALUES ${placeholders}
+                `, values, function(batchErr) {
+                  if (batchErr) {
+                    reject(batchErr);
+                  } else {
+                    totalStepsInserted += batch.length;
+                    resolve();
+                  }
+                });
+              });
+            };
+            
+            // Process all batches
+            Promise.all(batches.map(processBatch))
+              .then(() => {
+                console.log(`✅ Archive created for challenge "${challenge.name}": ${totalStepsInserted} step records archived`);
+                res.json({ 
+                  success: true, 
+                  archiveId,
+                  message: 'Challenge archived successfully',
+                  totalParticipants,
+                  stepsArchived: totalStepsInserted,
+                  challengeName: challenge.name
+                });
+              })
+              .catch((batchErr) => {
+                console.error('Error inserting step batches:', batchErr);
+                // Rollback archive creation
+                db.run(`DELETE FROM challenge_archives WHERE id = ?`, [archiveId]);
+                res.status(500).json({ error: 'Failed to archive step data' });
+              });
+          });
+        });
+      });
+    });
+  });
+});
+
+// Get all challenge archives (admin only)
+app.get('/api/admin/archives', requireApiAdmin, (req, res) => {
+  db.all(`
+    SELECT ca.*, u.name as created_by_name
+    FROM challenge_archives ca
+    LEFT JOIN users u ON ca.created_by_user_id = u.id
+    ORDER BY ca.archive_timestamp DESC
+  `, (err, rows) => {
+    if (err) {
+      console.error('Error fetching archives:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(rows);
+  });
+});
+
+// Download archived challenge data as ZIP (admin only)
+app.get('/api/admin/archives/:archiveId/download', requireApiAdmin, (req, res) => {
+  const { archiveId } = req.params;
+  
+  // Get archive details
+  db.get(`SELECT * FROM challenge_archives WHERE id = ?`, [archiveId], (err, archive) => {
+    if (err) {
+      console.error('Error fetching archive:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (!archive) {
+      return res.status(404).json({ error: 'Archive not found' });
+    }
+    
+    // Get archived step data
+    db.all(`
+      SELECT * FROM challenge_archive_steps 
+      WHERE archive_id = ? 
+      ORDER BY user_name, date
+    `, [archiveId], (stepErr, steps) => {
+      if (stepErr) {
+        console.error('Error fetching archived steps:', stepErr);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      // Create CSV content
+      const csvHeader = 'Date,User Name,Team,Email,Steps,Original Update Time\n';
+      const csvContent = csvHeader + steps.map(step => 
+        `${step.date},"${step.user_name}","${step.user_team || ''}","${step.user_email}",${step.count},"${step.original_updated_at || ''}"`
+      ).join('\n');
+      
+      // Create summary JSON
+      const summary = {
+        archive_info: {
+          challenge_name: archive.challenge_name,
+          challenge_period: `${archive.challenge_start_date} to ${archive.challenge_end_date}`,
+          reporting_threshold: archive.reporting_threshold,
+          archived_on: archive.archive_timestamp,
+          total_participants: archive.total_participants,
+          total_step_records: steps.length
+        },
+        participant_summary: {}
+      };
+      
+      // Generate participant summary
+      steps.forEach(step => {
+        if (!summary.participant_summary[step.user_name]) {
+          summary.participant_summary[step.user_name] = {
+            team: step.user_team,
+            email: step.user_email,
+            total_steps: 0,
+            days_logged: 0
+          };
+        }
+        summary.participant_summary[step.user_name].total_steps += step.count;
+        summary.participant_summary[step.user_name].days_logged += 1;
+      });
+      
+      // For now, return JSON response instead of ZIP (ZIP requires additional dependencies)
+      // In a future update, we can add ZIP functionality with archiver package
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${archive.challenge_name.replace(/[^a-zA-Z0-9]/g, '_')}_archive.json"`);
+      
+      res.json({
+        archive: summary,
+        csv_data: csvContent,
+        raw_steps: steps
+      });
+    });
+  });
+});
+
 // Admin dashboard
 app.get('/admin', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'admin.html'));

@@ -1,5 +1,55 @@
 # Step Challenge App - TODO List
 
+## 🎉 **AUGUST 18, 2025 - CHART & LEADERBOARD IMPROVEMENTS** ✅
+
+**🎉 CHART DISPLAY & DATA FILTERING FIXES COMPLETE!**
+- ✅ **My Steps Chart Fixed**: Chart now properly shows active challenge period (17 days: July 29 - Aug 14) instead of hardcoded 10 days
+- ✅ **Dynamic Date Range**: When no active challenge, shows last 30 days; with active challenge, shows full challenge period
+- ✅ **Chart Label Fix**: Only shows start/end date labels ("Jul 29" and "Aug 14") instead of confusing labels on every bar
+- ✅ **Timezone Bug Fixed**: Used 'T00:00:00' format to prevent date shifts that were causing off-by-one errors (was showing "Jul 28" to "Aug 13")
+- ✅ **Individual Disclosure Filter Fix**: Fixed major data integrity issue where individual disclosure triangles showed ALL user step data instead of challenge period only
+- ✅ **Date Range Filtering**: Individual disclosures now properly filter by actual challenge start/end dates instead of count-based limiting
+- ✅ **Challenge Data Integrity**: Eliminated display of steps from outside challenge periods (e.g., data after challenge end date)
+
+### ✅ **CHART IMPROVEMENTS IMPLEMENTED**
+- **My Steps Chart Date Range**: Now dynamically calculates based on active challenge duration with proper timezone handling
+- **Visual Label Clarity**: Removed rotation from date labels, increased font size, positioned only at start/end for better readability
+- **Challenge Period Display**: Chart accurately reflects July 29 - Aug 14 period (17 days) with clear start/end markers
+- **No Challenge Fallback**: Shows last 30 days when no active challenge exists instead of hardcoded 10-day period
+- **Date Normalization**: Consistent use of 'T00:00:00' format prevents timezone-related date calculation errors
+
+### ✅ **INDIVIDUAL DISCLOSURE DATA FILTERING OVERHAUL** 
+- **Root Cause Fixed**: Frontend was using `userData.daily_steps.slice(0, displayLimit)` which took first N items by count, not actual challenge dates
+- **Proper Date Range Filtering**: Replaced with `userData.daily_steps.filter(day => stepDate >= challengeStartDate && stepDate <= challengeEndDate)`
+- **Data Integrity Restored**: Individual disclosure triangles now show only steps within active challenge period (July 29 - Aug 14)
+- **Backend Efficiency**: Backend already had LIMIT 45 to prevent bloat; frontend now properly constrains data to challenge dates
+- **Challenge Period Constraint**: Successfully eliminates display of steps from after challenge end or from previous challenges outside date range
+- **Backward Compatibility**: Falls back to 14-day limit when no active challenge exists
+
+### 🔍 **LEADERBOARD QUERY VALIDATION COMPLETE**
+- ✅ **Individual Leaderboard**: Properly filters by `s.challenge_id = ?` to show only active challenge data
+- ✅ **Team Leaderboard**: Correctly uses `s.challenge_id = ?` constraint for challenge-specific data
+- ✅ **Challenge Date Range Verification**: All leaderboard queries constrain data to active challenge period (ends inclusive)
+- ✅ **Individual Disclosure Fix**: Now shows only challenge period data instead of all user step history
+- ⚠️ **MCP API Validation Gap**: MCP API allows step logging outside challenge period (by design for flexibility), but all leaderboards filter properly
+
+### 🚀 **DEPLOYMENT STATUS**
+- **Commits**: 
+  - `e235f93` - Chart improvements with timezone fixes
+  - `6d76748` - Individual disclosure filtering fix
+- **Production Status**: Both fixes deployed and operational at https://step-app-4x-yhw.fly.dev/
+- **Health Check**: All systems healthy with enhanced chart display and proper data filtering
+- **User Impact**: Chart now shows correct challenge period, individual disclosures show only relevant challenge data
+
+### 📊 **TESTING VALIDATION**
+- **Playwright Browser Testing**: Verified chart shows correct date range (Jul 29 - Aug 14) with proper start/end labels
+- **Individual Disclosure Testing**: Confirmed disclosure triangles now filter out data outside challenge period (Aug 15+ data no longer shown)
+- **Date Range Accuracy**: Challenge duration calculation verified (17 days for July 29 - Aug 14 period)
+- **Visual Confirmation**: Screenshots document successful chart and filtering improvements
+- **Data Integrity Validation**: Proper challenge date constraints prevent display of irrelevant step data
+
+---
+
 ## 🎉 **AUGUST 14, 2025 - CSV DOWNLOAD ENDPOINT RESTORATION** ✅
 
 **🎉 DOWNLOAD FUNCTIONALITY RESTORED: MISSING API ENDPOINT IMPLEMENTED!**

@@ -98,6 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('challengesBtn').addEventListener('click', () => {
             showView('challenges');
             loadChallenges();
+            loadArchives();
         });
         
         document.getElementById('mcpTokensBtn').addEventListener('click', () => {
@@ -748,6 +749,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                             <button class="save-btn save-challenge-btn" id="saveChallenge-${challenge.id}" data-challenge-id="${challenge.id}" disabled>
                                                 Save
                                             </button>
+                                            ${challenge.is_active ? `
+                                                <button class="archive-challenge-btn" data-challenge-id="${challenge.id}" data-challenge-name="${escapeHtml(challenge.name)}" 
+                                                        style="background: #ff8c00; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-weight: 500;">
+                                                    Archive
+                                                </button>
+                                            ` : ''}
                                             <button class="delete-challenge-btn" data-challenge-id="${challenge.id}" data-challenge-name="${escapeHtml(challenge.name)}" 
                                                     style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px;">
                                                 Delete
@@ -920,6 +927,136 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Archive challenge
+        async function archiveChallenge(challengeId, challengeName) {
+            if (!confirm(`Are you sure you want to archive the challenge "${challengeName}"?\n\nThis will:\n• Create a permanent snapshot of all challenge data\n• Preserve user step records and team information\n• Make the data available for download\n• This action cannot be undone\n\nDo you want to proceed?`)) {
+                return;
+            }
+            
+            const messageDiv = document.getElementById('challengesMessage');
+            
+            try {
+                // Show loading message
+                messageDiv.innerHTML = '<div class="message info">Creating archive... This may take a moment.</div>';
+                
+                const response = await authenticatedFetch(`/api/admin/challenges/${challengeId}/archive`, {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    messageDiv.innerHTML = `<div class="message success">
+                        <strong>Challenge archived successfully!</strong><br>
+                        • Archive ID: ${data.archiveId}<br>
+                        • Participants: ${data.totalParticipants}<br>
+                        • Step records: ${data.stepsArchived}<br>
+                        Archive data is now available for download.
+                    </div>`;
+                    loadChallenges();
+                    setTimeout(() => messageDiv.innerHTML = '', 8000);
+                } else {
+                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
+                }
+            } catch (error) {
+                console.error('Archive error:', error);
+                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+            }
+        }
+
+        // Load challenge archives
+        async function loadArchives() {
+            try {
+                const response = await fetch('/api/admin/archives');
+                const archives = await response.json();
+                
+                const archivesTable = document.getElementById('archivesTable');
+                if (archives.length === 0) {
+                    archivesTable.innerHTML = '<p>No challenge archives yet. Archive a challenge to preserve its data permanently.</p>';
+                } else {
+                    archivesTable.innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Challenge Name</th>
+                                    <th>Challenge Period</th>
+                                    <th>Participants</th>
+                                    <th>Threshold</th>
+                                    <th>Archived On</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${archives.map(archive => {
+                                    const archivedDate = new Date(archive.archive_timestamp).toLocaleDateString();
+                                    const challengePeriod = `${archive.challenge_start_date} to ${archive.challenge_end_date}`;
+                                    return `
+                                        <tr>
+                                            <td><strong>${escapeHtml(archive.challenge_name)}</strong></td>
+                                            <td>${challengePeriod}</td>
+                                            <td>${archive.total_participants}</td>
+                                            <td>${archive.reporting_threshold}%</td>
+                                            <td>${archivedDate}</td>
+                                            <td>${escapeHtml(archive.created_by_name || 'Unknown')}</td>
+                                            <td>
+                                                <button class="download-archive-btn" data-archive-id="${archive.id}" data-archive-name="${escapeHtml(archive.challenge_name)}" 
+                                                        style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                                                    Download
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading archives:', error);
+                document.getElementById('archivesTable').innerHTML = '<p>Error loading archives</p>';
+            }
+        }
+
+        // Download archive
+        async function downloadArchive(archiveId, archiveName) {
+            try {
+                // Show downloading message
+                const messageDiv = document.getElementById('challengesMessage');
+                messageDiv.innerHTML = '<div class="message info">Preparing archive download...</div>';
+                
+                const response = await fetch(`/api/admin/archives/${archiveId}/download`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Create downloadable file
+                    const filename = `${archiveName.replace(/[^a-zA-Z0-9]/g, '_')}_archive.json`;
+                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    const url = window.URL.createObjectURL(blob);
+                    
+                    // Trigger download
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    messageDiv.innerHTML = '<div class="message success">Archive downloaded successfully!</div>';
+                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                } else {
+                    const errorData = await response.json();
+                    messageDiv.innerHTML = '<div class="message error">' + errorData.error + '</div>';
+                }
+            } catch (error) {
+                console.error('Download error:', error);
+                document.getElementById('challengesMessage').innerHTML = '<div class="message error">Download failed. Please try again.</div>';
+            }
+        }
+
         // Load initial data
         loadUsers();
         
@@ -1010,6 +1147,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 const challengeId = e.target.dataset.challengeId;
                 const challengeName = e.target.dataset.challengeName;
                 deleteChallenge(parseInt(challengeId), challengeName);
+            }
+            
+            // Archive challenge buttons
+            if (e.target.classList.contains('archive-challenge-btn')) {
+                const challengeId = e.target.dataset.challengeId;
+                const challengeName = e.target.dataset.challengeName;
+                archiveChallenge(parseInt(challengeId), challengeName);
+            }
+            
+            // Download archive buttons
+            if (e.target.classList.contains('download-archive-btn')) {
+                const archiveId = e.target.dataset.archiveId;
+                const archiveName = e.target.dataset.archiveName;
+                downloadArchive(parseInt(archiveId), archiveName);
             }
         });
     

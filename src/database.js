@@ -372,10 +372,43 @@ if (!shouldDelayInit) {
     UNIQUE(user_id, date)
   )`);
 
+  // Challenge archive tables for historical data preservation
+  db.run(`CREATE TABLE IF NOT EXISTS challenge_archives (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    challenge_id INTEGER NOT NULL,
+    challenge_name TEXT NOT NULL,
+    challenge_start_date TEXT NOT NULL,
+    challenge_end_date TEXT NOT NULL,
+    reporting_threshold INTEGER NOT NULL,
+    archive_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_by_user_id INTEGER NOT NULL,
+    total_participants INTEGER NOT NULL,
+    FOREIGN KEY (challenge_id) REFERENCES challenges (id),
+    FOREIGN KEY (created_by_user_id) REFERENCES users (id)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS challenge_archive_steps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    archive_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    user_name TEXT NOT NULL,
+    user_team TEXT,
+    user_email TEXT NOT NULL,
+    date TEXT NOT NULL,
+    count INTEGER NOT NULL,
+    original_updated_at DATETIME,
+    FOREIGN KEY (archive_id) REFERENCES challenge_archives (id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+  )`);
+
   // Shadow game performance indexes
   db.run(`CREATE INDEX IF NOT EXISTS idx_shadow_steps_user_date ON shadow_steps(user_id, date)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_shadow_steps_date ON shadow_steps(date)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_shadow_hearts_user_date ON shadow_hearts(user_id, date)`);
+  
+  // Archive indexes for performance
+  db.run(`CREATE INDEX IF NOT EXISTS idx_archive_steps_archive_id ON challenge_archive_steps(archive_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_archive_steps_user_date ON challenge_archive_steps(archive_id, user_id, date)`);
 
   // Add constraint to prevent multiple active challenges (SQLite doesn't support partial unique indexes easily)
   // We'll handle this in application logic for now
