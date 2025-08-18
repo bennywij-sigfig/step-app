@@ -864,14 +864,40 @@ document.addEventListener('DOMContentLoaded', function() {
             const isBeingDeactivated = wasActive && !isActive;
             
             if (isBeingDeactivated) {
-                // Offer to create archive before deactivating
-                const shouldArchive = confirm(`You are about to deactivate the challenge "${name.trim()}".\n\nWould you like to create an archive first?\n\nThis will preserve all challenge data and step records before deactivating.\n\n• Click OK to archive first, then deactivate\n• Click Cancel to deactivate without archiving\n• Click Cancel and then the "x" to cancel the deactivation entirely`);
+                // Reset checkbox to active state while user decides
+                document.getElementById(`challengeActive-${challengeId}`).checked = true;
                 
-                if (shouldArchive) {
+                // Show three-button dialog for deactivation
+                messageDiv.innerHTML = `
+                    <div class="message info">
+                        <strong>You are about to deactivate "${name.trim()}"</strong><br>
+                        Choose how to proceed:
+                        <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button id="archiveThenDeactivate-${challengeId}" 
+                                    style="background: #17a2b8; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                                Archive + Deactivate
+                            </button>
+                            <button id="deactivateOnly-${challengeId}" 
+                                    style="background: #ffc107; color: #212529; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                                Deactivate Only
+                            </button>
+                            <button id="cancelDeactivation-${challengeId}" 
+                                    style="background: #6c757d; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                                Cancel
+                            </button>
+                        </div>
+                        <div style="font-size: 13px; color: #666; margin-top: 10px;">
+                            • <strong>Archive + Deactivate</strong>: Preserve all data, then end challenge<br>
+                            • <strong>Deactivate Only</strong>: End challenge without creating archive<br>
+                            • <strong>Cancel</strong>: Keep challenge active
+                        </div>
+                    </div>
+                `;
+                
+                // Add event listeners for the three buttons
+                document.getElementById(`archiveThenDeactivate-${challengeId}`).addEventListener('click', async () => {
                     try {
                         // First create the archive
-                        saveBtn.disabled = true;
-                        saveBtn.textContent = 'Creating archive...';
                         messageDiv.innerHTML = '<div class="message info">Creating archive before deactivating...</div>';
                         
                         const archiveResponse = await authenticatedFetch(`/api/admin/challenges/${challengeId}/archive`, {
@@ -882,8 +908,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         if (!archiveResponse.ok) {
                             messageDiv.innerHTML = '<div class="message error">Failed to create archive: ' + archiveData.error + '</div>';
-                            saveBtn.disabled = false;
-                            saveBtn.textContent = 'Save';
                             return;
                         }
                         
@@ -892,17 +916,34 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Brief delay to show archive success message
                         await new Promise(resolve => setTimeout(resolve, 1500));
                         
+                        // Now proceed with deactivation
+                        document.getElementById(`challengeActive-${challengeId}`).checked = false;
+                        proceedWithUpdate();
+                        
                     } catch (error) {
-                        messageDiv.innerHTML = '<div class="message error">Failed to create archive. Deactivation cancelled.</div>';
-                        saveBtn.disabled = false;
-                        saveBtn.textContent = 'Save';
-                        return;
+                        messageDiv.innerHTML = '<div class="message error">Failed to create archive. Please try again.</div>';
                     }
-                }
+                });
+                
+                document.getElementById(`deactivateOnly-${challengeId}`).addEventListener('click', () => {
+                    // Proceed with deactivation without archive
+                    document.getElementById(`challengeActive-${challengeId}`).checked = false;
+                    proceedWithUpdate();
+                });
+                
+                document.getElementById(`cancelDeactivation-${challengeId}`).addEventListener('click', () => {
+                    // Keep challenge active and clear message
+                    document.getElementById(`challengeActive-${challengeId}`).checked = true;
+                    messageDiv.innerHTML = '';
+                });
+                
+                return; // Don't proceed with the update yet
             }
             
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Saving...';
+            // Function to proceed with the actual update
+            async function proceedWithUpdate() {
+                saveBtn.disabled = true;
+                saveBtn.textContent = 'Saving...';
             
             try {
                 const response = await authenticatedFetch(`/api/admin/challenges/${challengeId}`, {
@@ -935,11 +976,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     saveBtn.disabled = false;
                     saveBtn.textContent = 'Save';
                 }
-            } catch (error) {
-                messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
-                saveBtn.disabled = false;
-                saveBtn.textContent = 'Save';
+                } catch (error) {
+                    messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save';
+                }
             }
+            
+            // If not being deactivated, proceed with normal update
+            await proceedWithUpdate();
         }
 
         // Delete challenge
