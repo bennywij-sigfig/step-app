@@ -2302,25 +2302,30 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `;
             } else {
-                // Calculate dynamic limit based on active challenge duration
-                let displayLimit = 14; // Default fallback
-                let periodDescription = '14 days';
+                // Filter data based on active challenge date range
+                let filteredSteps;
+                let periodDescription;
                 
                 if (currentUser && currentUser.current_challenge) {
                     const challenge = currentUser.current_challenge;
-                    // Normalize dates to midnight (strip hours/minutes, no timezone conversion)
-                    const startDate = new Date(challenge.start_date);
-                    startDate.setHours(0, 0, 0, 0);
-                    const endDate = new Date(challenge.end_date);
-                    endDate.setHours(0, 0, 0, 0);
+                    // Normalize challenge dates to midnight
+                    const challengeStartDate = new Date(challenge.start_date + 'T00:00:00');
+                    const challengeEndDate = new Date(challenge.end_date + 'T00:00:00');
                     
-                    // Calculate challenge duration (inclusive)
-                    const challengeDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-                    displayLimit = challengeDays;
+                    // Filter steps to only include those within the challenge date range
+                    filteredSteps = userData.daily_steps.filter(day => {
+                        const stepDate = new Date(day.date + 'T00:00:00');
+                        return stepDate >= challengeStartDate && stepDate <= challengeEndDate;
+                    });
+                    
                     periodDescription = 'full active challenge period';
+                } else {
+                    // No active challenge - show last 14 days
+                    filteredSteps = userData.daily_steps.slice(0, 14);
+                    periodDescription = '14 days';
                 }
                 
-                const dailyDataHtml = userData.daily_steps.slice(0, displayLimit).map((day, index) => `
+                const dailyDataHtml = filteredSteps.map((day, index) => `
                     <div class="user-data-item" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: rgba(255, 255, 255, 0.4); border-bottom: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.9em;">
                         <div>
                             <span style="font-weight: 500;">${day.formatted_date}</span>
@@ -2332,12 +2337,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 `).join('');
                 
                 let showingText;
-                if (userData.daily_steps.length > displayLimit) {
-                    showingText = ` (showing latest ${displayLimit} of ${userData.total_days} days)`;
-                } else if (currentUser && currentUser.current_challenge) {
+                if (currentUser && currentUser.current_challenge) {
                     showingText = ` (${periodDescription})`;
                 } else {
-                    showingText = ` (${userData.total_days} days total)`;
+                    showingText = ` (${filteredSteps.length} days total)`;
                 }
                 
                 userDataList.innerHTML = `
