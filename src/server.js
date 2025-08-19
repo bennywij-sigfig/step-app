@@ -2626,76 +2626,160 @@ app.get('/api/admin/archives', requireApiAdmin, (req, res) => {
 });
 
 // Download archived challenge data as ZIP (admin only)
-app.get('/api/admin/archives/:archiveId/download', requireApiAdmin, (req, res) => {
+app.get('/api/admin/archives/:archiveId/download', requireApiAdmin, async (req, res) => {
   const { archiveId } = req.params;
+  const archiver = require('archiver');
+  const { promisify } = require('util');
   
-  // Get archive details
-  db.get(`SELECT * FROM challenge_archives WHERE id = ?`, [archiveId], (err, archive) => {
-    if (err) {
-      console.error('Error fetching archive:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
+  try {
+    // Get archive details
+    const archive = await new Promise((resolve, reject) => {
+      db.get(`SELECT * FROM challenge_archives WHERE id = ?`, [archiveId], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
     
     if (!archive) {
       return res.status(404).json({ error: 'Archive not found' });
     }
     
     // Get archived step data
-    db.all(`
-      SELECT * FROM challenge_archive_steps 
-      WHERE archive_id = ? 
-      ORDER BY user_name, date
-    `, [archiveId], (stepErr, steps) => {
-      if (stepErr) {
-        console.error('Error fetching archived steps:', stepErr);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      // Create CSV content
-      const csvHeader = 'Date,User Name,Team,Email,Steps,Original Update Time\n';
-      const csvContent = csvHeader + steps.map(step => 
-        `${step.date},"${step.user_name}","${step.user_team || ''}","${step.user_email}",${step.count},"${step.original_updated_at || ''}"`
-      ).join('\n');
-      
-      // Create summary JSON
-      const summary = {
-        archive_info: {
-          challenge_name: archive.challenge_name,
-          challenge_period: `${archive.challenge_start_date} to ${archive.challenge_end_date}`,
-          reporting_threshold: archive.reporting_threshold,
-          archived_on: archive.archive_timestamp,
-          total_participants: archive.total_participants,
-          total_step_records: steps.length
-        },
-        participant_summary: {}
-      };
-      
-      // Generate participant summary
-      steps.forEach(step => {
-        if (!summary.participant_summary[step.user_name]) {
-          summary.participant_summary[step.user_name] = {
-            team: step.user_team,
-            email: step.user_email,
-            total_steps: 0,
-            days_logged: 0
-          };
-        }
-        summary.participant_summary[step.user_name].total_steps += step.count;
-        summary.participant_summary[step.user_name].days_logged += 1;
-      });
-      
-      // For now, return JSON response instead of ZIP (ZIP requires additional dependencies)
-      // In a future update, we can add ZIP functionality with archiver package
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="${archive.challenge_name.replace(/[^a-zA-Z0-9]/g, '_')}_archive.json"`);
-      
-      res.json({
-        archive: summary,
-        csv_data: csvContent,
-        raw_steps: steps
+    const steps = await new Promise((resolve, reject) => {
+      db.all(`
+        SELECT * FROM challenge_archive_steps 
+        WHERE archive_id = ? 
+        ORDER BY date, user_name
+      `, [archiveId], (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
       });
     });
-  });
+    
+    // Create safe filename
+    const safeChallengeName = archive.challenge_name.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_');
+    const zipFilename = `${safeChallengeName}_Archive.zip`;
+    
+    // Set response headers for ZIP download
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${zipFilename}"`);
+    
+    // Create ZIP archive
+    const archive_zip = archiver('zip', {
+      zlib: { level: 9 } // Maximum compression
+    });
+    
+    // Handle ZIP errors
+    archive_zip.on('error', (err) => {
+      console.error('Archive creation error:', err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: 'Failed to create archive' });
+      }
+    });
+    
+    // Pipe archive to response
+    archive_zip.pipe(res);
+    
+    // 1. Create challenge metadata CSV
+    const challengeMetadataCSV = [
+      'Field,Value',
+      `Challenge Name,"${archive.challenge_name.replace(/"/g, '""')}"`,
+      `Start Date,${archive.challenge_start_date}`,
+      `End Date,${archive.challenge_end_date}`,
+      `Reporting Threshold,${archive.reporting_threshold}%`,
+      `Total Participants,${archive.total_participants}`,
+      `Total Step Records,${steps.length}`,
+      `Archived On,${archive.archive_timestamp}`,
+      `Created By User ID,${archive.created_by_user_id}`
+    ].join('\n');
+    
+    archive_zip.append(challengeMetadataCSV, { name: 'challenge_info.csv' });
+    
+    // 2. Create daily steps CSV
+    const stepsCSVHeader = 'Date,User_Name,Team,User_Email,Steps,Original_Update_Time\n';
+    const stepsCSVRows = steps.map(step => {
+      const escapedName = (step.user_name || '').replace(/"/g, '""');
+      const escapedTeam = (step.user_team || '').replace(/"/g, '""');
+      const escapedEmail = (step.user_email || '').replace(/"/g, '""');
+      const escapedUpdateTime = (step.original_updated_at || '').replace(/"/g, '""');
+      
+      return `${step.date},"${escapedName}","${escapedTeam}","${escapedEmail}",${step.count},"${escapedUpdateTime}"`;
+    });
+    
+    const stepsCSV = stepsCSVHeader + stepsCSVRows.join('\n');
+    archive_zip.append(stepsCSV, { name: 'daily_steps.csv' });
+    
+    // 3. Create participant summary CSV
+    const participantSummary = {};
+    steps.forEach(step => {
+      const key = step.user_name || 'Unknown';
+      if (!participantSummary[key]) {
+        participantSummary[key] = {
+          user_name: step.user_name,
+          team: step.user_team,
+          email: step.user_email,
+          total_steps: 0,
+          days_logged: 0,
+          avg_steps_per_day: 0
+        };
+      }
+      participantSummary[key].total_steps += step.count;
+      participantSummary[key].days_logged += 1;
+    });
+    
+    // Calculate averages and sort by total steps
+    const participantArray = Object.values(participantSummary).map(p => ({
+      ...p,
+      avg_steps_per_day: p.days_logged > 0 ? Math.round(p.total_steps / p.days_logged) : 0
+    })).sort((a, b) => b.total_steps - a.total_steps);
+    
+    const summaryCSVHeader = 'Rank,User_Name,Team,Email,Total_Steps,Days_Logged,Avg_Steps_Per_Day\n';
+    const summaryCSVRows = participantArray.map((p, index) => {
+      const escapedName = (p.user_name || '').replace(/"/g, '""');
+      const escapedTeam = (p.team || '').replace(/"/g, '""');
+      const escapedEmail = (p.email || '').replace(/"/g, '""');
+      
+      return `${index + 1},"${escapedName}","${escapedTeam}","${escapedEmail}",${p.total_steps},${p.days_logged},${p.avg_steps_per_day}`;
+    });
+    
+    const summaryCSV = summaryCSVHeader + summaryCSVRows.join('\n');
+    archive_zip.append(summaryCSV, { name: 'participant_summary.csv' });
+    
+    // 4. Create README file
+    const readme = `Challenge Archive: ${archive.challenge_name}
+===============================================
+
+This archive contains complete data for the challenge "${archive.challenge_name}"
+Period: ${archive.challenge_start_date} to ${archive.challenge_end_date}
+Archived on: ${archive.archive_timestamp}
+
+Files included:
+- challenge_info.csv: Challenge metadata and settings
+- daily_steps.csv: All step records by user and date during the challenge
+- participant_summary.csv: Summary statistics for each participant
+- README.txt: This file
+
+Data Notes:
+- ${steps.length} step records from ${archive.total_participants} participants
+- Reporting threshold was ${archive.reporting_threshold}%
+- Data preserved exactly as it was when the challenge was active
+
+Generated by Step Challenge App Archive System
+`;
+    
+    archive_zip.append(readme, { name: 'README.txt' });
+    
+    // Finalize the archive
+    await archive_zip.finalize();
+    
+    console.log(`✅ Archive download created for challenge "${archive.challenge_name}": ${steps.length} records`);
+    
+  } catch (error) {
+    console.error('Error creating archive download:', error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to create archive download' });
+    }
+  }
 });
 
 // Admin dashboard

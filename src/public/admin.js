@@ -1110,19 +1110,20 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 // Show downloading message
                 const messageDiv = document.getElementById('challengesMessage');
-                messageDiv.innerHTML = '<div class="message info">Preparing archive download...</div>';
+                messageDiv.innerHTML = '<div class="message info">Preparing ZIP archive download...</div>';
                 
                 const response = await fetch(`/api/admin/archives/${archiveId}/download`);
                 
                 if (response.ok) {
-                    const data = await response.json();
+                    // Handle ZIP blob download
+                    const blob = await response.blob();
                     
-                    // Create downloadable file
-                    const filename = `${archiveName.replace(/[^a-zA-Z0-9]/g, '_')}_archive.json`;
-                    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                    // Create safe filename
+                    const safeArchiveName = archiveName.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_');
+                    const filename = `${safeArchiveName}_Archive.zip`;
+                    
+                    // Create download URL and trigger download
                     const url = window.URL.createObjectURL(blob);
-                    
-                    // Trigger download
                     const a = document.createElement('a');
                     a.style.display = 'none';
                     a.href = url;
@@ -1132,15 +1133,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
                     
-                    messageDiv.innerHTML = '<div class="message success">Archive downloaded successfully!</div>';
-                    setTimeout(() => messageDiv.innerHTML = '', 3000);
+                    messageDiv.innerHTML = '<div class="message success">ZIP archive downloaded successfully! Contains CSVs and challenge data.</div>';
+                    setTimeout(() => messageDiv.innerHTML = '', 4000);
                 } else {
-                    const errorData = await response.json();
-                    messageDiv.innerHTML = '<div class="message error">' + errorData.error + '</div>';
+                    // Handle error response
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && contentType.includes('application/json')) {
+                        const errorData = await response.json();
+                        messageDiv.innerHTML = '<div class="message error">' + errorData.error + '</div>';
+                    } else {
+                        messageDiv.innerHTML = '<div class="message error">Download failed. Server returned an error.</div>';
+                    }
                 }
             } catch (error) {
                 console.error('Download error:', error);
-                document.getElementById('challengesMessage').innerHTML = '<div class="message error">Download failed. Please try again.</div>';
+                document.getElementById('challengesMessage').innerHTML = '<div class="message error">Download failed. Please check your connection and try again.</div>';
             }
         }
 
