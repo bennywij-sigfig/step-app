@@ -417,14 +417,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 batchActionBar.classList.add('hidden');
             } else {
                 batchActionBar.classList.remove('hidden');
-                // Re-render the batch action bar with updated content
-                const usersTable = document.getElementById('usersTable');
-                if (usersTable) {
-                    const currentBatchBar = batchActionBar.outerHTML;
-                    const newBatchBar = renderBatchActionBar();
-                    usersTable.innerHTML = usersTable.innerHTML.replace(currentBatchBar, newBatchBar);
-                    setupBatchActionListeners();
-                }
+                // Update only the batch action bar content, preserving table event listeners
+                const newBatchBarHTML = renderBatchActionBar();
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = newBatchBarHTML;
+                const newBatchBar = tempDiv.firstChild;
+                
+                batchActionBar.parentNode.replaceChild(newBatchBar, batchActionBar);
+                setupBatchActionListeners();
             }
         }
         
