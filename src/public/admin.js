@@ -285,6 +285,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             renderUsersTable(sortedUsers, window.teamsData);
+            
+            // Restore selection state after re-render
+            if (selectedUserIds.size > 0) {
+                updateCheckboxStates();
+                updateSelectAllState();
+                updateBatchActionBar();
+            }
         }
 
         // Update sort indicators
@@ -410,8 +417,19 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Update batch action bar visibility and content
         function updateBatchActionBar() {
-            const batchActionBar = document.getElementById('batch-action-bar');
-            if (!batchActionBar) return;
+            let batchActionBar = document.getElementById('batch-action-bar');
+            
+            // If batch action bar doesn't exist, create it and insert it at the beginning of usersTable
+            if (!batchActionBar) {
+                const usersTable = document.getElementById('usersTable');
+                if (usersTable) {
+                    const newBatchBarHTML = renderBatchActionBar();
+                    usersTable.insertAdjacentHTML('afterbegin', newBatchBarHTML);
+                    batchActionBar = document.getElementById('batch-action-bar');
+                    setupBatchActionListeners();
+                }
+                return;
+            }
             
             if (selectedUserIds.size === 0) {
                 batchActionBar.classList.add('hidden');
