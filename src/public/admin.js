@@ -130,6 +130,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Multi-select state management
         let selectedUserIds = new Set();
+        let updateBatchActionBarTimeout = null;
         
         // Load users
         async function loadUsers() {
@@ -163,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function renderUsersTable(users, teams) {
             const usersTable = document.getElementById('usersTable');
             usersTable.innerHTML = `
-                ${renderBatchActionBar()}
+                ${renderBatchActionBar() || ''}
                 <table id="users-table">
                     <thead>
                         <tr>
@@ -290,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (selectedUserIds.size > 0) {
                 updateCheckboxStates();
                 updateSelectAllState();
-                updateBatchActionBar();
+                updateBatchActionBarDebounced();
             }
         }
 
@@ -365,7 +366,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         selectedUserIds.clear();
                     }
                     updateCheckboxStates();
-                    updateBatchActionBar();
+                    updateBatchActionBarDebounced();
                 });
             }
             
@@ -379,7 +380,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         selectedUserIds.delete(userId);
                     }
                     updateSelectAllState();
-                    updateBatchActionBar();
+                    updateBatchActionBarDebounced();
                 });
             });
             
@@ -396,17 +397,20 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Update select all checkbox state (checked/unchecked/indeterminate)
+        // FIXED: Use selectedUserIds as authoritative source, not DOM checkbox states
         function updateSelectAllState() {
             const selectAllCheckbox = document.getElementById('select-all-checkbox');
             if (!selectAllCheckbox) return;
             
-            const visibleCheckboxes = document.querySelectorAll('.user-checkbox');
-            const checkedCount = Array.from(visibleCheckboxes).filter(cb => cb.checked).length;
+            // Get total number of visible users from our data, not DOM
+            const visibleUsers = window.usersData || [];
+            const totalVisibleUsers = visibleUsers.length;
+            const selectedCount = selectedUserIds.size;
             
-            if (checkedCount === 0) {
+            if (selectedCount === 0) {
                 selectAllCheckbox.checked = false;
                 selectAllCheckbox.indeterminate = false;
-            } else if (checkedCount === visibleCheckboxes.length) {
+            } else if (selectedCount === totalVisibleUsers) {
                 selectAllCheckbox.checked = true;
                 selectAllCheckbox.indeterminate = false;
             } else {
@@ -415,34 +419,95 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Debounced batch action bar update to prevent rapid successive calls
+        function updateBatchActionBarDebounced() {
+            if (updateBatchActionBarTimeout) {
+                clearTimeout(updateBatchActionBarTimeout);
+            }
+            updateBatchActionBarTimeout = setTimeout(() => {
+                updateBatchActionBar();
+            }, 10); // Very short debounce to prevent race conditions
+        }
+
         // Update batch action bar visibility and content
         function updateBatchActionBar() {
-            let batchActionBar = document.getElementById('batch-action-bar');
-            
-            // If batch action bar doesn't exist, create it and insert it at the beginning of usersTable
-            if (!batchActionBar) {
-                const usersTable = document.getElementById('usersTable');
-                if (usersTable) {
-                    const newBatchBarHTML = renderBatchActionBar();
-                    usersTable.insertAdjacentHTML('afterbegin', newBatchBarHTML);
-                    batchActionBar = document.getElementById('batch-action-bar');
+            try {
+                let batchActionBar = document.getElementById('batch-action-bar');
+                
+                // If batch action bar doesn't exist, create it and insert it at the beginning of usersTable
+                if (!batchActionBar) {
+                    const usersTable = document.getElementById('usersTable');
+                    if (usersTable) {
+                        const newBatchBarHTML = renderBatchActionBar();
+                        usersTable.insertAdjacentHTML('afterbegin', newBatchBarHTML);
+                        batchActionBar = document.getElementById('batch-action-bar');
+                        if (batchActionBar) {
+                            setupBatchActionListeners();
+                        }
+                    }
+                    return;
+                }
+                
+                if (selectedUserIds.size === 0) {
+                    batchActionBar.classList.add('hidden');
+                } else {
+                    batchActionBar.classList.remove('hidden');
+                    // Update only the innerHTML to preserve the DOM element and avoid event listener issues
+                    // SIMPLIFIED: Skip DOM parsing and directly set innerHTML
+                    const selectedCount = selectedUserIds.size;
+                    const visibleUsers = window.usersData || [];
+                    const selectedUsers = visibleUsers.filter(user => selectedUserIds.has(user.id));
+                    const hasUnarchived = selectedUsers.some(user => !user.archived_at);
+                    const hasArchived = selectedUsers.some(user => user.archived_at);
+                    
+                    batchActionBar.innerHTML = `
+                        <div class="batch-info">
+                            <span class="selection-count">${selectedCount} users selected</span>
+                        </div>
+                        <div class="batch-actions">
+                            <button id="batch-save-teams" class="batch-btn batch-save-btn" title="Save team assignments for selected users">
+                                💾 Save All Teams
+                            </button>
+                            ${hasUnarchived ? `
+                                <button id="batch-archive" class="batch-btn batch-archive-btn" title="Archive selected unarchived users">
+                                    📥 Archive Selected
+                                </button>
+                            ` : ''}
+                            ${hasArchived ? `
+                                <button id="batch-unarchive" class="batch-btn batch-unarchive-btn" title="Unarchive selected archived users">
+                                    📤 Unarchive Selected
+                                </button>
+                            ` : ''}
+                            <button id="batch-clear-steps" class="batch-btn batch-clear-btn" title="Clear all steps for selected users">
+                                🗑️ Clear All Steps
+                            </button>
+                            <button id="batch-clear-selection" class="batch-btn batch-cancel-btn" title="Clear selection">
+                                ✖️ Clear Selection
+                            </button>
+                        </div>
+                    `;
                     setupBatchActionListeners();
                 }
-                return;
-            }
-            
-            if (selectedUserIds.size === 0) {
-                batchActionBar.classList.add('hidden');
-            } else {
-                batchActionBar.classList.remove('hidden');
-                // Update only the batch action bar content, preserving table event listeners
-                const newBatchBarHTML = renderBatchActionBar();
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = newBatchBarHTML;
-                const newBatchBar = tempDiv.firstChild;
-                
-                batchActionBar.parentNode.replaceChild(newBatchBar, batchActionBar);
-                setupBatchActionListeners();
+            } catch (error) {
+                console.error('Error updating batch action bar:', error);
+                // Try to recover by recreating the element
+                try {
+                    const existingBar = document.getElementById('batch-action-bar');
+                    if (existingBar) {
+                        existingBar.remove();
+                    }
+                    const usersTable = document.getElementById('usersTable');
+                    if (usersTable) {
+                        const newBatchBarHTML = renderBatchActionBar();
+                        usersTable.insertAdjacentHTML('afterbegin', newBatchBarHTML);
+                        const recreatedBar = document.getElementById('batch-action-bar');
+                        if (recreatedBar) {
+                            setupBatchActionListeners();
+                        }
+                    }
+                } catch (recoveryError) {
+                    console.error('Failed to recover batch action bar:', recoveryError);
+                }
             }
         }
         
@@ -471,7 +536,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectedUserIds.clear();
                     updateCheckboxStates();
                     updateSelectAllState();
-                    updateBatchActionBar();
+                    updateBatchActionBarDebounced();
                 });
             }
         }
