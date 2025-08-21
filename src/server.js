@@ -2477,19 +2477,8 @@ app.post('/api/admin/challenges/:challengeId/archive', requireApiAdmin, validate
       return res.status(404).json({ error: 'Challenge not found' });
     }
     
-    // Check if challenge is already archived
-    db.get(`SELECT id FROM challenge_archives WHERE challenge_id = ?`, [challengeId], (archiveCheckErr, existingArchive) => {
-      if (archiveCheckErr) {
-        console.error('Error checking existing archive:', archiveCheckErr);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (existingArchive) {
-        return res.status(400).json({ error: 'Challenge has already been archived' });
-      }
-
-      // Count participants for this challenge
-      db.get(`
+    // Count participants for this challenge (multiple archives per challenge are allowed)
+    db.get(`
         SELECT COUNT(DISTINCT user_id) as participant_count 
         FROM steps 
         WHERE challenge_id = ?
@@ -2607,7 +2596,6 @@ app.post('/api/admin/challenges/:challengeId/archive', requireApiAdmin, validate
       });
     });
   });
-});
 
 // Get all challenge archives (admin only)
 app.get('/api/admin/archives', requireApiAdmin, (req, res) => {
