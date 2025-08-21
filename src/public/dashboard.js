@@ -1690,8 +1690,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 endDate = new Date(challenge.end_date + 'T00:00:00');
                 maxDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
             } else {
-                // Show last 30 days when no active challenge
-                maxDays = 30;
+                // Show last 14 days when no active challenge
+                maxDays = 14;
                 endDate = new Date(today);
                 endDate.setHours(0, 0, 0, 0);
                 startDate = new Date(endDate);
@@ -1739,6 +1739,14 @@ document.addEventListener('DOMContentLoaded', function() {
         async function loadLeaderboard() {
             // Clear expanded user state when reloading individual leaderboard
             expandedUsers.clear();
+            
+            // Update header text based on challenge status
+            const leaderboardHeader = document.querySelector('#leaderboardView h2');
+            if (!currentUser || !currentUser.current_challenge) {
+                leaderboardHeader.textContent = 'No active challenge';
+            } else {
+                leaderboardHeader.textContent = 'Individual Leaderboard';
+            }
             
             try {
                 const response = await fetch('/api/leaderboard');
@@ -1959,6 +1967,14 @@ document.addEventListener('DOMContentLoaded', function() {
         async function loadTeamLeaderboard() {
             // Clear expanded state when reloading
             expandedTeams.clear();
+            
+            // Update header text based on challenge status
+            const teamLeaderboardHeader = document.querySelector('#teamLeaderboardView h2');
+            if (!currentUser || !currentUser.current_challenge) {
+                teamLeaderboardHeader.textContent = 'No active challenge';
+            } else {
+                teamLeaderboardHeader.textContent = 'Team Leaderboard';
+            }
             
             try {
                 const response = await fetch('/api/team-leaderboard');

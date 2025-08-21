@@ -1912,6 +1912,277 @@ app.post('/api/admin/users/:userId/unarchive', adminApiLimiter, requireApiAdmin,
   });
 });
 
+// Batch update users (admin only) - handles multiple users at once with safety validations
+app.post('/api/admin/users/batch-update', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
+  const { action, userIds, updates } = req.body;
+  
+  // Input validation
+  if (!action) {
+    return res.status(400).json({ error: 'Action is required' });
+  }
+  
+  // Validate allowed actions (explicitly exclude delete for safety)
+  const allowedActions = ['archive', 'unarchive', 'clear_steps', 'update_teams'];
+  if (!allowedActions.includes(action)) {
+    return res.status(400).json({ error: 'Invalid action. Allowed actions: ' + allowedActions.join(', ') });
+  }
+  
+  // Validation for userIds or updates
+  if (action === 'update_teams') {
+    if (!updates || !Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({ error: 'Updates array is required for team updates' });
+    }
+    // Validate updates structure
+    for (const update of updates) {
+      if (!update.userId || isNaN(update.userId)) {
+        return res.status(400).json({ error: 'Invalid userId in updates' });
+      }
+    }
+  } else {
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ error: 'UserIds array is required' });
+    }
+    // Validate userIds are numbers
+    for (const userId of userIds) {
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: 'Invalid userId format' });
+      }
+    }
+  }
+  
+  // Rate limiting for safety - limit batch size
+  const maxBatchSize = 50;
+  const batchSize = action === 'update_teams' ? updates.length : userIds.length;
+  if (batchSize > maxBatchSize) {
+    return res.status(400).json({ error: `Batch size too large. Maximum ${maxBatchSize} users allowed.` });
+  }
+  
+  // Handle different actions
+  switch (action) {
+    case 'archive':
+      handleBatchArchive(userIds, res);
+      break;
+    case 'unarchive':
+      handleBatchUnarchive(userIds, res);
+      break;
+    case 'clear_steps':
+      handleBatchClearSteps(userIds, res);
+      break;
+    case 'update_teams':
+      handleBatchUpdateTeams(updates, res);
+      break;
+    default:
+      return res.status(400).json({ error: 'Unsupported action' });
+  }
+});
+
+// Batch archive users helper
+function handleBatchArchive(userIds, res) {
+  // First verify users exist and none are admins (safety check)
+  const placeholders = userIds.map(() => '?').join(',');
+  db.all(`SELECT id, name, email, is_admin FROM users WHERE id IN (${placeholders}) AND archived_at IS NULL`, userIds, (err, users) => {
+    if (err) {
+      console.error('Error checking users for batch archive:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    // Safety check - prevent archiving admin users
+    const adminUsers = users.filter(user => user.is_admin);
+    if (adminUsers.length > 0) {
+      return res.status(400).json({ 
+        error: `Cannot archive admin users: ${adminUsers.map(u => u.name).join(', ')}` 
+      });
+    }
+    
+    if (users.length === 0) {
+      return res.status(400).json({ error: 'No valid unarchived users found to archive' });
+    }
+    
+    // Archive the users
+    const validUserIds = users.map(user => user.id);
+    const validPlaceholders = validUserIds.map(() => '?').join(',');
+    
+    db.run(`UPDATE users SET archived_at = CURRENT_TIMESTAMP WHERE id IN (${validPlaceholders})`, validUserIds, function(err) {
+      if (err) {
+        console.error('Error batch archiving users:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      const archivedUserNames = users.map(user => user.name).join(', ');
+      console.log(`Admin batch archived ${this.changes} users: ${archivedUserNames}`);
+      
+      res.json({
+        message: `Successfully archived ${this.changes} users`,
+        updated: this.changes,
+        users: users.map(user => ({ id: user.id, name: user.name, email: user.email }))
+      });
+    });
+  });
+}
+
+// Batch unarchive users helper
+function handleBatchUnarchive(userIds, res) {
+  // First verify users exist and are archived
+  const placeholders = userIds.map(() => '?').join(',');
+  db.all(`SELECT id, name, email FROM users WHERE id IN (${placeholders}) AND archived_at IS NOT NULL`, userIds, (err, users) => {
+    if (err) {
+      console.error('Error checking users for batch unarchive:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (users.length === 0) {
+      return res.status(400).json({ error: 'No valid archived users found to unarchive' });
+    }
+    
+    // Unarchive the users
+    const validUserIds = users.map(user => user.id);
+    const validPlaceholders = validUserIds.map(() => '?').join(',');
+    
+    db.run(`UPDATE users SET archived_at = NULL WHERE id IN (${validPlaceholders})`, validUserIds, function(err) {
+      if (err) {
+        console.error('Error batch unarchiving users:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      const unarchivedUserNames = users.map(user => user.name).join(', ');
+      console.log(`Admin batch unarchived ${this.changes} users: ${unarchivedUserNames}`);
+      
+      res.json({
+        message: `Successfully unarchived ${this.changes} users`,
+        updated: this.changes,
+        users: users.map(user => ({ id: user.id, name: user.name, email: user.email }))
+      });
+    });
+  });
+}
+
+// Batch clear steps helper - with enhanced safety validation
+function handleBatchClearSteps(userIds, res) {
+  // First verify users exist (safety check)
+  const placeholders = userIds.map(() => '?').join(',');
+  db.all(`SELECT id, name, email FROM users WHERE id IN (${placeholders})`, userIds, (err, users) => {
+    if (err) {
+      console.error('Error checking users for batch clear steps:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (users.length === 0) {
+      return res.status(400).json({ error: 'No valid users found' });
+    }
+    
+    // Additional safety check - limit batch clear to reasonable size
+    if (users.length > 10) {
+      return res.status(400).json({ 
+        error: 'Batch clear steps limited to 10 users maximum for safety. Please select fewer users.' 
+      });
+    }
+    
+    // Clear steps for the users
+    const validUserIds = users.map(user => user.id);
+    const validPlaceholders = validUserIds.map(() => '?').join(',');
+    
+    db.run(`DELETE FROM steps WHERE user_id IN (${validPlaceholders})`, validUserIds, function(err) {
+      if (err) {
+        console.error('Error batch clearing steps:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+      
+      const clearedUserNames = users.map(user => user.name).join(', ');
+      console.log(`Admin batch cleared steps for ${users.length} users (${this.changes} step records): ${clearedUserNames}`);
+      
+      res.json({
+        message: `Successfully cleared steps for ${users.length} users`,
+        updated: users.length,
+        stepsCleared: this.changes,
+        users: users.map(user => ({ id: user.id, name: user.name, email: user.email }))
+      });
+    });
+  });
+}
+
+// Batch update teams helper
+function handleBatchUpdateTeams(updates, res) {
+  // First verify all users exist
+  const userIds = updates.map(update => update.userId);
+  const placeholders = userIds.map(() => '?').join(',');
+  
+  db.all(`SELECT id, name, email FROM users WHERE id IN (${placeholders})`, userIds, (err, users) => {
+    if (err) {
+      console.error('Error checking users for batch team update:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    
+    if (users.length !== updates.length) {
+      return res.status(400).json({ error: 'Some users not found' });
+    }
+    
+    // Validate team names exist (for non-null teams)
+    const teamNames = [...new Set(updates.map(update => update.teamId).filter(team => team))];
+    if (teamNames.length > 0) {
+      const teamPlaceholders = teamNames.map(() => '?').join(',');
+      db.all(`SELECT name FROM teams WHERE name IN (${teamPlaceholders})`, teamNames, (err, teams) => {
+        if (err) {
+          console.error('Error checking teams for batch update:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        
+        const validTeamNames = new Set(teams.map(team => team.name));
+        const invalidTeams = teamNames.filter(team => !validTeamNames.has(team));
+        if (invalidTeams.length > 0) {
+          return res.status(400).json({ error: `Invalid team names: ${invalidTeams.join(', ')}` });
+        }
+        
+        // Proceed with updates
+        performBatchTeamUpdates(updates, users, res);
+      });
+    } else {
+      // No team validation needed, proceed with updates
+      performBatchTeamUpdates(updates, users, res);
+    }
+  });
+}
+
+// Perform the actual batch team updates
+function performBatchTeamUpdates(updates, users, res) {
+  let completedUpdates = 0;
+  let errors = [];
+  
+  const userMap = new Map(users.map(user => [user.id, user]));
+  
+  updates.forEach((update, index) => {
+    const user = userMap.get(update.userId);
+    const teamValue = update.teamId || null;
+    
+    db.run('UPDATE users SET team = ? WHERE id = ?', [teamValue, update.userId], function(err) {
+      completedUpdates++;
+      
+      if (err) {
+        console.error(`Error updating team for user ${user.name}:`, err);
+        errors.push(`Failed to update ${user.name}: ${err.message}`);
+      } else {
+        console.log(`Admin updated team for user ${user.name} to: ${teamValue || 'No Team'}`);
+      }
+      
+      // Check if all updates are complete
+      if (completedUpdates === updates.length) {
+        if (errors.length > 0) {
+          res.status(207).json({
+            message: `Partial success: ${updates.length - errors.length}/${updates.length} team updates completed`,
+            updated: updates.length - errors.length,
+            errors: errors
+          });
+        } else {
+          res.json({
+            message: `Successfully updated teams for ${updates.length} users`,
+            updated: updates.length,
+            users: users.map(user => ({ id: user.id, name: user.name, email: user.email }))
+          });
+        }
+      }
+    });
+  });
+}
+
 // Export all step data as CSV (admin only)
 app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) => {
   db.all(`
@@ -2327,6 +2598,17 @@ app.get('/api/admin/challenges', requireApiAdmin, (req, res) => {
       return res.status(500).json({ error: 'Database error' });
     }
     res.json(rows);
+  });
+});
+
+// Get current active challenge (admin only)
+app.get('/api/admin/current-challenge', adminApiLimiter, requireApiAdmin, (req, res) => {
+  db.get(`SELECT * FROM challenges WHERE is_active = 1 LIMIT 1`, (err, challenge) => {
+    if (err) {
+      console.error('Error fetching current challenge:', err);
+      return res.status(500).json({ error: 'Database error' });
+    }
+    res.json(challenge || {});
   });
 });
 

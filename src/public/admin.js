@@ -128,6 +128,9 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById(`${view}View`).classList.remove('hidden');
         }
 
+        // Multi-select state management
+        let selectedUserIds = new Set();
+        
         // Load users
         async function loadUsers() {
             try {
@@ -143,6 +146,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.usersData = users;
                 window.teamsData = teams;
                 
+                // Clear selection when reloading
+                selectedUserIds.clear();
+                
                 renderUsersTable(users, teams);
             } catch (error) {
                 document.getElementById('usersTable').innerHTML = '<p>Error loading users</p>';
@@ -157,9 +163,14 @@ document.addEventListener('DOMContentLoaded', function() {
         function renderUsersTable(users, teams) {
             const usersTable = document.getElementById('usersTable');
             usersTable.innerHTML = `
+                ${renderBatchActionBar()}
                 <table id="users-table">
                     <thead>
                         <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="select-all-checkbox" aria-label="Select all visible users">
+                                <label for="select-all-checkbox" class="sr-only">Select all users</label>
+                            </th>
                             <th class="sortable" data-column="name">Name <span class="sort-indicator"></span></th>
                             <th class="sortable" data-column="email">Email <span class="sort-indicator"></span></th>
                             <th class="sortable" data-column="team">Team <span class="sort-indicator"></span></th>
@@ -172,7 +183,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     </thead>
                     <tbody>
                         ${users.map(user => `
-                            <tr class="${user.archived_at ? 'archived-user' : ''}">
+                            <tr class="${user.archived_at ? 'archived-user' : ''}" data-user-id="${user.id}">
+                                <td>
+                                    <input type="checkbox" id="user-checkbox-${user.id}" class="user-checkbox" data-user-id="${user.id}" aria-label="Select user ${escapeHtml(user.name)}">
+                                </td>
                                 <td>${escapeHtml(user.name)}</td>
                                 <td>${escapeHtml(user.email)}</td>
                                 <td>
@@ -230,6 +244,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Update sort indicators
             updateSortIndicators();
+            
+            // Set up multi-select event listeners
+            setupMultiSelectListeners(users);
         }
 
         // Sort users table by column
@@ -281,6 +298,163 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (activeHeader) {
                     activeHeader.textContent = currentSortDirection === 'asc' ? ' ↑' : ' ↓';
                 }
+            }
+        }
+
+        // Render batch action bar
+        function renderBatchActionBar() {
+            const selectedCount = selectedUserIds.size;
+            if (selectedCount === 0) {
+                return '<div id="batch-action-bar" class="batch-action-bar hidden" aria-live="polite"></div>';
+            }
+            
+            // Determine which actions are available based on selection
+            const visibleUsers = window.usersData || [];
+            const selectedUsers = visibleUsers.filter(user => selectedUserIds.has(user.id));
+            const hasUnarchived = selectedUsers.some(user => !user.archived_at);
+            const hasArchived = selectedUsers.some(user => user.archived_at);
+            
+            return `
+                <div id="batch-action-bar" class="batch-action-bar" aria-live="polite">
+                    <div class="batch-info">
+                        <span class="selection-count">${selectedCount} users selected</span>
+                    </div>
+                    <div class="batch-actions">
+                        <button id="batch-save-teams" class="batch-btn batch-save-btn" title="Save team assignments for selected users">
+                            💾 Save All Teams
+                        </button>
+                        ${hasUnarchived ? `
+                            <button id="batch-archive" class="batch-btn batch-archive-btn" title="Archive selected unarchived users">
+                                📥 Archive Selected
+                            </button>
+                        ` : ''}
+                        ${hasArchived ? `
+                            <button id="batch-unarchive" class="batch-btn batch-unarchive-btn" title="Unarchive selected archived users">
+                                📤 Unarchive Selected
+                            </button>
+                        ` : ''}
+                        <button id="batch-clear-steps" class="batch-btn batch-clear-btn" title="Clear all steps for selected users">
+                            🗑️ Clear All Steps
+                        </button>
+                        <button id="batch-clear-selection" class="batch-btn batch-cancel-btn" title="Clear selection">
+                            ✖️ Clear Selection
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Set up multi-select event listeners
+        function setupMultiSelectListeners(users) {
+            // Select all checkbox
+            const selectAllCheckbox = document.getElementById('select-all-checkbox');
+            if (selectAllCheckbox) {
+                selectAllCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        // Select all visible users
+                        users.forEach(user => selectedUserIds.add(user.id));
+                    } else {
+                        // Deselect all
+                        selectedUserIds.clear();
+                    }
+                    updateCheckboxStates();
+                    updateBatchActionBar();
+                });
+            }
+            
+            // Individual user checkboxes
+            document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const userId = parseInt(this.dataset.userId);
+                    if (this.checked) {
+                        selectedUserIds.add(userId);
+                    } else {
+                        selectedUserIds.delete(userId);
+                    }
+                    updateSelectAllState();
+                    updateBatchActionBar();
+                });
+            });
+            
+            // Set up batch action listeners
+            setupBatchActionListeners();
+        }
+        
+        // Update checkbox states based on selection
+        function updateCheckboxStates() {
+            document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+                const userId = parseInt(checkbox.dataset.userId);
+                checkbox.checked = selectedUserIds.has(userId);
+            });
+        }
+        
+        // Update select all checkbox state (checked/unchecked/indeterminate)
+        function updateSelectAllState() {
+            const selectAllCheckbox = document.getElementById('select-all-checkbox');
+            if (!selectAllCheckbox) return;
+            
+            const visibleCheckboxes = document.querySelectorAll('.user-checkbox');
+            const checkedCount = Array.from(visibleCheckboxes).filter(cb => cb.checked).length;
+            
+            if (checkedCount === 0) {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = false;
+            } else if (checkedCount === visibleCheckboxes.length) {
+                selectAllCheckbox.checked = true;
+                selectAllCheckbox.indeterminate = false;
+            } else {
+                selectAllCheckbox.checked = false;
+                selectAllCheckbox.indeterminate = true;
+            }
+        }
+        
+        // Update batch action bar visibility and content
+        function updateBatchActionBar() {
+            const batchActionBar = document.getElementById('batch-action-bar');
+            if (!batchActionBar) return;
+            
+            if (selectedUserIds.size === 0) {
+                batchActionBar.classList.add('hidden');
+            } else {
+                batchActionBar.classList.remove('hidden');
+                // Re-render the batch action bar with updated content
+                const usersTable = document.getElementById('usersTable');
+                if (usersTable) {
+                    const currentBatchBar = batchActionBar.outerHTML;
+                    const newBatchBar = renderBatchActionBar();
+                    usersTable.innerHTML = usersTable.innerHTML.replace(currentBatchBar, newBatchBar);
+                    setupBatchActionListeners();
+                }
+            }
+        }
+        
+        // Set up batch action button listeners
+        function setupBatchActionListeners() {
+            const batchSave = document.getElementById('batch-save-teams');
+            const batchArchive = document.getElementById('batch-archive');
+            const batchUnarchive = document.getElementById('batch-unarchive');
+            const batchClear = document.getElementById('batch-clear-steps');
+            const batchClearSelection = document.getElementById('batch-clear-selection');
+            
+            if (batchSave) {
+                batchSave.addEventListener('click', () => handleBatchSaveTeams());
+            }
+            if (batchArchive) {
+                batchArchive.addEventListener('click', () => handleBatchArchive());
+            }
+            if (batchUnarchive) {
+                batchUnarchive.addEventListener('click', () => handleBatchUnarchive());
+            }
+            if (batchClear) {
+                batchClear.addEventListener('click', () => handleBatchClearSteps());
+            }
+            if (batchClearSelection) {
+                batchClearSelection.addEventListener('click', () => {
+                    selectedUserIds.clear();
+                    updateCheckboxStates();
+                    updateSelectAllState();
+                    updateBatchActionBar();
+                });
             }
         }
 
@@ -342,9 +516,36 @@ document.addEventListener('DOMContentLoaded', function() {
         // Load overview
         async function loadOverview() {
             try {
-                const response = await fetch('/api/admin/users');
-                const users = await response.json();
+                const [usersResponse, challengeResponse] = await Promise.all([
+                    fetch('/api/admin/users'),
+                    fetch('/api/admin/current-challenge')
+                ]);
                 
+                const users = await usersResponse.json();
+                let currentChallenge = null;
+                
+                // Check if current challenge endpoint exists and get current challenge
+                if (challengeResponse.ok) {
+                    try {
+                        currentChallenge = await challengeResponse.json();
+                        if (currentChallenge && !currentChallenge.id) {
+                            currentChallenge = null; // No active challenge
+                        }
+                    } catch (e) {
+                        // No active challenge or endpoint doesn't exist
+                        currentChallenge = null;
+                    }
+                }
+                
+                // Update header text based on challenge status
+                const overviewHeader = document.querySelector('#overviewView h2');
+                if (!currentChallenge) {
+                    overviewHeader.textContent = 'System Overview';
+                } else {
+                    overviewHeader.textContent = 'Challenge Overview';
+                }
+                
+                // System-wide statistics (always shown)
                 const totalUsers = users.length;
                 const totalSteps = users.reduce((sum, user) => sum + user.total_steps, 0);
                 const avgSteps = totalUsers > 0 ? Math.round(totalSteps / totalUsers) : 0;
@@ -354,8 +555,83 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('totalSteps').textContent = totalSteps.toLocaleString();
                 document.getElementById('avgSteps').textContent = avgSteps.toLocaleString();
                 document.getElementById('activeUsers').textContent = activeUsers;
+                
+                // Add or update active challenge section
+                updateActiveChallengeSection(currentChallenge, users);
+                
             } catch (error) {
                 console.error('Error loading overview:', error);
+            }
+        }
+        
+        // Update or create active challenge statistics section
+        function updateActiveChallengeSection(currentChallenge, users) {
+            const overviewView = document.getElementById('overviewView');
+            let challengeSection = document.getElementById('active-challenge-stats');
+            
+            if (!currentChallenge) {
+                // Remove challenge section if no active challenge
+                if (challengeSection) {
+                    challengeSection.remove();
+                }
+                return;
+            }
+            
+            // Calculate challenge-specific statistics
+            const challengeStartDate = new Date(currentChallenge.start_date + 'T00:00:00');
+            const challengeEndDate = new Date(currentChallenge.end_date + 'T00:00:00');
+            const today = new Date();
+            
+            // Get challenge participants and their steps within challenge period
+            const challengeParticipants = users.filter(user => {
+                // User has logged steps within the challenge period
+                return user.days_logged > 0; // This is a simplification - ideally we'd check dates
+            });
+            
+            const totalChallengeParticipants = challengeParticipants.length;
+            const participationRate = users.length > 0 ? Math.round((totalChallengeParticipants / users.length) * 100) : 0;
+            
+            // Calculate days into challenge
+            const daysIntoChallenge = Math.max(0, Math.ceil((today - challengeStartDate) / (1000 * 60 * 60 * 24)));
+            const totalChallengeDays = Math.ceil((challengeEndDate - challengeStartDate) / (1000 * 60 * 60 * 24)) + 1;
+            
+            const challengeStatsHTML = `
+                <div id="active-challenge-stats" style="margin-top: 30px; padding: 20px; background: rgba(102, 126, 234, 0.08); border-radius: 12px; border: 2px solid rgba(102, 126, 234, 0.15);">
+                    <h3 style="margin: 0 0 20px 0; color: var(--primary-color); display: flex; align-items: center; gap: 8px;">
+                        🏆 Active Challenge: ${escapeHtml(currentChallenge.name)}
+                    </h3>
+                    <div class="stats" style="margin-bottom: 15px;">
+                        <div class="stat-card">
+                            <div class="stat-number">${totalChallengeParticipants}</div>
+                            <div class="stat-label">Challenge Participants</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${participationRate}%</div>
+                            <div class="stat-label">Participation Rate</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${daysIntoChallenge}</div>
+                            <div class="stat-label">Days Elapsed</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${totalChallengeDays}</div>
+                            <div class="stat-label">Total Days</div>
+                        </div>
+                    </div>
+                    <div style="font-size: 14px; color: #666; margin-top: 15px;">
+                        <strong>Period:</strong> ${challengeStartDate.toLocaleDateString()} - ${challengeEndDate.toLocaleDateString()}
+                        ${currentChallenge.reporting_threshold ? `<br><strong>Reporting Threshold:</strong> ${currentChallenge.reporting_threshold}% for ranked participation` : ''}
+                    </div>
+                </div>
+            `;
+            
+            if (challengeSection) {
+                // Update existing section
+                challengeSection.outerHTML = challengeStatsHTML;
+            } else {
+                // Add new section after the main stats
+                const statsSection = document.getElementById('stats');
+                statsSection.insertAdjacentHTML('afterend', challengeStatsHTML);
             }
         }
 
@@ -639,7 +915,182 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-
+        // Batch action handlers
+        async function handleBatchSaveTeams() {
+            if (selectedUserIds.size === 0) return;
+            
+            const visibleUsers = window.usersData || [];
+            const selectedUsers = visibleUsers.filter(user => selectedUserIds.has(user.id));
+            const updates = [];
+            
+            // Collect team updates for selected users
+            selectedUsers.forEach(user => {
+                const teamSelect = document.getElementById(`team-${user.id}`);
+                if (teamSelect) {
+                    updates.push({
+                        userId: user.id,
+                        teamId: teamSelect.value || null
+                    });
+                }
+            });
+            
+            if (updates.length === 0) {
+                showMessage('No team changes to save.', 'info');
+                return;
+            }
+            
+            if (!confirm(`Save team assignments for ${updates.length} selected users?`)) {
+                return;
+            }
+            
+            try {
+                const response = await authenticatedFetch('/api/admin/users/batch-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update_teams',
+                        updates: updates
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage(`Successfully updated teams for ${data.updated || updates.length} users.`, 'success');
+                    selectedUserIds.clear();
+                    loadUsers();
+                } else {
+                    showMessage(data.error || 'Failed to update teams.', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+        
+        async function handleBatchArchive() {
+            if (selectedUserIds.size === 0) return;
+            
+            const visibleUsers = window.usersData || [];
+            const selectedUsers = visibleUsers.filter(user => selectedUserIds.has(user.id));
+            const unarchivedUsers = selectedUsers.filter(user => !user.archived_at);
+            
+            if (unarchivedUsers.length === 0) {
+                showMessage('No unarchived users selected.', 'info');
+                return;
+            }
+            
+            if (!confirm(`Archive ${unarchivedUsers.length} selected users? This will block their access to log steps.`)) {
+                return;
+            }
+            
+            try {
+                const response = await authenticatedFetch('/api/admin/users/batch-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'archive',
+                        userIds: unarchivedUsers.map(user => user.id)
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage(`Successfully archived ${data.updated || unarchivedUsers.length} users.`, 'success');
+                    selectedUserIds.clear();
+                    loadUsers();
+                } else {
+                    showMessage(data.error || 'Failed to archive users.', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+        
+        async function handleBatchUnarchive() {
+            if (selectedUserIds.size === 0) return;
+            
+            const visibleUsers = window.usersData || [];
+            const selectedUsers = visibleUsers.filter(user => selectedUserIds.has(user.id));
+            const archivedUsers = selectedUsers.filter(user => user.archived_at);
+            
+            if (archivedUsers.length === 0) {
+                showMessage('No archived users selected.', 'info');
+                return;
+            }
+            
+            if (!confirm(`Unarchive ${archivedUsers.length} selected users? This will restore their access to log steps.`)) {
+                return;
+            }
+            
+            try {
+                const response = await authenticatedFetch('/api/admin/users/batch-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'unarchive',
+                        userIds: archivedUsers.map(user => user.id)
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage(`Successfully unarchived ${data.updated || archivedUsers.length} users.`, 'success');
+                    selectedUserIds.clear();
+                    loadUsers();
+                } else {
+                    showMessage(data.error || 'Failed to unarchive users.', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+        
+        async function handleBatchClearSteps() {
+            if (selectedUserIds.size === 0) return;
+            
+            const visibleUsers = window.usersData || [];
+            const selectedUsers = visibleUsers.filter(user => selectedUserIds.has(user.id));
+            const userNames = selectedUsers.map(user => user.name).join(', ');
+            
+            if (!confirm(`⚠️ DESTRUCTIVE ACTION WARNING ⚠️\n\nAre you sure you want to clear ALL step data for ${selectedUsers.length} selected users?\n\nUsers: ${userNames}\n\nThis will:\n• Delete all their recorded steps permanently\n• Keep their user accounts and team assignments\n• Cannot be undone\n\nType "CLEAR ALL" to confirm this destructive action.`)) {
+                return;
+            }
+            
+            // Second confirmation with text input
+            const confirmText = prompt(`Please type "CLEAR ALL" to confirm clearing all steps for ${selectedUsers.length} selected users:`);
+            if (confirmText !== 'CLEAR ALL') {
+                showMessage('Action cancelled. You must type "CLEAR ALL" exactly to confirm.', 'error');
+                return;
+            }
+            
+            try {
+                const response = await authenticatedFetch('/api/admin/users/batch-update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'clear_steps',
+                        userIds: selectedUsers.map(user => user.id)
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showMessage(`Successfully cleared steps for ${data.updated || selectedUsers.length} users. (${data.stepsCleared || 0} step records removed)`, 'success');
+                    selectedUserIds.clear();
+                    loadUsers();
+                } else {
+                    showMessage(data.error || 'Failed to clear steps.', 'error');
+                }
+            } catch (error) {
+                showMessage('Network error. Please try again.', 'error');
+            }
+        }
+        
+        // Helper function to show messages
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('usersMessage');
+            messageDiv.innerHTML = `<div class="message ${type}">${message}</div>`;
+            setTimeout(() => messageDiv.innerHTML = '', type === 'success' ? 3000 : 5000);
+        }
 
         // Export CSV function
         async function exportCSV() {

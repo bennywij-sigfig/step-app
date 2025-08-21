@@ -338,6 +338,128 @@
             background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
         }
         
+        /* Batch action bar styles */
+        .batch-action-bar {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+            border: 2px solid rgba(102, 126, 234, 0.15);
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .batch-action-bar.hidden {
+            display: none;
+        }
+        
+        .batch-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .selection-count {
+            font-weight: 600;
+            color: var(--primary-color);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 6px 12px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .batch-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .batch-btn {
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            white-space: nowrap;
+        }
+        
+        .batch-save-btn {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+        
+        .batch-archive-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        
+        .batch-unarchive-btn {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+            color: white;
+        }
+        
+        .batch-clear-btn {
+            background: linear-gradient(135deg, #fd7e14 0%, #e9630b 100%);
+            color: white;
+        }
+        
+        .batch-cancel-btn {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            color: white;
+        }
+        
+        .batch-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .batch-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Screen reader only class */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Responsive batch actions */
+        @media (max-width: 768px) {
+            .batch-action-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .batch-info {
+                justify-content: center;
+            }
+            
+            .batch-actions {
+                justify-content: center;
+            }
+            
+            .batch-btn {
+                flex: 1;
+                min-height: 40px;
+                font-size: 14px;
+            }
+        }
+        
         .archived-user {
             background-color: rgba(108, 117, 125, 0.1) !important;
             opacity: 0.7;
