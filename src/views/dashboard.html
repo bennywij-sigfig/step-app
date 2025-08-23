@@ -931,6 +931,208 @@
                 width: 100%;
             }
         }
+
+        /* Delightful Step Entry UX Improvements */
+        .input-with-validation {
+            position: relative;
+        }
+
+        .validation-feedback {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            font-size: 18px;
+        }
+
+        .validation-feedback.show {
+            opacity: 1;
+            transform: translateY(-50%) scale(1);
+            animation: checkBounce 0.4s ease-out;
+        }
+
+        .validation-feedback.valid {
+            color: #28a745;
+        }
+
+        .validation-feedback.milestone {
+            color: #ff6b6b;
+            font-weight: bold;
+            animation: pulse 0.6s ease-in-out;
+        }
+
+        @keyframes checkBounce {
+            0% { transform: translateY(-50%) scale(0.5); }
+            50% { transform: translateY(-50%) scale(1.2); }
+            100% { transform: translateY(-50%) scale(1); }
+        }
+
+        /* Enhanced Save Button States */
+        .form-group button.ready-to-save {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4);
+            animation: readyPulse 2s ease-in-out infinite;
+        }
+
+        .form-group button.saving {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .form-group button.saved {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            animation: saveSuccess 0.5s ease-out;
+        }
+
+        @keyframes readyPulse {
+            0%, 100% { box-shadow: 0 4px 15px rgba(40, 167, 69, 0.4); }
+            50% { box-shadow: 0 4px 25px rgba(40, 167, 69, 0.6); }
+        }
+
+        @keyframes saveSuccess {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* Number formatting and contextualization */
+        .steps-input-formatted {
+            color: #333;
+            font-weight: 600;
+        }
+
+        /* Smart placeholder animations */
+        .form-group input.contextual-placeholder::placeholder {
+            color: #999;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input.milestone-hint::placeholder {
+            color: #ff6b6b;
+            font-weight: 500;
+        }
+
+        /* Celebration particles (subtle) */
+        .mini-celebration {
+            position: absolute;
+            pointer-events: none;
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .mini-celebration.sparkle {
+            animation: miniSparkle 1s ease-out forwards;
+        }
+
+        @keyframes miniSparkle {
+            0% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.8);
+            }
+        }
+
+        /* Chart animation enhancement */
+        .step-bar.animate-grow {
+            animation: barGrow 0.6s ease-out;
+        }
+
+        @keyframes barGrow {
+            0% {
+                transform: scaleY(0);
+                transform-origin: bottom;
+            }
+            100% {
+                transform: scaleY(1);
+                transform-origin: bottom;
+            }
+        }
+
+        /* Success message enhancements */
+        .smart-success-message {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            animation: smartSlideIn 0.4s ease-out;
+        }
+
+        .smart-success-message .icon {
+            font-size: 16px;
+        }
+
+        @keyframes smartSlideIn {
+            0% {
+                transform: translateX(-20px);
+                opacity: 0;
+            }
+            100% {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Counter animation */
+        .animated-counter {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Mobile Safari/Android specific optimizations */
+        @supports (-webkit-touch-callout: none) {
+            /* iOS Safari specific optimizations */
+            .validation-feedback {
+                -webkit-transform: translateY(-50%);
+                will-change: transform, opacity;
+            }
+            
+            .form-group button {
+                -webkit-appearance: none;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            .mini-celebration {
+                -webkit-transform: translateZ(0);
+                backface-visibility: hidden;
+            }
+        }
+
+        /* Android Chrome optimizations */
+        @media screen and (max-device-width: 640px) {
+            .validation-feedback {
+                font-size: 16px; /* Prevent zoom on focus */
+            }
+            
+            .form-group input[type="number"] {
+                font-size: 16px; /* Prevent zoom on focus */
+                -webkit-appearance: none;
+                -moz-appearance: textfield;
+            }
+            
+            /* Reduce motion for users who prefer it */
+            @media (prefers-reduced-motion: reduce) {
+                .validation-feedback,
+                .mini-celebration,
+                .form-group button {
+                    animation: none !important;
+                    transition: none !important;
+                }
+            }
+        }
+
+        /* Ensure touch targets are at least 44px for accessibility */
+        @media (hover: none) and (pointer: coarse) {
+            .form-group button {
+                min-height: 44px;
+                min-width: 44px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -961,7 +1163,10 @@
             </div>
             <div class="form-group">
                 <label for="steps">Steps:</label>
-                <input type="number" id="steps" name="steps" min="0" max="70000" required placeholder="e.g. 8500" inputmode="numeric" pattern="[0-9]*">
+                <div class="input-with-validation">
+                    <input type="number" id="steps" name="steps" min="0" max="70000" required placeholder="e.g. 8500" inputmode="numeric" pattern="[0-9]*">
+                    <div class="validation-feedback" id="stepsValidation"></div>
+                </div>
             </div>
             <div class="form-group">
                 <button type="submit" id="submitStepsBtn">Save Steps</button>
@@ -998,6 +1203,7 @@
         </div>
     </div>
 
+    <script src="/step-entry-ux.js"></script>
     <script src="/dashboard.js"></script>    </div>
 
     <!-- Unobtrusive Extras Section -->

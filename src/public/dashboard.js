@@ -1945,7 +1945,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    messageDiv.innerHTML = '<div class="message success">Steps saved successfully!</div>';
+                    // Check if delightful UX is enabled and use enhanced success handling
+                    if (window.stepEntryUX && window.stepEntryUX.isEnabled) {
+                        window.stepEntryUX.handleSubmitSuccess(steps, messageDiv);
+                        // Trigger chart animation
+                        setTimeout(() => {
+                            window.stepEntryUX.animateChartUpdate();
+                        }, 100);
+                    } else {
+                        // Fallback to standard success message
+                        messageDiv.innerHTML = '<div class="message success">Steps saved successfully!</div>';
+                    }
+                    
                     document.getElementById('steps').value = '';
                     
                     // Trigger confetti for high step counts
