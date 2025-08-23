@@ -1391,7 +1391,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="challenge-details" id="challengeDetails">
                         <p><strong>Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
-                        <p>You can log steps for any date within the challenge period, including retroactive entries.</p>
+                        ${today >= startDate ? '<p>You can log steps for any date within the challenge period, including retroactive entries.</p>' : ''}
                         ${!isWithinPeriod ? '<p style="color: #28a745; font-size: 14px; margin-top: 4px;">✓ Challenge ended - retroactive step entry available for dates within challenge period.</p>' : ''}
                     </div>
                 `;
