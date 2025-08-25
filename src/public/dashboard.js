@@ -428,12 +428,14 @@ function celebrateSteps(stepCount) {
             // Only do mega celebration for epic threshold+
             createMegaConfetti();
             
-            // Add epic celebration message with warp speed glow
+            // Add epic celebration message (only if delightful UX is not handling messaging)
             setTimeout(() => {
-                const messageDiv = document.getElementById('stepsMessage');
-                const currentMessage = messageDiv.innerHTML;
-                const formattedThreshold = (confettiThresholds.epic / 1000).toFixed(0) + 'K';
-                messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">EPIC ACHIEVEMENT! ${formattedThreshold}+ STEPS!</div>`;
+                if (!window.stepEntryUX || !window.stepEntryUX.isEnabled) {
+                    const messageDiv = document.getElementById('stepsMessage');
+                    const currentMessage = messageDiv.innerHTML;
+                    const formattedThreshold = (confettiThresholds.epic / 1000).toFixed(0) + 'K';
+                    messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; animation: warp-glow 1s ease-out 1; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(255,255,255,0.8);">EPIC ACHIEVEMENT! ${formattedThreshold}+ STEPS!</div>`;
+                }
             }, 500);
             return; // Skip regular confetti for epic threshold+
         }
@@ -443,12 +445,14 @@ function celebrateSteps(stepCount) {
     if (stepCount >= confettiThresholds.regular) {
         createConfetti();
         
-        // Add celebration message
+        // Add celebration message (only if delightful UX is not handling messaging)
         setTimeout(() => {
-            const messageDiv = document.getElementById('stepsMessage');
-            const currentMessage = messageDiv.innerHTML;
-            const formattedThreshold = (confettiThresholds.regular / 1000).toFixed(0) + 'K';
-            messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; animation: pulse 1s ease-in-out 3;">Amazing! ${formattedThreshold}+ steps celebration!</div>`;
+            if (!window.stepEntryUX || !window.stepEntryUX.isEnabled) {
+                const messageDiv = document.getElementById('stepsMessage');
+                const currentMessage = messageDiv.innerHTML;
+                const formattedThreshold = (confettiThresholds.regular / 1000).toFixed(0) + 'K';
+                messageDiv.innerHTML = currentMessage + `<div class="message success" style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: #B8860B; animation: pulse 1s ease-in-out 3;">Amazing! ${formattedThreshold}+ steps celebration!</div>`;
+            }
         }, 500);
     }
 }

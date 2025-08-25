@@ -239,6 +239,19 @@
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
         }
+
+        /* Hide number input spinners completely - global rule */
+        input[type="number"] {
+            -webkit-appearance: none;
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+            display: none !important;
+        }
         
         .form-group input:focus {
             outline: none;
@@ -964,6 +977,11 @@
             animation: pulse 0.6s ease-in-out;
         }
 
+        .validation-feedback.warning {
+            color: #ffc107;
+            font-weight: bold;
+        }
+
         @keyframes checkBounce {
             0% { transform: translateY(-50%) scale(0.5); }
             50% { transform: translateY(-50%) scale(1.2); }
@@ -1113,6 +1131,14 @@
                 font-size: 16px; /* Prevent zoom on focus */
                 -webkit-appearance: none;
                 -moz-appearance: textfield;
+            }
+
+            /* Hide number input spinners completely */
+            .form-group input[type="number"]::-webkit-outer-spin-button,
+            .form-group input[type="number"]::-webkit-inner-spin-button {
+                -webkit-appearance: none;
+                margin: 0;
+                display: none;
             }
             
             /* Reduce motion for users who prefer it */

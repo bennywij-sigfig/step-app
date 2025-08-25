@@ -52,16 +52,31 @@ class StepEntryUX {
     }
 
     calculateUserStats(steps) {
-        if (!steps.length) return { average: 8500, recent: 8500, best: 10000 };
+        if (!steps || !steps.length) {
+            console.log('No steps data available, using defaults');
+            return { average: 8500, recent: 8500, best: 10000 };
+        }
+        
+        console.log('Calculating stats from', steps.length, 'step records:', steps);
         
         const recentSteps = steps.slice(0, 7); // Last 7 days
-        const allCounts = steps.map(s => s.count);
+        const allCounts = steps.map(s => parseInt(s.count) || 0).filter(count => count > 0);
         
-        return {
+        if (!allCounts.length) {
+            console.log('No valid step counts found');
+            return { average: 8500, recent: 8500, best: 10000 };
+        }
+        
+        const recentCounts = recentSteps.map(s => parseInt(s.count) || 0).filter(count => count > 0);
+        
+        const stats = {
             average: Math.round(allCounts.reduce((a, b) => a + b, 0) / allCounts.length),
-            recent: Math.round(recentSteps.reduce((a, b) => a + b.count, 0) / recentSteps.length),
+            recent: recentCounts.length ? Math.round(recentCounts.reduce((a, b) => a + b, 0) / recentCounts.length) : 8500,
             best: Math.max(...allCounts)
         };
+        
+        console.log('Calculated user stats:', stats);
+        return stats;
     }
 
     setupEventListeners() {
@@ -119,15 +134,27 @@ class StepEntryUX {
         if (value > 0 && value <= 70000) {
             this.showValidationFeedback('✓', 'valid');
             
-            // Milestone detection
-            if (this.userStats && value > this.userStats.best) {
-                this.showValidationFeedback('🎉', 'milestone');
-                this.createMiniCelebration(input);
-            } else if (value >= 15000) {
-                this.showValidationFeedback('🔥', 'milestone');
+            // Milestone detection with proper debugging
+            if (this.userStats) {
+                console.log(`Checking milestone: entered=${value}, userBest=${this.userStats.best}`);
+                
+                if (value > this.userStats.best) {
+                    console.log('Personal best detected');
+                    this.showValidationFeedback('*', 'milestone');
+                    this.createMiniCelebration(input);
+                } else if (value >= 15000) {
+                    console.log('High achiever threshold met');
+                    this.showValidationFeedback('•', 'milestone');
+                }
+            } else {
+                console.log('No user stats available for milestone detection');
+                // Fallback to generic high achiever threshold
+                if (value >= 15000) {
+                    this.showValidationFeedback('•', 'milestone');
+                }
             }
         } else if (value > 70000) {
-            this.showValidationFeedback('⚠️', 'warning');
+            this.showValidationFeedback('!', 'warning');
         }
 
         this.updateButtonState();
@@ -173,10 +200,10 @@ class StepEntryUX {
 
     createMiniCelebration(element) {
         // Subtle particles around the input (mobile-optimized)
-        const particles = ['✨', '⭐', '💫'];
+        const particles = ['·', '•', '∙'];
         const rect = element.getBoundingClientRect();
         
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 2; i++) {
             const particle = document.createElement('div');
             particle.className = 'mini-celebration sparkle';
             particle.textContent = particles[Math.floor(Math.random() * particles.length)];
@@ -185,6 +212,8 @@ class StepEntryUX {
             particle.style.top = `${rect.top + Math.random() * rect.height}px`;
             particle.style.zIndex = '1000';
             particle.style.pointerEvents = 'none';
+            particle.style.color = '#667eea';
+            particle.style.opacity = '0.6';
             
             document.body.appendChild(particle);
             
@@ -241,26 +270,48 @@ class StepEntryUX {
     }
 
     showSmartSuccessMessage(steps, messageDiv) {
-        if (!this.userStats || !messageDiv) {
+        if (!messageDiv) {
+            console.log('No message div available for smart success message');
             return; // Fallback to default message
         }
 
         let message = 'Steps saved successfully!';
         let icon = '✅';
 
-        // Contextual messages
-        if (steps > this.userStats.best) {
-            message = `New personal best! ${steps.toLocaleString()} steps! 🎉`;
-            icon = '🏆';
-        } else if (steps >= 15000) {
-            message = `Amazing! ${(steps/1000).toFixed(1)}K steps logged! 🔥`;
-            icon = '🔥';
-        } else if (steps > this.userStats.average * 1.2) {
-            message = `Great job! That's ${Math.round(((steps - this.userStats.average) / this.userStats.average) * 100)}% above your average!`;
-            icon = '📈';
-        } else if (steps >= this.userStats.average * 0.8) {
-            message = 'Solid day of steps! Keep it up! 💪';
-            icon = '💪';
+        console.log(`Smart success message: steps=${steps}, userStats=`, this.userStats);
+
+        // Contextual messages based on user stats
+        if (this.userStats) {
+            if (steps > this.userStats.best) {
+                message = `Personal best: ${steps.toLocaleString()} steps`;
+                icon = '';
+                console.log('Showing personal best message');
+            } else if (steps >= 15000) {
+                message = `Strong performance: ${(steps/1000).toFixed(1)}K steps logged`;
+                icon = '';
+                console.log('Showing high achiever message');
+            } else if (this.userStats.average > 0 && steps > this.userStats.average * 1.2) {
+                const percentAbove = Math.round(((steps - this.userStats.average) / this.userStats.average) * 100);
+                message = `Above average: ${percentAbove}% higher than usual`;
+                icon = '';
+                console.log('Showing above-average message');
+            } else if (this.userStats.average > 0 && steps >= this.userStats.average * 0.8) {
+                message = 'Consistent with your typical activity';
+                icon = '';
+                console.log('Showing solid day message');
+            } else {
+                console.log('Using default success message');
+            }
+        } else {
+            console.log('No user stats available, using generic message');
+            // Fallback for when no user stats are available
+            if (steps >= 15000) {
+                message = `${(steps/1000).toFixed(1)}K steps logged`;
+                icon = '';
+            } else if (steps >= 10000) {
+                message = `${steps.toLocaleString()} steps logged`;
+                icon = '';
+            }
         }
 
         messageDiv.innerHTML = `
