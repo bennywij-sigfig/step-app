@@ -293,7 +293,11 @@ const THEME_DEFINITIONS = {
     'sunset': { name: 'Sunset Orange', value: 'sunset' },
     'forest': { name: 'Forest Green', value: 'forest' },
     'lavender': { name: 'Lavender Purple', value: 'lavender' },
-    'monochrome': { name: 'Monochrome', value: 'monochrome' }
+    'monochrome': { name: 'Monochrome', value: 'monochrome' },
+    'warm-focus': { name: 'Warm Focus', value: 'warm-focus' },
+    'cool-calm': { name: 'Cool Calm', value: 'cool-calm' },
+    'sage-zen': { name: 'Sage Zen', value: 'sage-zen' },
+    'soft-light': { name: 'Soft Light', value: 'soft-light' }
 };
 
 // Theme functionality with user preference override
