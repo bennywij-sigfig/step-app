@@ -1423,11 +1423,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Set date input constraints (works in most browsers)
                 dateInput.min = challenge.start_date;
                 
-                // Set max date to prevent future entries (allow +1 day for timezone flexibility)
+                // Set max date to prevent future entries (use user's local today)
                 const now = new Date();
-                const maxAllowedDate = new Date(now);
-                maxAllowedDate.setDate(maxAllowedDate.getDate() + 1);
-                const maxDateString = maxAllowedDate.toISOString().split('T')[0];
+                const year = now.getFullYear();
+                const month = String(now.getMonth() + 1).padStart(2, '0');
+                const day = String(now.getDate()).padStart(2, '0');
+                const maxDateString = `${year}-${month}-${day}`;
                 
                 // Allow retroactive entry up to challenge end date, even after challenge period
                 // Only limit by current date + 1 day (for timezone flexibility), not by challenge end date
@@ -1478,12 +1479,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Check for future dates (allow +1 day for timezone flexibility)
+            // Check for future dates (no allowance - user's local time is authoritative)
             const now = new Date();
-            const maxAllowedDate = new Date(now);
-            maxAllowedDate.setDate(maxAllowedDate.getDate() + 1);
+            const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
             
-            if (stepDate.getTime() > maxAllowedDate.getTime()) {
+            if (stepDate.getTime() > todayEnd.getTime()) {
                 dateInput.style.borderColor = '#dc3545';
                 dateInput.style.backgroundColor = '#fff5f5';
                 messageDiv.innerHTML = '<div class="message error">Cannot enter steps for future dates</div>';
@@ -1901,12 +1901,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Prevent future date entries (allow +1 day for timezone flexibility)
+                // Prevent future date entries (user's local time is authoritative)  
                 const now = new Date();
-                const maxAllowedDate = new Date(now);
-                maxAllowedDate.setDate(maxAllowedDate.getDate() + 1);
+                const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
                 
-                if (stepDate.getTime() > maxAllowedDate.getTime()) {
+                if (stepDate.getTime() > todayEnd.getTime()) {
                     messageDiv.innerHTML = '<div class="message error">Cannot enter steps for future dates.</div>';
                     return;
                 }
