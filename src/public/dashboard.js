@@ -20,96 +20,12 @@ let expandedUsers = new Set(); // Track expanded user data state
 
 
 
-// Physics-based mega confetti system
-let megaConfettiSystem = null;
-let deviceMotionPermissionStatus = null; // Cache iOS permission status
-let megaConfettiSetupComplete = false; // Track if event listeners are already set up
-
-// Store event listener references for proper cleanup
-let confettiEventListeners = {
-    orientationChange: null,
-    orientationChangeFallback: null,
-    deviceMotion: null,
-    mouseDown: null,
-    mouseMove: null,
-    mouseUp: null,
-    touchStart: null,
-    touchMove: null,
-    touchEnd: null
-};
-
-function cleanupMegaConfetti() {
-    if (megaConfettiSystem) {
-        // Stop the animation loop
-        megaConfettiSystem.running = false;
-        
-        // Clear particles array to free memory
-        if (megaConfettiSystem.particles) {
-            megaConfettiSystem.particles.length = 0;
-        }
-        
-        // Hide canvas
-        const canvas = document.getElementById('confettiCanvas');
-        if (canvas) {
-            canvas.style.display = 'none';
-        }
-        
-        // Clear the system object
-        megaConfettiSystem = null;
-    }
-    
-    // Remove all event listeners to prevent memory leaks
-    if (megaConfettiSetupComplete) {
-        // Remove orientation listeners
-        if (confettiEventListeners.orientationChange && screen.orientation) {
-            screen.orientation.removeEventListener('change', confettiEventListeners.orientationChange);
-        }
-        if (confettiEventListeners.orientationChangeFallback) {
-            window.removeEventListener('orientationchange', confettiEventListeners.orientationChangeFallback);
-        }
-        
-        // Remove device motion listener
-        if (confettiEventListeners.deviceMotion) {
-            window.removeEventListener('devicemotion', confettiEventListeners.deviceMotion);
-        }
-        
-        // Remove canvas interaction listeners
-        const canvas = document.getElementById('confettiCanvas');
-        if (canvas) {
-            if (confettiEventListeners.mouseDown) {
-                canvas.removeEventListener('mousedown', confettiEventListeners.mouseDown);
-            }
-            if (confettiEventListeners.mouseMove) {
-                canvas.removeEventListener('mousemove', confettiEventListeners.mouseMove);
-            }
-            if (confettiEventListeners.mouseUp) {
-                canvas.removeEventListener('mouseup', confettiEventListeners.mouseUp);
-            }
-            if (confettiEventListeners.touchStart) {
-                canvas.removeEventListener('touchstart', confettiEventListeners.touchStart);
-            }
-            if (confettiEventListeners.touchMove) {
-                canvas.removeEventListener('touchmove', confettiEventListeners.touchMove);
-            }
-            if (confettiEventListeners.touchEnd) {
-                canvas.removeEventListener('touchend', confettiEventListeners.touchEnd);
-            }
-        }
-        
-        // Clear all listener references
-        for (let key in confettiEventListeners) {
-            confettiEventListeners[key] = null;
-        }
-        
-        // Reset setup flag so listeners can be added again if needed
-        megaConfettiSetupComplete = false;
-    }
-}
+// Note: mega confetti cleanup & variables moved to confetti.js
 
 function createMegaConfetti() {
-    // Properly clean up any existing system before creating new one
-    if (megaConfettiSystem) {
-        cleanupMegaConfetti();
+    // Properly clean up any existing system before creating new one  
+    if (window.cleanupMegaConfetti) {
+        window.cleanupMegaConfetti();
     }
     
     const canvas = document.getElementById('confettiCanvas');
