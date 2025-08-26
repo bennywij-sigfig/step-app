@@ -40,11 +40,12 @@ class StepEntryUX {
 
     async loadUserStats() {
         try {
-            // Get user's recent step data for smart suggestions
+            // Get user's ALL-TIME step data for personal best and averages
             const response = await fetch('/api/steps');
             if (response.ok) {
                 const data = await response.json();
-                this.userStats = this.calculateUserStats(data.steps || []);
+                // API returns array directly: [{ date: "2024-08-25", count: 12500 }, ...]
+                this.userStats = this.calculateUserStats(data || []);
             }
         } catch (error) {
             console.log('Could not load user stats for UX features:', error.message);
