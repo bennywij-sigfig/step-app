@@ -128,97 +128,18 @@ window.confettiThresholds = confettiThresholds;
 window.updateConfettiThresholds = updateConfettiThresholds;
 window.cleanupMegaConfetti = cleanupMegaConfetti;
 
-// Physics-based mega confetti system
-let megaConfettiSystem = null;
-let deviceMotionPermissionStatus = null; // Cache iOS permission status
-let megaConfettiSetupComplete = false; // Track if event listeners are already set up
+// Note: Physics-based mega confetti system moved to mega-confetti-physics.js
+// Variables and event listeners are now managed in that module
 
-// Store event listener references for proper cleanup
-let confettiEventListeners = {
-    orientationChange: null,
-    orientationChangeFallback: null,
-    deviceMotion: null,
-    mouseDown: null,
-    mouseMove: null,
-    mouseUp: null,
-    touchStart: null,
-    touchMove: null,
-    touchEnd: null
-};
-
+// cleanupMegaConfetti is now provided by mega-confetti-physics.js
+// This placeholder ensures the reference exists during module loading
 function cleanupMegaConfetti() {
-    if (megaConfettiSystem) {
-        // Stop the animation loop
-        megaConfettiSystem.running = false;
-        
-        // Clear particles array to free memory
-        if (megaConfettiSystem.particles) {
-            megaConfettiSystem.particles.length = 0;
-        }
-        
-        // Hide canvas
-        const canvas = document.getElementById('confettiCanvas');
-        if (canvas) {
-            canvas.style.display = 'none';
-        }
-        
-        // Clear the system object
-        megaConfettiSystem = null;
-    }
-    
-    // Remove all event listeners to prevent memory leaks
-    if (megaConfettiSetupComplete) {
-        // Remove orientation listeners
-        if (confettiEventListeners.orientationChange && screen.orientation) {
-            screen.orientation.removeEventListener('change', confettiEventListeners.orientationChange);
-        }
-        if (confettiEventListeners.orientationChangeFallback) {
-            window.removeEventListener('orientationchange', confettiEventListeners.orientationChangeFallback);
-        }
-        
-        // Remove device motion listener
-        if (confettiEventListeners.deviceMotion) {
-            window.removeEventListener('devicemotion', confettiEventListeners.deviceMotion);
-        }
-        
-        // Remove canvas interaction listeners
-        const canvas = document.getElementById('confettiCanvas');
-        if (canvas) {
-            if (confettiEventListeners.mouseDown) {
-                canvas.removeEventListener('mousedown', confettiEventListeners.mouseDown);
-            }
-            if (confettiEventListeners.mouseMove) {
-                canvas.removeEventListener('mousemove', confettiEventListeners.mouseMove);
-            }
-            if (confettiEventListeners.mouseUp) {
-                canvas.removeEventListener('mouseup', confettiEventListeners.mouseUp);
-            }
-            if (confettiEventListeners.touchStart) {
-                canvas.removeEventListener('touchstart', confettiEventListeners.touchStart);
-            }
-            if (confettiEventListeners.touchMove) {
-                canvas.removeEventListener('touchmove', confettiEventListeners.touchMove);
-            }
-            if (confettiEventListeners.touchEnd) {
-                canvas.removeEventListener('touchend', confettiEventListeners.touchEnd);
-            }
-        }
-        
-        // Clear all listener references
-        for (let key in confettiEventListeners) {
-            confettiEventListeners[key] = null;
-        }
-        
-        // Reset setup flag so listeners can be added again if needed
-        megaConfettiSetupComplete = false;
+    if (window.cleanupMegaConfetti && window.cleanupMegaConfetti !== cleanupMegaConfetti) {
+        window.cleanupMegaConfetti();
     }
 }
 
-// Placeholder for createMegaConfetti - will be completed in next extraction
-function createMegaConfetti() {
-    console.log('Mega confetti triggered (placeholder - full system coming next)');
-    // Fallback to regular confetti for now
-    createConfetti();
-}
+// createMegaConfetti is now provided by mega-confetti-physics.js
+// This will be available after the physics module loads
 
 console.log('Basic confetti functions + mega confetti cleanup loaded');
