@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Create bars
             const bars = days.map(day => {
-                const heightPercent = day.steps > 0 ? (day.steps / maxSteps) * 90 + 10 : 5; // Min 5% height for empty days
+                const heightPercent = day.steps > 0 ? (day.steps / maxSteps) * 90 : 5; // Min 5% height for empty days
                 const isToday = day.date === today.toISOString().split('T')[0];
                 const hasData = day.steps > 0;
                 const showLabel = day.isFirst || day.isLast;
