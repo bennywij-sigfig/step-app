@@ -17,9 +17,9 @@ on:
         required: false
         default: 'Manual validation before release'
   
-  # Weekly automated run (Mondays at 2 AM UTC)  
-  schedule:
-    - cron: '0 2 * * 1'
+  # Weekly automated run (Mondays at 2 AM UTC)  -- disabled 10/6 till app is active again
+  # schedule:
+  #  - cron: '0 2 * * 1'
   
   # ONLY trigger automatically on very high-risk changes
   push:
