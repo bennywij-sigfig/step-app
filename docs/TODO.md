@@ -1,5 +1,43 @@
 # Step Challenge App - TODO List
 
+## ✅ **AUGUST 24, 2026 - APPLICATION REVIVED**
+
+- Production is healthy at https://step-app-4x-yhw.fly.dev/
+- Challenge ID `6` runs September 1–15, 2026.
+- Runtime upgraded to Node.js 22; production dependency audit is clean.
+- Original Fly volume is preserved; production uses restored volume `data_revival`.
+- See `README.md` for current commands and status.
+
+---
+
+## 🎉 **AUGUST 27, 2025 - CHART REGRESSION FIXES COMPLETE** ✅
+
+**📊 CRITICAL CHART DISPLAY ISSUES RESOLVED - ZERO FUNCTIONALITY IMPACT**
+
+### ✅ **CHART VALUE LABEL REGRESSION FIX - PRODUCTION DEPLOYED**
+- ✅ **Stray Value Labels Eliminated**: Fixed permanent display of "23,630 steps" type labels on chart bars
+- ✅ **Hover-Only Labels Restored**: Value labels now properly hidden by default with `opacity: 0 !important`
+- ✅ **Hover State Preserved**: Labels correctly appear on hover with `opacity: 1 !important`
+- ✅ **No Data Labels Fixed**: "No data" labels also respect hover-only behavior
+
+### ✅ **CHART BAR HEIGHT PROPORTIONS CORRECTED**
+- ✅ **Artificial Baseline Removed**: Eliminated 10% baseline inflation that made bars appear too tall
+- ✅ **True Proportional Heights**: Bars now accurately reflect `(steps / maxSteps) * 90%` ratio
+- ✅ **Highest Bar Optimization**: Maximum bar now properly reaches 90% chart height
+- ✅ **Visual Accuracy Restored**: All bars correctly proportional to actual step counts
+
+### 🔧 **TECHNICAL IMPLEMENTATION**
+- **CSS Priority Fixes**: Added `!important` declarations to ensure consistent opacity behavior
+- **JavaScript Chart Logic**: Removed `+ 10` artificial baseline from height calculation
+- **Date Labels Preserved**: X-axis date labels (Aug 20, Aug 30) remain visible as intended
+- **Hover Interaction Maintained**: Touch/mouse hover still reveals step count tooltips
+
+### 🚀 **PRODUCTION STATUS**
+- **Local Testing**: ✅ Verified proper chart display with Playwright browser automation
+- **Deployment**: ✅ Successfully deployed to https://step-app-4x-yhw.fly.dev/
+- **Health Check**: ✅ Production environment healthy with 52 users, 756 steps logged
+- **User Impact**: ✅ Charts now display cleanly without visual distractions
+
 ## 🎉 **AUGUST 26, 2025 - MEGA CONFETTI PHYSICS EXTRACTION COMPLETE** ✅
 
 **🏗️ MASSIVE DASHBOARD SIMPLIFICATION: 30.6% CODE REDUCTION - ZERO REGRESSION**

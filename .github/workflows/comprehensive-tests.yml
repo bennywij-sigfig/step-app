@@ -2,8 +2,7 @@ name: Comprehensive Test Suite
 
 # 🎯 When this runs:
 # - Manual trigger only (workflow_dispatch) - for pre-release validation  
-# - Weekly automated (Mondays 2 AM UTC) - for regular health checks
-# - Auto-trigger ONLY on very high-risk file changes (auth, server core, deps)
+# - Auto-trigger only on very high-risk file changes (auth, server core, deps)
 # 
 # ⚡ For daily development: Use Fast CI (runs in ~30 seconds)
 # 🔍 For thorough validation: Manually trigger this comprehensive suite
@@ -16,10 +15,6 @@ on:
         description: 'Reason for running comprehensive tests'
         required: false
         default: 'Manual validation before release'
-  
-  # Weekly automated run (Mondays at 2 AM UTC)  -- disabled 10/6 till app is active again
-  # schedule:
-  #  - cron: '0 2 * * 1'
   
   # ONLY trigger automatically on very high-risk changes
   push:
@@ -54,7 +49,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22'
         cache: 'npm'
         
     - name: Install dependencies
@@ -82,7 +77,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22'
         cache: 'npm'
         
     - name: Install dependencies
@@ -100,7 +95,7 @@ jobs:
         SQLITE_BUSY_TIMEOUT: 30000
 
   e2e-tests:
-    name: E2E Tests (Full)
+    name: Authenticated E2E Gate
     runs-on: ubuntu-latest
     
     steps:
@@ -110,34 +105,16 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22'
         cache: 'npm'
         
     - name: Install dependencies
       run: npm ci
       
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps
-      
-    - name: Start test server
-      run: |
-        npm run dev &
-        sleep 10
-      env:
-        NODE_ENV: test
-        PORT: 3000
-        
-    - name: Run E2E tests
+    # Browser journeys require manual magic-link authentication.
+    - name: Report E2E test policy
       run: npm run test:e2e:ci
       
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
-
   security-comprehensive:
     name: Security Analysis (Deep)
     runs-on: ubuntu-latest
@@ -149,7 +126,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22'
         cache: 'npm'
         
     - name: Install dependencies
@@ -195,7 +172,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22'
         cache: 'npm'
         
     - name: Install dependencies
@@ -224,7 +201,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22'
         cache: 'npm'
         
     - name: Install dependencies

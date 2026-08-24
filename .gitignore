@@ -30,6 +30,8 @@ screenshots/
 backups/
 coverage/
 tests/test-databases/
+.playwright-mcp/
+.pi/
 
 # OS generated files
 Thumbs.db
