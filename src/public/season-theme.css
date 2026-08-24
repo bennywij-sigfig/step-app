@@ -275,21 +275,32 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
         border-radius: 16px;
     }
 
-    body:not(.login-page) .nav {
+    body.admin-page .nav {
         overflow-x: auto;
         justify-content: flex-start;
         scroll-snap-type: x proximity;
         scrollbar-width: none;
     }
 
-    body:not(.login-page) .nav::-webkit-scrollbar {
+    body.admin-page .nav::-webkit-scrollbar {
         display: none;
     }
 
-    body:not(.login-page) .nav button {
+    body.admin-page .nav button {
         flex: 0 0 auto;
         min-width: 112px;
         scroll-snap-align: start;
+    }
+
+    body.dashboard-page .nav {
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    body.dashboard-page .nav button {
+        flex: 1 1 0;
+        width: 0;
+        min-width: 0;
     }
 
     #usersTable::before,
@@ -309,13 +320,19 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
 }
 
 @media (max-width: 480px) {
-    body:not(.login-page) .nav {
+    body.admin-page .nav {
         flex-wrap: nowrap;
     }
 
-    body:not(.login-page) .nav button {
+    body.admin-page .nav button {
         flex: 0 0 auto;
         min-width: 108px;
+    }
+
+    body.dashboard-page .nav button {
+        flex: 1 1 0;
+        width: 0;
+        min-width: 0;
     }
 
     body.login-page .container {
