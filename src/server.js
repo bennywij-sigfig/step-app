@@ -1,4 +1,5 @@
 const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
@@ -221,6 +222,27 @@ async function getActiveChallenge(dbConnection = null) {
         return reject(err);
       }
       resolve(challenge || null);
+    });
+  });
+}
+
+function dbGetAsync(sql, params = [], connection = db) {
+  return new Promise((resolve, reject) => {
+    connection.get(sql, params, (err, row) => err ? reject(err) : resolve(row));
+  });
+}
+
+function dbAllAsync(sql, params = [], connection = db) {
+  return new Promise((resolve, reject) => {
+    connection.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows));
+  });
+}
+
+function dbRunAsync(sql, params = [], connection = db) {
+  return new Promise((resolve, reject) => {
+    connection.run(sql, params, function(err) {
+      if (err) return reject(err);
+      resolve({ changes: this.changes, lastID: this.lastID });
     });
   });
 }
@@ -650,7 +672,6 @@ End of Message`;
  */
 function getActiveDbConnection() {
   if (process.env.NODE_ENV === 'test' && process.env.DB_PATH) {
-    const sqlite3 = require('sqlite3').verbose();
     const activeDb = new sqlite3.Database(process.env.DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE);
     activeDb.configure('busyTimeout', 5000);
     activeDb.run('PRAGMA journal_mode = WAL');
@@ -2667,6 +2688,119 @@ app.post('/api/admin/challenges', requireApiAdmin, validateCSRFToken, sanitizeUs
   });
 });
 
+// Atomically preserve the outgoing roster and prepare teams for a new challenge.
+app.post('/api/admin/challenges/:challengeId/prepare-teams', adminApiLimiter, requireApiAdmin, validateCSRFToken, async (req, res) => {
+  const targetChallengeId = Number(req.params.challengeId);
+  const requestedSourceId = req.body?.source_challenge_id == null
+    ? null
+    : Number(req.body.source_challenge_id);
+
+  if (!Number.isInteger(targetChallengeId) || targetChallengeId < 1) {
+    return res.status(400).json({ error: 'Valid target challenge ID required' });
+  }
+  if (requestedSourceId !== null && (!Number.isInteger(requestedSourceId) || requestedSourceId < 1 || requestedSourceId === targetChallengeId)) {
+    return res.status(400).json({ error: 'Valid, distinct source challenge ID required' });
+  }
+
+  try {
+    const target = await dbGetAsync('SELECT * FROM challenges WHERE id = ?', [targetChallengeId]);
+    if (!target) return res.status(404).json({ error: 'Target challenge not found' });
+    if (target.teams_prepared_at) {
+      return res.status(409).json({ error: 'Teams have already been prepared for this challenge' });
+    }
+
+    const targetSteps = await dbGetAsync('SELECT COUNT(*) AS count FROM steps WHERE challenge_id = ?', [targetChallengeId]);
+    if (targetSteps.count > 0) {
+      return res.status(409).json({ error: 'Cannot reset teams after step entries exist for the target challenge' });
+    }
+
+    let source = null;
+    if (requestedSourceId !== null) {
+      source = await dbGetAsync('SELECT * FROM challenges WHERE id = ?', [requestedSourceId]);
+      if (!source) return res.status(404).json({ error: 'Source challenge not found' });
+    } else {
+      source = await dbGetAsync('SELECT * FROM challenges WHERE is_active = 1 AND id != ? LIMIT 1', [targetChallengeId]);
+    }
+
+    const currentState = await dbGetAsync(`
+      SELECT
+        (SELECT COUNT(*) FROM teams) AS team_count,
+        (SELECT COUNT(*) FROM users WHERE team IS NOT NULL AND team != '') AS assigned_count
+    `);
+    if (!source && (currentState.team_count > 0 || currentState.assigned_count > 0)) {
+      return res.status(409).json({ error: 'Select an outgoing challenge before clearing existing team data' });
+    }
+
+    const transactionDb = new sqlite3.Database(db.filename);
+    transactionDb.configure('busyTimeout', 30000);
+    await dbRunAsync('BEGIN IMMEDIATE', [], transactionDb);
+    try {
+      if (source) {
+        await dbRunAsync(`
+          INSERT OR IGNORE INTO challenge_team_names (challenge_id, team_name)
+          SELECT ?, name FROM teams
+        `, [source.id], transactionDb);
+        await dbRunAsync(`
+          INSERT OR IGNORE INTO challenge_team_memberships
+            (challenge_id, user_id, user_name, user_email, team_name, user_archived_at)
+          SELECT ?, id, name, email, team, archived_at FROM users
+        `, [source.id], transactionDb);
+      }
+
+      const resetResult = await dbRunAsync(`UPDATE users SET team = NULL WHERE team IS NOT NULL AND team != ''`, [], transactionDb);
+      const teamsResult = await dbRunAsync('DELETE FROM teams', [], transactionDb);
+      await dbRunAsync('UPDATE challenges SET is_active = 0', [], transactionDb);
+      await dbRunAsync(`
+        UPDATE challenges
+        SET is_active = 1,
+            teams_prepared_at = CURRENT_TIMESTAMP,
+            previous_challenge_id = ?
+        WHERE id = ?
+      `, [source?.id || null, targetChallengeId], transactionDb);
+      await dbRunAsync('COMMIT', [], transactionDb);
+      transactionDb.close();
+
+      console.log(`Admin prepared teams for challenge ${targetChallengeId}; preserved challenge ${source?.id || 'none'}, reset ${resetResult.changes} users, removed ${teamsResult.changes} teams`);
+      return res.json({
+        message: 'Outgoing roster saved. Players and team names are ready for the new challenge.',
+        target_challenge_id: targetChallengeId,
+        source_challenge_id: source?.id || null,
+        players_unassigned: resetResult.changes,
+        team_names_cleared: teamsResult.changes
+      });
+    } catch (error) {
+      try { await dbRunAsync('ROLLBACK', [], transactionDb); } catch (_) {}
+      transactionDb.close();
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error preparing challenge teams:', error);
+    return res.status(500).json({ error: 'Failed to prepare teams for the new challenge' });
+  }
+});
+
+app.get('/api/admin/challenges/:challengeId/team-snapshot', adminApiLimiter, requireApiAdmin, async (req, res) => {
+  const challengeId = Number(req.params.challengeId);
+  if (!Number.isInteger(challengeId) || challengeId < 1) {
+    return res.status(400).json({ error: 'Valid challenge ID required' });
+  }
+  try {
+    const [teams, players] = await Promise.all([
+      dbAllAsync('SELECT team_name FROM challenge_team_names WHERE challenge_id = ? ORDER BY team_name', [challengeId]),
+      dbAllAsync(`
+        SELECT user_id, user_name, user_email, team_name, user_archived_at
+        FROM challenge_team_memberships
+        WHERE challenge_id = ?
+        ORDER BY user_name
+      `, [challengeId])
+    ]);
+    res.json({ challenge_id: challengeId, teams, players });
+  } catch (error) {
+    console.error('Error loading team snapshot:', error);
+    res.status(500).json({ error: 'Failed to load team snapshot' });
+  }
+});
+
 // Update challenge (admin only)
 app.put('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { challengeId } = req.params;
@@ -2899,7 +3033,6 @@ app.get('/api/admin/archives', requireApiAdmin, (req, res) => {
 app.get('/api/admin/archives/:archiveId/download', requireApiAdmin, async (req, res) => {
   const { archiveId } = req.params;
   const archiver = require('archiver');
-  const { promisify } = require('util');
   
   try {
     // Get archive details
@@ -2925,6 +3058,15 @@ app.get('/api/admin/archives/:archiveId/download', requireApiAdmin, async (req, 
         else resolve(result);
       });
     });
+    const [teamNames, roster] = await Promise.all([
+      dbAllAsync('SELECT team_name FROM challenge_team_names WHERE challenge_id = ? ORDER BY team_name', [archive.challenge_id]),
+      dbAllAsync(`
+        SELECT user_name, user_email, team_name, user_archived_at
+        FROM challenge_team_memberships
+        WHERE challenge_id = ?
+        ORDER BY user_name
+      `, [archive.challenge_id])
+    ]);
     
     // Create safe filename
     const safeChallengeName = archive.challenge_name.replace(/[^a-zA-Z0-9\-_\s]/g, '').replace(/\s+/g, '_');
@@ -3014,8 +3156,21 @@ app.get('/api/admin/archives/:archiveId/download', requireApiAdmin, async (req, 
     
     const summaryCSV = summaryCSVHeader + summaryCSVRows.join('\n');
     archive_zip.append(summaryCSV, { name: 'participant_summary.csv' });
+
+    // 4. Include the complete team catalog and roster when a rollover snapshot exists.
+    const quoteCsv = value => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const teamNamesCSV = 'Team_Name\n' + teamNames.map(team => quoteCsv(team.team_name)).join('\n');
+    archive_zip.append(teamNamesCSV, { name: 'team_names.csv' });
+
+    const rosterCSV = 'User_Name,User_Email,Team,Archived_At\n' + roster.map(player => [
+      quoteCsv(player.user_name),
+      quoteCsv(player.user_email),
+      quoteCsv(player.team_name),
+      quoteCsv(player.user_archived_at)
+    ].join(',')).join('\n');
+    archive_zip.append(rosterCSV, { name: 'team_roster.csv' });
     
-    // 4. Create README file
+    // 5. Create README file
     const readme = `Challenge Archive: ${archive.challenge_name}
 ===============================================
 
@@ -3026,11 +3181,14 @@ Archived on: ${archive.archive_timestamp}
 Files included:
 - challenge_info.csv: Challenge metadata and settings
 - daily_steps.csv: All step records by user and date during the challenge
-- participant_summary.csv: Summary statistics for each participant
+- participant_summary.csv: Summary statistics for participants with steps
+- team_names.csv: Complete saved team-name catalog
+- team_roster.csv: Every saved player and team assignment, including unassigned players
 - README.txt: This file
 
 Data Notes:
 - ${steps.length} step records from ${archive.total_participants} participants
+- ${roster.length} players and ${teamNames.length} team names in the roster snapshot
 - Reporting threshold was ${archive.reporting_threshold}%
 - Data preserved exactly as it was when the challenge was active
 

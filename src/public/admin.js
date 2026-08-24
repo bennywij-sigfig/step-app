@@ -1275,8 +1275,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <td>
                                             <label style="display: flex; align-items: center; gap: 5px;">
                                                 <input type="checkbox" id="challengeActive-${challenge.id}" ${challenge.is_active ? 'checked' : ''}
+                                                       ${!challenge.is_active && !challenge.teams_prepared_at ? 'disabled title="Use Start & Reset Teams to activate this challenge"' : ''}
                                                        class="challenge-active-input" data-challenge-id="${challenge.id}">
                                                 ${challenge.is_active ? '<span style="color: #28a745; font-weight: bold;">Active</span>' : 'Inactive'}
+                                                ${challenge.teams_prepared_at ? '<br><small style="color: #28a745;">Teams prepared</small>' : ''}
                                             </label>
                                         </td>
                                         <td>
@@ -1287,6 +1289,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <button class="archive-challenge-btn" data-challenge-id="${challenge.id}" data-challenge-name="${escapeHtml(challenge.name)}" 
                                                         style="background: #ff8c00; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-weight: 500;">
                                                     Archive
+                                                </button>
+                                            ` : ''}
+                                            ${!challenge.is_active && !challenge.teams_prepared_at ? `
+                                                <button class="prepare-teams-btn" data-challenge-id="${challenge.id}" data-challenge-name="${escapeHtml(challenge.name)}"
+                                                        style="background: #17a2b8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-weight: 500;">
+                                                    Start &amp; Reset Teams
                                                 </button>
                                             ` : ''}
                                             <button class="delete-challenge-btn" data-challenge-id="${challenge.id}" data-challenge-name="${escapeHtml(challenge.name)}" 
@@ -1519,6 +1527,47 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // If not being deactivated, proceed with normal update
             await proceedWithUpdate();
+        }
+
+        async function prepareChallengeTeams(challengeId, challengeName) {
+            const confirmed = confirm(
+                `Start "${challengeName}" with fresh teams?\n\n` +
+                `This will atomically:\n` +
+                `• Save every current player-to-team assignment\n` +
+                `• Save all current team names\n` +
+                `• Set every player to Unassigned\n` +
+                `• Clear the current team-name list\n` +
+                `• Activate this challenge\n\n` +
+                `The saved outgoing roster remains available in challenge archives.`
+            );
+            if (!confirmed) return;
+
+            const messageDiv = document.getElementById('challengesMessage');
+            messageDiv.innerHTML = '<div class="message info">Saving the outgoing roster and preparing fresh teams...</div>';
+
+            try {
+                const response = await authenticatedFetch(`/api/admin/challenges/${challengeId}/prepare-teams`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    messageDiv.innerHTML = `<div class="message error">${escapeHtml(data.error || 'Unable to prepare teams')}</div>`;
+                    return;
+                }
+
+                messageDiv.innerHTML = `<div class="message success">
+                    <strong>New challenge ready.</strong><br>
+                    Saved the outgoing roster, unassigned ${data.players_unassigned} players, and cleared ${data.team_names_cleared} team names.
+                    Opening Manage Teams...
+                </div>`;
+                await Promise.all([loadChallenges(), loadUsers(), loadManageTeams()]);
+                setTimeout(() => document.getElementById('manageTeamsBtn').click(), 1200);
+            } catch (error) {
+                console.error('Team preparation error:', error);
+                messageDiv.innerHTML = '<div class="message error">Network error. No team reset was confirmed.</div>';
+            }
         }
 
         // Delete challenge
@@ -1770,6 +1819,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateChallenge(parseInt(challengeId));
             }
             
+            // Prepare a new challenge with a preserved outgoing roster.
+            if (e.target.classList.contains('prepare-teams-btn')) {
+                const challengeId = e.target.dataset.challengeId;
+                const challengeName = e.target.dataset.challengeName;
+                prepareChallengeTeams(parseInt(challengeId), challengeName);
+            }
+
             // Delete challenge buttons
             if (e.target.classList.contains('delete-challenge-btn')) {
                 const challengeId = e.target.dataset.challengeId;

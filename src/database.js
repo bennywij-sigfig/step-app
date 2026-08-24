@@ -232,8 +232,20 @@ if (!shouldDelayInit) {
     // This will fail if column already exists, which is expected
     if (err && !err.message.includes('duplicate column name')) {
       console.error('Error adding created_at column:', err);
-    } else {
+    } else if (!err) {
       console.log('✅ Added created_at column to challenges table');
+    }
+  });
+
+  // Track the one-time team rollover used to prepare a new challenge.
+  db.run(`ALTER TABLE challenges ADD COLUMN teams_prepared_at DATETIME DEFAULT NULL`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding teams_prepared_at column:', err);
+    }
+  });
+  db.run(`ALTER TABLE challenges ADD COLUMN previous_challenge_id INTEGER DEFAULT NULL REFERENCES challenges(id)`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding previous_challenge_id column:', err);
     }
   });
 
@@ -397,6 +409,31 @@ if (!shouldDelayInit) {
     FOREIGN KEY (user_id) REFERENCES users (id)
   )`);
 
+  // Complete roster snapshots survive team resets between challenges. Unlike
+  // step archives, these include players with no entries and empty teams.
+  db.run(`CREATE TABLE IF NOT EXISTS challenge_team_names (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    challenge_id INTEGER NOT NULL,
+    team_name TEXT NOT NULL,
+    snapshot_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (challenge_id) REFERENCES challenges (id),
+    UNIQUE(challenge_id, team_name)
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS challenge_team_memberships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    challenge_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    user_name TEXT NOT NULL,
+    user_email TEXT NOT NULL,
+    team_name TEXT,
+    user_archived_at DATETIME,
+    snapshot_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (challenge_id) REFERENCES challenges (id),
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    UNIQUE(challenge_id, user_id)
+  )`);
+
   // Shadow game performance indexes
   db.run(`CREATE INDEX IF NOT EXISTS idx_shadow_steps_user_date ON shadow_steps(user_id, date)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_shadow_steps_date ON shadow_steps(date)`);
@@ -405,6 +442,8 @@ if (!shouldDelayInit) {
   // Archive indexes for performance
   db.run(`CREATE INDEX IF NOT EXISTS idx_archive_steps_archive_id ON challenge_archive_steps(archive_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_archive_steps_user_date ON challenge_archive_steps(archive_id, user_id, date)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_challenge_team_names_challenge ON challenge_team_names(challenge_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_challenge_team_memberships_challenge ON challenge_team_memberships(challenge_id)`);
 
   // Add constraint to prevent multiple active challenges (SQLite doesn't support partial unique indexes easily)
   // We'll handle this in application logic for now
