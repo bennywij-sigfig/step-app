@@ -8,86 +8,25 @@
     <!-- Prevent FOUC by applying theme immediately -->
     <script>
         (function() {
-            const userTheme = localStorage.getItem('userTheme');
-            const adminTheme = localStorage.getItem('adminTheme') || 'default';
-            const theme = userTheme || adminTheme;
-            if (theme && theme !== 'default') {
-                document.documentElement.setAttribute('data-theme', theme);
-            }
+            const currentThemes = ['default', 'golden-hour', 'evergreen', 'berry-pace', 'tidepool', 'night-run'];
+            const legacyThemes = {
+                sunset: 'golden-hour', forest: 'evergreen', lavender: 'berry-pace',
+                monochrome: 'night-run', 'warm-focus': 'golden-hour',
+                'cool-calm': 'tidepool', 'sage-zen': 'evergreen', 'soft-light': 'default'
+            };
+            const storedTheme = localStorage.getItem('userTheme') || localStorage.getItem('adminTheme') || 'default';
+            const theme = currentThemes.includes(storedTheme) ? storedTheme : (legacyThemes[storedTheme] || 'default');
+            if (theme !== 'default') document.documentElement.setAttribute('data-theme', theme);
         })();
     </script>
     <style>
         :root {
-            /* Default theme - Ocean Blue */
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --primary-color: #667eea;
-            --secondary-color: #764ba2;
-            --accent-color: #48bb78;
-            --text-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        [data-theme="sunset"] {
-            --primary-gradient: linear-gradient(135deg, #ff7b7b 0%, #ff8c42 100%);
-            --primary-color: #ff7b7b;
-            --secondary-color: #ff8c42;
-            --accent-color: #ff6b6b;
-            --text-gradient: linear-gradient(135deg, #ff7b7b 0%, #ff8c42 100%);
-        }
-
-        [data-theme="forest"] {
-            --primary-gradient: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-            --primary-color: #56ab2f;
-            --secondary-color: #a8e6cf;
-            --accent-color: #4caf50;
-            --text-gradient: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-        }
-
-        [data-theme="lavender"] {
-            --primary-gradient: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
-            --primary-color: #a18cd1;
-            --secondary-color: #fbc2eb;
-            --accent-color: #9c88ff;
-            --text-gradient: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
-        }
-
-        [data-theme="monochrome"] {
-            --primary-gradient: linear-gradient(135deg, #434343 0%, #000000 100%);
-            --primary-color: #434343;
-            --secondary-color: #000000;
-            --accent-color: #666666;
-            --text-gradient: linear-gradient(135deg, #434343 0%, #000000 100%);
-        }
-
-        [data-theme="warm-focus"] {
-            --primary-gradient: linear-gradient(135deg, #f4d03f 0%, #fff9e6 100%);
-            --primary-color: #d4a024;
-            --secondary-color: #f7dc6f;
-            --accent-color: #e67e22;
-            --text-gradient: linear-gradient(135deg, #d4a024 0%, #f39c12 100%);
-        }
-
-        [data-theme="cool-calm"] {
-            --primary-gradient: linear-gradient(135deg, #a8dadc 0%, #e8f4f8 100%);
-            --primary-color: #457b9d;
-            --secondary-color: #a8dadc;
-            --accent-color: #1d3557;
-            --text-gradient: linear-gradient(135deg, #457b9d 0%, #1d3557 100%);
-        }
-
-        [data-theme="sage-zen"] {
-            --primary-gradient: linear-gradient(135deg, #9caf88 0%, #f0f4ec 100%);
-            --primary-color: #6b7f5a;
-            --secondary-color: #9caf88;
-            --accent-color: #52734d;
-            --text-gradient: linear-gradient(135deg, #6b7f5a 0%, #52734d 100%);
-        }
-
-        [data-theme="soft-light"] {
-            --primary-gradient: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            --primary-color: #6c757d;
-            --secondary-color: #adb5bd;
-            --accent-color: #495057;
-            --text-gradient: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+            /* 2026 default - Dawn Patrol */
+            --primary-gradient: linear-gradient(145deg, #0f3d4c 0%, #155e75 48%, #3730a3 100%);
+            --primary-color: #155e75;
+            --secondary-color: #3730a3;
+            --accent-color: #b45309;
+            --text-gradient: linear-gradient(135deg, #155e75 0%, #3730a3 100%);
         }
 
         * {
@@ -1194,6 +1133,7 @@
             }
         }
     </style>
+    <link rel="stylesheet" href="/season-theme.css">
 </head>
 <body>
     <div class="container">
@@ -1293,15 +1233,12 @@
                     <select id="userThemeSelector" 
                             style="width: 100%; padding: 8px 12px; background: rgba(255, 255, 255, 0.8); color: #333; border: 1px solid rgba(102, 126, 234, 0.2); border-radius: 6px; cursor: pointer; font-size: 12px; transition: all 0.2s ease;">
                         <option value="system-default">Use System Default</option>
-                        <option value="default">Ocean Blue</option>
-                        <option value="sunset">Sunset Orange</option>
-                        <option value="forest">Forest Green</option>
-                        <option value="lavender">Lavender Purple</option>
-                        <option value="monochrome">Monochrome</option>
-                        <option value="warm-focus">Warm Focus</option>
-                        <option value="cool-calm">Cool Calm</option>
-                        <option value="sage-zen">Sage Zen</option>
-                        <option value="soft-light">Soft Light</option>
+                        <option value="default">Dawn Patrol</option>
+                        <option value="golden-hour">Golden Hour</option>
+                        <option value="evergreen">Evergreen</option>
+                        <option value="berry-pace">Berry Pace</option>
+                        <option value="tidepool">Tidepool</option>
+                        <option value="night-run">Night Run</option>
                     </select>
                     <div style="font-size: 11px; color: #888; margin-top: 4px; line-height: 1.3;">
                         Override the system-wide theme with your personal preference.

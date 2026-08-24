@@ -1852,15 +1852,35 @@ document.addEventListener('DOMContentLoaded', function() {
         window.updateUserTeam = updateUserTeam;
         window.saveTeam = saveTeam;
         // Theme management functionality
-        function initializeThemes() {
+        async function initializeThemes() {
             const themeSelector = document.getElementById('themeSelector');
-            
-            // Load saved theme
-            const savedTheme = localStorage.getItem('adminTheme') || 'default';
+            const currentThemes = ['default', 'golden-hour', 'evergreen', 'berry-pace', 'tidepool', 'night-run'];
+            const legacyThemes = {
+                sunset: 'golden-hour', forest: 'evergreen', lavender: 'berry-pace',
+                monochrome: 'night-run', 'warm-focus': 'golden-hour',
+                'cool-calm': 'tidepool', 'sage-zen': 'evergreen', 'soft-light': 'default'
+            };
+            const normalizeTheme = theme => currentThemes.includes(theme) ? theme : (legacyThemes[theme] || 'default');
+
+            let savedTheme = normalizeTheme(localStorage.getItem('adminTheme') || 'default');
             applyTheme(savedTheme);
             themeSelector.value = savedTheme;
+
+            try {
+                const response = await authenticatedFetch('/api/admin/theme');
+                if (response.ok) {
+                    const systemTheme = normalizeTheme((await response.json()).theme);
+                    if (systemTheme !== savedTheme) {
+                        savedTheme = systemTheme;
+                        applyTheme(savedTheme);
+                        themeSelector.value = savedTheme;
+                    }
+                }
+            } catch (error) {
+                console.warn('Unable to refresh system theme; using cached setting.', error);
+            }
+            localStorage.setItem('adminTheme', savedTheme);
             
-            // Theme change handler
             themeSelector.addEventListener('change', function() {
                 const selectedTheme = this.value;
                 applyTheme(selectedTheme);
@@ -1923,8 +1943,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         function applyTheme(themeName) {
-            // Apply to current page
-            document.documentElement.setAttribute('data-theme', themeName === 'default' ? '' : themeName);
+            if (themeName === 'default') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', themeName);
+            }
         }
         
         async function updateMainAppTheme(themeName) {

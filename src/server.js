@@ -2342,7 +2342,9 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
   }
 });
 
-// Theme management endpoints (admin only)
+// Theme management
+const VALID_APP_THEMES = ['default', 'golden-hour', 'evergreen', 'berry-pace', 'tidepool', 'night-run'];
+
 app.post('/api/admin/theme', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { theme } = req.body;
   
@@ -2350,20 +2352,39 @@ app.post('/api/admin/theme', adminApiLimiter, requireApiAdmin, validateCSRFToken
     return res.status(400).json({ error: 'Theme is required' });
   }
   
-  const validThemes = ['default', 'sunset', 'forest', 'lavender', 'monochrome'];
-  if (!validThemes.includes(theme)) {
+  if (!VALID_APP_THEMES.includes(theme)) {
     return res.status(400).json({ error: 'Invalid theme' });
   }
-  
-  // Store theme in database or file system
-  // For now, we'll just return success - the theme is managed client-side
-  res.json({ message: 'Theme updated successfully', theme: theme });
+
+  db.run(
+    `INSERT INTO settings (key, value, description)
+     VALUES ('app_theme', ?, 'System-wide visual theme')
+     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`,
+    [theme],
+    err => {
+      if (err) {
+        console.error('Error saving app theme:', err);
+        return res.status(500).json({ error: 'Failed to save theme' });
+      }
+      res.json({ message: 'Theme updated successfully', theme });
+    }
+  );
 });
 
-app.get('/api/admin/theme', adminApiLimiter, requireApiAdmin, (req, res) => {
-  // For now, return default theme - in production this would be stored
-  res.json({ theme: 'default' });
-});
+function sendCurrentTheme(res) {
+  db.get(`SELECT value FROM settings WHERE key = 'app_theme'`, (err, row) => {
+    if (err) {
+      console.error('Error loading app theme:', err);
+      return res.status(500).json({ error: 'Failed to load theme' });
+    }
+    const theme = VALID_APP_THEMES.includes(row?.value) ? row.value : 'default';
+    res.json({ theme });
+  });
+}
+
+app.get('/api/admin/theme', adminApiLimiter, requireApiAdmin, (req, res) => sendCurrentTheme(res));
+// Theme identifiers are public presentation metadata, so login can match the app.
+app.get('/api/theme', apiLimiter, (req, res) => sendCurrentTheme(res));
 
 // Update fun setting
 app.post('/api/admin/fun-setting', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {

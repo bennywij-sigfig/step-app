@@ -10,16 +10,29 @@ const SYSTEM_DEFAULT_VALUE = 'system-default';
 
 // Centralized theme definitions (DRY principle)
 const THEME_DEFINITIONS = {
-    'default': { name: 'Ocean Blue', value: 'default' },
-    'sunset': { name: 'Sunset Orange', value: 'sunset' },
-    'forest': { name: 'Forest Green', value: 'forest' },
-    'lavender': { name: 'Lavender Purple', value: 'lavender' },
-    'monochrome': { name: 'Monochrome', value: 'monochrome' },
-    'warm-focus': { name: 'Warm Focus', value: 'warm-focus' },
-    'cool-calm': { name: 'Cool Calm', value: 'cool-calm' },
-    'sage-zen': { name: 'Sage Zen', value: 'sage-zen' },
-    'soft-light': { name: 'Soft Light', value: 'soft-light' }
+    'default': { name: 'Dawn Patrol', value: 'default' },
+    'golden-hour': { name: 'Golden Hour', value: 'golden-hour' },
+    'evergreen': { name: 'Evergreen', value: 'evergreen' },
+    'berry-pace': { name: 'Berry Pace', value: 'berry-pace' },
+    'tidepool': { name: 'Tidepool', value: 'tidepool' },
+    'night-run': { name: 'Night Run', value: 'night-run' }
 };
+
+const LEGACY_THEME_MAP = {
+    'sunset': 'golden-hour',
+    'forest': 'evergreen',
+    'lavender': 'berry-pace',
+    'monochrome': 'night-run',
+    'warm-focus': 'golden-hour',
+    'cool-calm': 'tidepool',
+    'sage-zen': 'evergreen',
+    'soft-light': 'default'
+};
+
+function normalizeTheme(themeName) {
+    if (THEME_DEFINITIONS[themeName]) return themeName;
+    return LEGACY_THEME_MAP[themeName] || 'default';
+}
 
 // Theme functionality with user preference override
 function initializeTheme() {
@@ -29,31 +42,38 @@ function initializeTheme() {
 
 function getEffectiveTheme() {
     // Priority: User preference > Admin default > Safe fallback
-    const userTheme = localStorage.getItem(THEME_STORAGE_KEYS.USER);
-    if (userTheme && THEME_DEFINITIONS[userTheme]) {
+    const storedUserTheme = localStorage.getItem(THEME_STORAGE_KEYS.USER);
+    if (storedUserTheme) {
+        const userTheme = normalizeTheme(storedUserTheme);
+        if (userTheme !== storedUserTheme) localStorage.setItem(THEME_STORAGE_KEYS.USER, userTheme);
         return userTheme;
     }
     
-    // Validate admin theme before using it
-    const adminTheme = localStorage.getItem(THEME_STORAGE_KEYS.ADMIN);
-    if (adminTheme && THEME_DEFINITIONS[adminTheme]) {
+    const storedAdminTheme = localStorage.getItem(THEME_STORAGE_KEYS.ADMIN);
+    if (storedAdminTheme) {
+        const adminTheme = normalizeTheme(storedAdminTheme);
+        if (adminTheme !== storedAdminTheme) localStorage.setItem(THEME_STORAGE_KEYS.ADMIN, adminTheme);
         return adminTheme;
     }
     
-    // Safe fallback to known theme
     return 'default';
 }
 
 function applyTheme(themeName) {
-    document.documentElement.setAttribute('data-theme', themeName === 'default' ? '' : themeName);
+    const normalizedTheme = normalizeTheme(themeName);
+    if (normalizedTheme === 'default') {
+        document.documentElement.removeAttribute('data-theme');
+    } else {
+        document.documentElement.setAttribute('data-theme', normalizedTheme);
+    }
 }
 
 function setUserTheme(themeName) {
     if (themeName === SYSTEM_DEFAULT_VALUE) {
         // Clear user preference to use admin default
         localStorage.removeItem(THEME_STORAGE_KEYS.USER);
-    } else if (THEME_DEFINITIONS[themeName]) {
-        localStorage.setItem(THEME_STORAGE_KEYS.USER, themeName);
+    } else {
+        localStorage.setItem(THEME_STORAGE_KEYS.USER, normalizeTheme(themeName));
     }
     
     const effectiveTheme = getEffectiveTheme();
@@ -73,14 +93,27 @@ function getUserThemeDisplayName() {
     }
     
     const adminTheme = localStorage.getItem(THEME_STORAGE_KEYS.ADMIN);
-    const themeName = THEME_DEFINITIONS[adminTheme]?.name || THEME_DEFINITIONS['default']?.name || 'Ocean Blue';
+    const themeName = THEME_DEFINITIONS[normalizeTheme(adminTheme)]?.name || 'Dawn Patrol';
     return themeName + ' (Default)';
 }
 
 // Initialize theme system
+async function loadSystemTheme() {
+    try {
+        const response = await fetch('/api/theme');
+        if (!response.ok) return;
+        const data = await response.json();
+        const systemTheme = normalizeTheme(data.theme);
+        localStorage.setItem(THEME_STORAGE_KEYS.ADMIN, systemTheme);
+        if (!localStorage.getItem(THEME_STORAGE_KEYS.USER)) applyTheme(systemTheme);
+    } catch (error) {
+        console.warn('Unable to refresh system theme; using cached preference.', error);
+    }
+}
+
 function initializeThemeSystem() {
-    // Apply theme immediately
     initializeTheme();
+    loadSystemTheme();
     
     // Setup user theme selector if present
     const userThemeSelector = document.getElementById('userThemeSelector');

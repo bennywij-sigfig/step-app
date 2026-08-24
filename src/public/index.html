@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Step Challenge</title>
+    <script>
+        (function() {
+            const validThemes = ['default', 'golden-hour', 'evergreen', 'berry-pace', 'tidepool', 'night-run'];
+            const apply = theme => {
+                if (!validThemes.includes(theme) || theme === 'default') document.documentElement.removeAttribute('data-theme');
+                else document.documentElement.setAttribute('data-theme', theme);
+            };
+            apply(localStorage.getItem('adminTheme') || 'default');
+            fetch('/api/theme').then(response => response.ok ? response.json() : null).then(data => {
+                if (!data) return;
+                localStorage.setItem('adminTheme', data.theme);
+                apply(data.theme);
+            }).catch(() => {});
+        })();
+    </script>
     <style>
         * {
             box-sizing: border-box;
@@ -168,8 +183,9 @@
             opacity: 0.8;
         }
     </style>
+    <link rel="stylesheet" href="/season-theme.css">
 </head>
-<body>
+<body class="login-page">
     <div class="container">
         <h1>Step Challenge</h1>
         
