@@ -133,6 +133,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // Singapore reaches each date first among the supported challenge regions.
+        // Using it for the entry ceiling matches the server's inclusive policy.
+        function getLatestSupportedDate() {
+            const parts = new Intl.DateTimeFormat('en-US', {
+                timeZone: 'Asia/Singapore',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).formatToParts(new Date());
+            const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+            return `${values.year}-${values.month}-${values.day}`;
+        }
+
         // Update challenge information display
         function updateChallengeInfo(challenge) {
             const challengeInfo = document.getElementById('challengeInfo');
@@ -141,18 +154,18 @@ document.addEventListener('DOMContentLoaded', function() {
             const dateInput = document.getElementById('date');
             
             if (challenge) {
-                const today = new Date();
-                const startDate = new Date(challenge.start_date + 'T00:00:00');
-                const endDate = new Date(challenge.end_date + 'T23:59:59');
-                const isWithinPeriod = today >= startDate && today <= endDate;
+                const now = new Date();
+                const startDate = new Date(challenge.window_start_utc || `${challenge.start_date}T00:00:00+08:00`);
+                const endDate = new Date(challenge.window_end_utc || `${challenge.end_date}T23:59:59-07:00`);
+                const isWithinPeriod = now >= startDate && now <= endDate;
                 
-                // Calculate days remaining
+                // Calculate days remaining against the inclusive global window.
                 let daysInfo = '';
                 if (isWithinPeriod) {
-                    const daysRemaining = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+                    const daysRemaining = Math.max(0, Math.ceil((endDate - now) / (1000 * 60 * 60 * 24)));
                     daysInfo = `${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining`;
-                } else if (today < startDate) {
-                    const daysUntilStart = Math.ceil((startDate - today) / (1000 * 60 * 60 * 24));
+                } else if (now < startDate) {
+                    const daysUntilStart = Math.ceil((startDate - now) / (1000 * 60 * 60 * 24));
                     daysInfo = `starts in ${daysUntilStart} day${daysUntilStart !== 1 ? 's' : ''}`;
                 } else {
                     daysInfo = 'challenge ended';
@@ -163,15 +176,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="challenge-title">
                             <div class="challenge-name">
                                 <div class="challenge-expand" id="challengeExpand">▶</div>
-                                <h3>${challenge.name}</h3>
+                                <h3>${escapeHtml(challenge.name)}</h3>
                             </div>
                             <div class="challenge-status">${daysInfo}</div>
                         </div>
                     </div>
                     <div class="challenge-details" id="challengeDetails">
                         <p><strong>Period:</strong> ${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}</p>
-                        ${today >= startDate ? '<p>You can log steps for any date within the challenge period, including retroactive entries.</p>' : ''}
-                        ${today > endDate ? '<p style="color: #28a745; font-size: 14px; margin-top: 4px;">✓ Challenge ended - retroactive step entry available for dates within challenge period.</p>' : ''}
+                        ${now >= startDate ? '<p>You can log steps for any date within the challenge period, including retroactive entries.</p>' : ''}
+                        ${now > endDate ? '<p style="color: #28a745; font-size: 14px; margin-top: 4px;">✓ Challenge ended - retroactive step entry available for dates within challenge period.</p>' : ''}
                     </div>
                 `;
                 
@@ -194,16 +207,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Set date input constraints (works in most browsers)
                 dateInput.min = challenge.start_date;
                 
-                // Set max date to prevent future entries (use user's local today)
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const maxDateString = `${year}-${month}-${day}`;
-                
-                // Allow retroactive entry up to challenge end date, even after challenge period
-                // Only limit by current date + 1 day (for timezone flexibility), not by challenge end date
-                dateInput.max = maxDateString;
+                // Cap at both the challenge end and the earliest supported region's
+                // current date. This is intentionally generous across time zones.
+                const latestSupportedDate = getLatestSupportedDate();
+                dateInput.max = latestSupportedDate < challenge.end_date
+                    ? latestSupportedDate
+                    : challenge.end_date;
                 
                 // Add real-time validation for Safari and other browsers
                 dateInput.addEventListener('change', function() {
@@ -250,11 +259,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Check for future dates (no allowance - user's local time is authoritative)
-            const now = new Date();
-            const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-            
-            if (stepDate.getTime() > todayEnd.getTime()) {
+            // Match the server's generous cross-region future-date ceiling.
+            if (date > getLatestSupportedDate()) {
                 dateInput.style.borderColor = '#dc3545';
                 dateInput.style.backgroundColor = '#fff5f5';
                 messageDiv.innerHTML = '<div class="message error">Cannot enter steps for future dates</div>';
@@ -302,9 +308,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const day = String(now.getDate()).padStart(2, '0');
             let targetDate = `${year}-${month}-${day}`;
             
-            // Always use today's date as default, regardless of challenge status
-            // Users can manually select dates within the challenge period for retroactive entry
-            console.log(`📅 Date selector: Set to today ${targetDate} (allows retroactive entry within challenge period)`);
+            if (challenge) {
+                const latestSupportedDate = getLatestSupportedDate();
+                if (latestSupportedDate >= challenge.start_date && targetDate < challenge.start_date) {
+                    targetDate = challenge.start_date;
+                }
+                if (targetDate > challenge.end_date) {
+                    targetDate = challenge.end_date;
+                }
+            }
+
+            console.log(`📅 Date selector: Set to ${targetDate} (inclusive cross-region policy)`);
             
             const dateInput = document.getElementById('date');
             dateInput.value = targetDate;
@@ -544,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     leaderboard = data.data;
                     challengeInfo = '<h3>All-Time Rankings</h3>';
                 } else if (data.type === 'challenge') {
-                    challengeInfo = `<h3>${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>`;
+                    challengeInfo = `<h3>${escapeHtml(data.meta.challenge_name)} - Day ${data.meta.challenge_day}</h3>`;
                 }
                 
                 let html = challengeInfo;
@@ -774,7 +788,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Handle different response types
                 if (data.type === 'insufficient_data') {
                     teamLeaderboard.innerHTML = `<div class="info-message">
-                        <h3>${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>
+                        <h3>${escapeHtml(data.meta.challenge_name)} - Day ${data.meta.challenge_day}</h3>
                         <p>${data.message}</p>
                         <p style="font-size: 0.9em; color: #666;">
                             ${data.meta.actual_entries}/${data.meta.expected_entries} expected team entries 
@@ -790,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.type === 'all_time') {
                     challengeInfo = '<h3>All-Time Team Rankings</h3>';
                 } else if (data.type === 'challenge') {
-                    challengeInfo = `<h3>${data.meta.challenge_name} - Day ${data.meta.challenge_day}</h3>`;
+                    challengeInfo = `<h3>${escapeHtml(data.meta.challenge_name)} - Day ${data.meta.challenge_day}</h3>`;
                 }
                 
                 let html = challengeInfo;

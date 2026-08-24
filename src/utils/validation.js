@@ -7,8 +7,14 @@ function normalizeEmail(email) {
 }
 
 function isValidDate(dateString) {
-  const date = new Date(dateString);
-  return date instanceof Date && !isNaN(date);
+  if (typeof dateString !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+    return false;
+  }
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day;
 }
 
 // HTML escaping to prevent XSS attacks

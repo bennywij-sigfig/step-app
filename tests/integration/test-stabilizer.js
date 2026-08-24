@@ -28,15 +28,18 @@ class TestStabilizer {
           return reject(err);
         }
         
-        // Configure for maximum stability
-        db.configure('busyTimeout', 30000); // 30 second timeout
-        db.run('PRAGMA journal_mode = WAL');
-        db.run('PRAGMA synchronous = NORMAL');
-        db.run('PRAGMA temp_store = MEMORY');
-        db.run('PRAGMA cache_size = -2000'); // 2MB cache
-        
-        this.activeConnections.set(testName, { db, dbPath });
-        resolve(db);
+        // Finish connection setup before the app opens the same database.
+        db.configure('busyTimeout', 30000);
+        db.serialize(() => {
+          db.run('PRAGMA journal_mode = WAL');
+          db.run('PRAGMA synchronous = NORMAL');
+          db.run('PRAGMA temp_store = MEMORY');
+          db.run('PRAGMA cache_size = -2000', pragmaError => {
+            if (pragmaError) return reject(pragmaError);
+            this.activeConnections.set(testName, { db, dbPath });
+            resolve(db);
+          });
+        });
       });
     });
   }
@@ -72,15 +75,14 @@ class TestStabilizer {
 
     // Clear require cache
     Object.keys(require.cache).forEach(key => {
-      if (key.includes('src/server.js') || key.includes('src/database.js')) {
+      if (key.includes('src/server.js') || key.includes('src/database.js') || key.includes('src/shadow-api.js')) {
         delete require.cache[key];
       }
     });
 
-    // Import fresh server
+    // Import fresh server and wait for all serialized schema work to finish.
     const app = require('../../src/server.js');
-    
-    // Wait for proper initialization
+    await require('../../src/database.js').ready;
     await this.waitForStableConnection(3000);
     
     this.serverInstances.set(testName, app);
@@ -99,8 +101,10 @@ class TestStabilizer {
         const timeout = setTimeout(resolve, 2000); // Force close after 2s
         app.server.close(() => {
           clearTimeout(timeout);
-          resolve();
+          app.close(() => resolve());
         });
+      } else if (typeof app.close === 'function') {
+        app.close(() => resolve());
       } else {
         resolve();
       }

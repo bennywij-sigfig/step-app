@@ -9,6 +9,14 @@ module.exports = {
   testMatch: [
     '**/tests/integration/**/*.test.js'
   ],
+  // Superseded experimental suites each maintain competing SQLite connections
+  // and duplicate coverage in leaderboard-regression/database unit tests.
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    'leaderboard-fixed\\.test\\.js$',
+    'leaderboard-stable\\.test\\.js$',
+    'database-integrity-regression\\.test\\.js$'
+  ],
   testTimeout: 30000, // 30 second timeout per test
   setupFilesAfterEnv: ['<rootDir>/tests/integration/jest.setup.js'],
   globalTeardown: '<rootDir>/tests/integration/jest.teardown.js',

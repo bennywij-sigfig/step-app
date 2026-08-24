@@ -37,7 +37,7 @@ const dbPath = process.env.DB_PATH ||
 const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
   if (err) {
     console.error('❌ Shadow API database connection failed:', err.message);
-  } else {
+  } else if (process.env.NODE_ENV !== 'test') {
     console.log('✅ Shadow API connected to database');
   }
 });
@@ -440,5 +440,10 @@ router.post('/bonus-heart', requireShadowAuth, (req, res) => {
     });
   });
 });
+
+router.close = (callback = () => {}) => {
+  if (!db?.open) return callback();
+  db.close(callback);
+};
 
 module.exports = router;

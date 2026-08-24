@@ -6,7 +6,7 @@ primary_region = 'ord'
 
 # Single volume configuration for SQLite
 [[mounts]]
-  source = 'data'
+  source = 'data_revival'
   destination = '/data'
   snapshot_retention = 30  # Keep snapshots for 30 days
 

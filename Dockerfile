@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1
 
 # Use Node.js LTS version
-ARG NODE_VERSION=18.19.0
+ARG NODE_VERSION=22
 FROM node:${NODE_VERSION}-alpine AS base
 
 LABEL fly_launch_runtime="Node.js"

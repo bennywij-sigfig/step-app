@@ -44,7 +44,8 @@ class SimpleTestStabilizer {
             name TEXT,
             team TEXT DEFAULT 'No Team',
             is_admin BOOLEAN DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            archived_at DATETIME DEFAULT NULL
           )`);
           
           // Challenges table
@@ -107,15 +108,18 @@ class SimpleTestStabilizer {
       const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE, (err) => {
         if (err) return reject(err);
         
-        // Configure for maximum stability
+        // Finish connection setup before the app opens the same database.
         db.configure('busyTimeout', 30000);
-        db.run('PRAGMA journal_mode = WAL');
-        db.run('PRAGMA synchronous = NORMAL');
-        db.run('PRAGMA temp_store = MEMORY');
-        db.run('PRAGMA cache_size = -2000');
-        
-        this.activeConnections.set(testName, { db, dbPath });
-        resolve(db);
+        db.serialize(() => {
+          db.run('PRAGMA journal_mode = WAL');
+          db.run('PRAGMA synchronous = NORMAL');
+          db.run('PRAGMA temp_store = MEMORY');
+          db.run('PRAGMA cache_size = -2000', pragmaError => {
+            if (pragmaError) return reject(pragmaError);
+            this.activeConnections.set(testName, { db, dbPath });
+            resolve(db);
+          });
+        });
       });
     });
   }
@@ -134,16 +138,14 @@ class SimpleTestStabilizer {
 
     // Clear require cache
     Object.keys(require.cache).forEach(key => {
-      if (key.includes('src/server.js') || key.includes('src/database.js')) {
+      if (key.includes('src/server.js') || key.includes('src/database.js') || key.includes('src/shadow-api.js')) {
         delete require.cache[key];
       }
     });
 
-    // Import fresh server
+    // Import fresh server and wait for all serialized schema work to finish.
     const app = require('../../src/server.js');
-    
-    // Wait for proper initialization
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await require('../../src/database.js').ready;
     
     this.serverInstances.set(testName, app);
     return app;
@@ -191,8 +193,10 @@ class SimpleTestStabilizer {
         const timeout = setTimeout(resolve, 2000);
         app.server.close(() => {
           clearTimeout(timeout);
-          resolve();
+          app.close(() => resolve());
         });
+      } else if (typeof app.close === 'function') {
+        app.close(() => resolve());
       } else {
         resolve();
       }

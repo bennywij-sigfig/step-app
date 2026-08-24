@@ -44,11 +44,11 @@ describe('Critical Dependencies Import Validation', () => {
     test('should import database dependencies', () => {
       expect(() => {
         const sqlite3 = require('sqlite3');
-        const SQLiteStore = require('connect-sqlite3');
+        const SQLiteSessionStore = require('../../../src/services/sqlite-session-store');
         
         expect(sqlite3).toBeDefined();
-        expect(SQLiteStore).toBeDefined();
-        expect(typeof SQLiteStore).toBe('function');
+        expect(SQLiteSessionStore).toBeDefined();
+        expect(typeof SQLiteSessionStore).toBe('function');
       }).not.toThrow();
     });
   });
@@ -193,8 +193,7 @@ describe('Critical Dependencies Import Validation', () => {
         'uuid',
         'axios',
         'cors',
-        'dotenv',
-        'connect-sqlite3'
+        'dotenv'
       ];
       
       criticalDeps.forEach(dep => {

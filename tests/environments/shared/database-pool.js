@@ -65,7 +65,7 @@ class TestDatabasePool {
       db.run('PRAGMA journal_mode = MEMORY'); // No WAL files
       db.run('PRAGMA synchronous = OFF');     // Skip fsync for speed
       db.run('PRAGMA temp_store = MEMORY');   // Memory temp storage
-      db.run('PRAGMA locking_mode = EXCLUSIVE'); // Exclusive access
+      db.run('PRAGMA locking_mode = NORMAL'); // Allow test and app connections
       
       // Create all tables and indexes in single transaction for speed
       db.serialize(() => {
@@ -203,7 +203,8 @@ class TestDatabasePool {
         name TEXT NOT NULL,
         team TEXT,
         is_admin BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        archived_at DATETIME DEFAULT NULL
       )`,
 
       // Teams table - exact match from src/database.js

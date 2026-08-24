@@ -4,7 +4,7 @@ const helmet = require('helmet');
 const path = require('path');
 const axios = require('axios');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
+const SQLiteSessionStore = require('./services/sqlite-session-store');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 let db = require('./database');
@@ -26,7 +26,13 @@ const {
 const { sendEmail } = require('./services/email');
 const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
 const { hashToken, generateSecureToken } = require('./utils/token');
-const { getCurrentPacificTime, getCurrentChallengeDay, getTotalChallengeDays } = require('./utils/challenge');
+const {
+  getCurrentChallengeDay,
+  getTotalChallengeDays,
+  withChallengeTiming,
+  getLatestSupportedLocalDate,
+  isDateInChallengePeriod
+} = require('./utils/challenge');
 
 // Load environment variables
 require('dotenv').config();
@@ -120,12 +126,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Configure session store - avoid SQLite for unit tests to prevent hanging
 let sessionStore;
-if (process.env.NODE_ENV === 'test' && !process.env.DB_PATH) {
-  // Use memory store for unit tests that don't need database persistence
+if (process.env.NODE_ENV === 'test') {
+  // Keep test sessions isolated from production persistence and file locks.
   sessionStore = new session.MemoryStore();
 } else {
   // Use SQLite store for integration tests and production
-  sessionStore = new SQLiteStore({
+  sessionStore = new SQLiteSessionStore({
     db: 'sessions.db',
     dir: process.env.NODE_ENV === 'production' ? '/data' : '.',
     table: 'sessions'
@@ -150,20 +156,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 
-
-// Check if a date is within challenge period (Pacific Time)
-function isDateInChallengePeriod(date, challenge) {
-  try {
-    const checkDate = new Date(date + 'T12:00:00'); // Use noon to avoid timezone edge cases
-    const startPacific = new Date(challenge.start_date + 'T00:00:00');
-    const endPacific = new Date(challenge.end_date + 'T23:59:59');
-    
-    return checkDate >= startPacific && checkDate <= endPacific;
-  } catch (error) {
-    console.error('Error checking date in challenge period:', error);
-    return false;
-  }
-}
 
 // Calculate individual reporting percentage for challenge
 async function calculateIndividualReportingPercentage(challengeId, currentDay) {
@@ -255,7 +247,7 @@ async function getChallengeParticipantCount(challengeId, dbConnection = null) {
 }
 
 // Get individual leaderboard with personal reporting rates
-async function getIndividualLeaderboardWithRates(challengeId, currentDay, threshold) {
+async function getIndividualLeaderboardWithRates(challengeId, currentDay, threshold, dbConnection = db) {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT 
@@ -284,7 +276,7 @@ async function getIndividualLeaderboardWithRates(challengeId, currentDay, thresh
       ORDER BY meets_threshold DESC, steps_per_day_reported DESC, u.name ASC
     `;
     
-    db.all(query, [currentDay, currentDay, currentDay, currentDay, threshold, challengeId, challengeId], (err, rows) => {
+    dbConnection.all(query, [currentDay, currentDay, currentDay, currentDay, threshold, challengeId, challengeId], (err, rows) => {
       if (err) {
         console.error('Error getting individual leaderboard with rates:', err);
         return reject(err);
@@ -299,7 +291,7 @@ async function getIndividualLeaderboardWithRates(challengeId, currentDay, thresh
 }
 
 // Get team leaderboard with team reporting rates
-async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold) {
+async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold, dbConnection = db) {
   return new Promise((resolve, reject) => {
     const query = `
       SELECT 
@@ -334,7 +326,7 @@ async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold) {
       ORDER BY meets_threshold DESC, team_steps_per_day_reported DESC, u.team ASC
     `;
     
-    db.all(query, [currentDay, currentDay, currentDay, currentDay, threshold, challengeId], (err, rows) => {
+    dbConnection.all(query, [currentDay, currentDay, currentDay, currentDay, threshold, challengeId], (err, rows) => {
       if (err) {
         console.error('Error getting team leaderboard with rates:', err);
         return reject(err);
@@ -661,8 +653,8 @@ function getActiveDbConnection() {
     const sqlite3 = require('sqlite3').verbose();
     const activeDb = new sqlite3.Database(process.env.DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE);
     activeDb.configure('busyTimeout', 5000);
-    activeDb.run('PRAGMA journal_mode = MEMORY');
-    activeDb.run('PRAGMA synchronous = OFF');
+    activeDb.run('PRAGMA journal_mode = WAL');
+    activeDb.run('PRAGMA synchronous = NORMAL');
     return { db: activeDb, shouldClose: true };
   }
   return { db: db, shouldClose: false };
@@ -671,6 +663,8 @@ function getActiveDbConnection() {
 // Development-only: Get magic link directly (localhost only)
 if (isDevelopment) {
   app.post('/dev/get-magic-link', magicLinkLimiter, async (req, res) => {
+    let activeDb;
+    let shouldClose = false;
     const { email: rawEmail } = req.body;
     const email = normalizeEmail(rawEmail);
     
@@ -680,7 +674,7 @@ if (isDevelopment) {
 
     try {
       // Get appropriate database connection for current environment
-      const { db: activeDb, shouldClose } = getActiveDbConnection();
+      ({ db: activeDb, shouldClose } = getActiveDbConnection());
       
       if (!shouldClose) {
         // Wait for database initialization to complete before proceeding (production/development)
@@ -742,6 +736,7 @@ if (isDevelopment) {
         note: 'This endpoint only works in development mode'
       });
     } catch (error) {
+      if (shouldClose && activeDb?.open) activeDb.close();
       console.error('Error generating development magic link:', error);
       return res.status(500).json({ error: 'Failed to generate magic link' });
     }
@@ -750,6 +745,8 @@ if (isDevelopment) {
 
 // Login with token
 app.get('/auth/login', (req, res) => {
+  let activeDb;
+  let shouldClose = false;
   const { token } = req.query;
   
   devLog('Login attempt with token:', token ? 'present' : 'missing');
@@ -761,7 +758,7 @@ app.get('/auth/login', (req, res) => {
 
   try {
     // Get appropriate database connection for current environment
-    const { db: activeDb, shouldClose } = getActiveDbConnection();
+    ({ db: activeDb, shouldClose } = getActiveDbConnection());
     
     // Verify token (hash before comparison for security)
     const hashedToken = hashToken(token);
@@ -863,6 +860,7 @@ app.get('/auth/login', (req, res) => {
     }
   );
   } catch (error) {
+    if (shouldClose && activeDb?.open) activeDb.close();
     console.error('Login endpoint error:', error);
     devLog('Login endpoint error:', error.message);
     return res.status(400).send('Invalid login link');
@@ -923,7 +921,7 @@ app.get('/api/user', apiLimiter, requireApiAuth, (req, res) => {
       // Include challenge info with user data
       res.json({
         ...user,
-        current_challenge: challenge || null
+        current_challenge: withChallengeTiming(challenge)
       });
     });
   });
@@ -1134,13 +1132,10 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
       return res.status(400).json({ error: 'Invalid date format' });
     }
     
-    // Prevent future date entries (allow up to +1 day for timezone flexibility)
-    const stepDate = new Date(date + 'T00:00:00');
-    const nowPacific = getCurrentPacificTime();
-    const maxAllowedDate = new Date(nowPacific);
-    maxAllowedDate.setDate(maxAllowedDate.getDate() + 1); // Allow +1 day for timezone flexibility
-    
-    if (stepDate > maxAllowedDate) {
+    // Singapore reaches each calendar date first among the supported regions.
+    // This deliberately gives Pacific, India, and Singapore users the same,
+    // most-generous future-entry ceiling.
+    if (date > getLatestSupportedLocalDate()) {
       return res.status(400).json({ error: 'Cannot enter steps for future dates' });
     }
     
@@ -1155,15 +1150,11 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
       }
       
       if (challenge) {
-        // Parse dates for comparison (ignoring time)
-        const stepDate = new Date(date + 'T00:00:00');
-        const startDate = new Date(challenge.start_date + 'T00:00:00');
-        const endDate = new Date(challenge.end_date + 'T23:59:59');
-        
-        // Only block dates before challenge start - allow historical entries within challenge period
-        if (stepDate < startDate) {
-          return res.status(400).json({ 
-            error: `Step logging is only allowed from the challenge start date onwards (${challenge.start_date} to ${challenge.end_date})`,
+        // Entries remain retroactively editable, but must belong to the selected
+        // challenge's inclusive calendar-date range.
+        if (!isDateInChallengePeriod(date, challenge)) {
+          return res.status(400).json({
+            error: `Step logging is only allowed within the challenge period (${challenge.start_date} to ${challenge.end_date})`,
             challenge_period: {
               start_date: challenge.start_date,
               end_date: challenge.end_date,
@@ -1209,9 +1200,11 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
 
 // Challenge-aware individual leaderboard
 app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
+  let activeDb;
+  let shouldClose = false;
   try {
     // Get appropriate database connection for current environment
-    const { db: activeDb, shouldClose } = getActiveDbConnection();
+    ({ db: activeDb, shouldClose } = getActiveDbConnection());
     
     const activeChallenge = await getActiveChallenge(activeDb);
     
@@ -1259,7 +1252,8 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
       const leaderboardData = await getIndividualLeaderboardWithRates(
         activeChallenge.id, 
         currentDay, 
-        activeChallenge.reporting_threshold
+        activeChallenge.reporting_threshold,
+        activeDb
       );
       
       // Close database connection if we created one
@@ -1291,8 +1285,7 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
 
   } catch (error) {
     console.error('Leaderboard error:', error);
-    // Close database connection if we created one (error in active challenge lookup)
-    if (typeof shouldClose !== 'undefined' && shouldClose) activeDb.close();
+    if (shouldClose && activeDb?.open) activeDb.close();
     res.status(500).json({ error: 'Failed to load leaderboard' });
   }
 });
@@ -2240,9 +2233,11 @@ app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) =>
 
 // Challenge-aware team leaderboard
 app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
+  let activeDb;
+  let shouldClose = false;
   try {
     // Get appropriate database connection for current environment
-    const { db: activeDb, shouldClose } = getActiveDbConnection();
+    ({ db: activeDb, shouldClose } = getActiveDbConnection());
     
     const activeChallenge = await getActiveChallenge(activeDb);
     
@@ -2269,6 +2264,7 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
         GROUP BY u.team
         ORDER BY team_steps_per_day_reported DESC
       `, (err, rows) => {
+        if (shouldClose) activeDb.close();
         if (err) {
           console.error('Error fetching all-time team leaderboard:', err);
           return res.status(500).json({ error: 'Database error' });
@@ -2285,14 +2281,16 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
 
     // Challenge is active - return team rankings with per-team filtering
     const currentDay = getCurrentChallengeDay(activeChallenge);
-    const participantCount = await getChallengeParticipantCount(activeChallenge.id);
+    const participantCount = await getChallengeParticipantCount(activeChallenge.id, activeDb);
     try {
       const teamLeaderboardData = await getTeamLeaderboardWithRates(
         activeChallenge.id, 
         currentDay, 
-        activeChallenge.reporting_threshold
+        activeChallenge.reporting_threshold,
+        activeDb
       );
       
+      if (shouldClose) activeDb.close();
       res.json({
         type: 'challenge',
         challenge_active: true,
@@ -2312,11 +2310,13 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
       });
     } catch (leaderboardError) {
       console.error('Error getting team leaderboard with rates:', leaderboardError);
+      if (shouldClose) activeDb.close();
       return res.status(500).json({ error: 'Database error' });
     }
 
   } catch (error) {
     console.error('Team leaderboard error:', error);
+    if (shouldClose && activeDb?.open) activeDb.close();
     res.status(500).json({ error: 'Failed to load team leaderboard' });
   }
 });
@@ -3196,17 +3196,27 @@ if (require.main === module) {
 }
 
 // Add cleanup method for testing
-app.close = (callback) => {
-  if (db && db.open) {
-    db.close((err) => {
-      if (err) {
-        console.log('Test cleanup - Error closing database:', err);
-      }
-      if (callback) callback();
-    });
-  } else if (callback) {
-    callback();
+app.close = (callback = () => {}) => {
+  const closers = [];
+
+  if (db?.open) {
+    closers.push(done => db.close(done));
   }
+  if (typeof sessionStore?.close === 'function') {
+    closers.push(done => sessionStore.close(done));
+  }
+  if (typeof shadowApi?.close === 'function') {
+    closers.push(done => shadowApi.close(done));
+  }
+
+  if (closers.length === 0) return callback();
+  let remaining = closers.length;
+  let firstError = null;
+  closers.forEach(close => close(error => {
+    if (error && !firstError) firstError = error;
+    remaining -= 1;
+    if (remaining === 0) callback(firstError);
+  }));
 };
 
 // Add database reinitialization for testing

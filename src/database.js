@@ -93,12 +93,12 @@ if (shouldDelayInit) {
 // Configure SQLite based on environment - only for real databases
 if (!shouldDelayInit) {
   if (process.env.NODE_ENV === 'test') {
-    // Test configuration - prioritize speed and reliability over durability
-    db.configure('busyTimeout', 5000); // Shorter timeout for tests
-    db.run('PRAGMA journal_mode = MEMORY'); // Fastest mode, no WAL files
-    db.run('PRAGMA synchronous = OFF'); // Skip fsync for test speed
-    db.run('PRAGMA temp_store = MEMORY'); // Use memory for temporary storage
-    db.run('PRAGMA locking_mode = EXCLUSIVE'); // Exclusive access for tests
+    // Match the multi-connection integration harness while keeping test I/O light.
+    db.configure('busyTimeout', 5000);
+    db.run('PRAGMA journal_mode = WAL');
+    db.run('PRAGMA synchronous = NORMAL');
+    db.run('PRAGMA temp_store = MEMORY');
+    db.run('PRAGMA locking_mode = NORMAL');
   } else {
     // Production/development configuration
     db.configure('busyTimeout', 30000); // 30 second timeout for busy database
@@ -169,10 +169,6 @@ if (!shouldDelayInit) {
       process.exit(1);
     }
     console.log('✅ Auth tokens table ready');
-    
-    // Mark database as ready for critical operations when auth_tokens table is ready
-    // This fires whether the table was created or already existed
-    initializationResolve();
   });
 
   // Challenges table
@@ -426,6 +422,14 @@ if (!shouldDelayInit) {
     // Ensure admin privileges for existing users (handles INSERT OR IGNORE cases)
     db.run(`UPDATE users SET is_admin = 1 WHERE email IN ('benny@sigfig.com', 'benazir.qureshi@sigfig.com', 'liz.ridge@sigfig.com', 'megan.crowley@sigfig.com', 'amit.srivastava@sigfig.com')`);
   }
+
+  // Serialized barrier: all schema creation and migrations above are complete.
+  db.run('SELECT 1', (err) => {
+    if (err) {
+      console.error('❌ Database initialization failed:', err.message);
+    }
+    initializationResolve();
+  });
 });
 } else {
   // For delayed initialization (test mode), resolve immediately
