@@ -333,20 +333,41 @@ function createStepChatService({
     };
   }
 
-  async function challengeInfo() {
+  async function challengeInfo(asOfDate = null) {
     const challenge = await getActiveChallenge();
-    if (!challenge) return { kind: 'challenge_info', has_challenge: false };
-    const status = getChallengeStatus(challenge);
+    if (!challenge) return { kind: 'challenge_info', has_challenge: false, as_of_date: asOfDate };
     const totalDays = getTotalChallengeDays(challenge);
-    const currentDay = getCurrentChallengeDay(challenge);
-    const remainingDays = status === 'ended'
-      ? 0
-      : status === 'upcoming'
-        ? totalDays
-        : Math.max(0, totalDays - currentDay + 1);
+    let status;
+    let currentDay;
+    let remainingDays;
+
+    if (asOfDate) {
+      status = asOfDate < challenge.start_date ? 'upcoming' : asOfDate > challenge.end_date ? 'ended' : 'active';
+      if (status === 'upcoming') {
+        currentDay = 0;
+        remainingDays = totalDays;
+      } else if (status === 'ended') {
+        currentDay = totalDays;
+        remainingDays = 0;
+      } else {
+        const start = Date.parse(`${challenge.start_date}T00:00:00Z`);
+        const asOf = Date.parse(`${asOfDate}T00:00:00Z`);
+        currentDay = Math.floor((asOf - start) / 86400000) + 1;
+        remainingDays = totalDays - currentDay + 1;
+      }
+    } else {
+      status = getChallengeStatus(challenge);
+      currentDay = getCurrentChallengeDay(challenge);
+      remainingDays = status === 'ended'
+        ? 0
+        : status === 'upcoming'
+          ? totalDays
+          : Math.max(0, totalDays - currentDay + 1);
+    }
     return {
       kind: 'challenge_info',
       has_challenge: true,
+      as_of_date: asOfDate,
       challenge: {
         id: challenge.id,
         name: challenge.name,
@@ -463,7 +484,7 @@ function createStepChatService({
       case 'calculate_overtake': return calculateOvertake(userId, intent.target_name, intent.days);
       case 'calculate_target_average': return calculateTargetAverage(userId, intent.target_average, intent.days);
       case 'challenge_outlook': return challengeOutlook(userId, intent.leaderboard);
-      case 'challenge_info': return challengeInfo();
+      case 'challenge_info': return challengeInfo(intent.as_of_date);
       case 'encouragement': return encouragement(userId);
       case 'step_chitchat': return { kind: 'chitchat' };
       default:

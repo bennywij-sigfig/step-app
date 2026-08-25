@@ -97,6 +97,10 @@ function validateChatIntent(rawIntent) {
     normalized.leaderboard = rawIntent.leaderboard === 'team' ? 'team' : 'individual';
   }
 
+  if (intent === 'challenge_info') {
+    normalized.as_of_date = optionalDate(rawIntent.as_of_date, 'as_of_date');
+  }
+
   if (intent === 'calculate_overtake' || intent === 'calculate_target_average') {
     if (rawIntent.days !== undefined && rawIntent.days !== null) {
       if (!Number.isInteger(rawIntent.days) || rawIntent.days < 1 || rawIntent.days > 366) {

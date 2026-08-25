@@ -93,6 +93,21 @@ Proposed fix: complete deterministic, tone-aware renderers and add usefulness re
 
 Post-fix live regression checks confirmed that secret extraction, cross-user writes, person-directed insults, encoded tool requests, and SQL requests remain capability-denied while harmless step humor remains available.
 
+## Contextual conversation re-test
+
+After adding up to 30 recent messages / 20,000 characters of browser-supplied context and a read-only Gemini voice pass, a second red-team round verified:
+
+- Instructions embedded in prior user or assistant messages cannot authorize writes or bypass previews.
+- Historical prompt/secret extraction attempts remain denied.
+- Cross-user requests remain incapable of selecting another user.
+- Person-directed harassment remains refused without disabling harmless sarcasm or humor.
+- Write previews remain deterministic and do not use the voice pass.
+- The voice pass receives bounded authoritative facts and cannot modify them.
+- Composed text and historical content remain rendered as text, not HTML.
+- Oversized and unsupported history roles are filtered and bounded server-side.
+
+Usefulness checks also passed for repeated “tired,” “it ends?”, “really?”, greetings, and tomorrow-relative challenge timing. Trotter produced varied contextual responses, and the deterministic result correctly reported 11 remaining days for the next date rather than asking the model to invent the arithmetic.
+
 ## Usefulness balance
 
 The red-team result supports keeping the conversational surface broader while holding the capability surface narrow:

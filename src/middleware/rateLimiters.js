@@ -60,11 +60,11 @@ const chatApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   })
 });
 
-// Global model-call budgets bound aggregate spend even if many authenticated
-// users are active at once. Confirmation requests do not use these budgets.
+// Global submission budgets bound aggregate spend even if most read requests
+// use both interpretation and voice calls. Confirmations do not use these budgets.
 const chatGlobalHourlyLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: parseInt(process.env.CHAT_GLOBAL_HOURLY_LIMIT_MAX, 10) || 1000,
+  max: parseInt(process.env.CHAT_GLOBAL_HOURLY_LIMIT_MAX, 10) || 500,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: () => 'chat_global_hourly',
@@ -76,7 +76,7 @@ const chatGlobalHourlyLimiter = skipRateLimit ? (req, res, next) => next() : rat
 
 const chatGlobalDailyLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
-  max: parseInt(process.env.CHAT_GLOBAL_DAILY_LIMIT_MAX, 10) || 5000,
+  max: parseInt(process.env.CHAT_GLOBAL_DAILY_LIMIT_MAX, 10) || 2500,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: () => 'chat_global_daily',

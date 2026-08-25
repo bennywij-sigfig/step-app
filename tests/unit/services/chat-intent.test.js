@@ -39,7 +39,9 @@ describe('constrained chat intent validation', () => {
   test('accepts safe conversational and challenge intents', () => {
     expect(validateChatIntent({ intent: 'step_chitchat', tone: 'droll' })).toEqual({ intent: 'step_chitchat', tone: 'droll' });
     expect(validateChatIntent({ intent: 'encouragement', tone: 'encouraging' })).toEqual({ intent: 'encouragement', tone: 'encouraging' });
-    expect(validateChatIntent({ intent: 'challenge_info', tone: 'neutral' })).toEqual({ intent: 'challenge_info', tone: 'neutral' });
+    expect(validateChatIntent({ intent: 'challenge_info', tone: 'neutral' })).toEqual({ intent: 'challenge_info', tone: 'neutral', as_of_date: null });
+    expect(validateChatIntent({ intent: 'challenge_info', as_of_date: '2026-08-26', tone: 'neutral' }))
+      .toEqual({ intent: 'challenge_info', tone: 'neutral', as_of_date: '2026-08-26' });
     expect(validateChatIntent({ intent: 'challenge_outlook', leaderboard: 'team', tone: 'sarcastic' }))
       .toEqual({ intent: 'challenge_outlook', leaderboard: 'team', tone: 'sarcastic' });
   });

@@ -16,7 +16,8 @@ It does not support arbitrary questions, web access, SQL, admin actions, or modi
 ## Conversation retention
 
 - The server does not store chat transcripts.
-- Each model request receives only the current user message plus minimal challenge context.
+- Each model request may receive the current message plus up to 30 recent user/assistant messages, capped at 20,000 characters, to resolve conversational references.
+- Recent context is supplied by the browser, treated as untrusted, and cannot grant permissions or authorize actions.
 - The visible transcript is kept in browser `sessionStorage` only, scoped to the authenticated user, so it survives a refresh in the same tab but is removed when the tab/session ends.
 - Changing authenticated users clears the previous user's transcript from the tab.
 - A Clear button removes the browser transcript immediately.
@@ -62,9 +63,10 @@ All endpoints require the existing authenticated session. POST endpoints require
 - 0–70,000 steps per date, matching the existing application rule
 - Current or past dates only
 - Active challenge date range when a challenge exists
-- One model interpretation call per message
-- 30 model calls per user per hour by default
-- 1,000 global model calls per hour and 5,000 per day by default
+- One model interpretation call per message, plus a short read-only voice pass for non-write results
+- Step previews remain deterministic and do not use the voice pass
+- 30 chat submissions per user per hour by default
+- 500 global chat submissions per hour and 2,500 per day by default (read requests may use two model calls)
 - No autonomous tool loop
 
 ## Provider boundary

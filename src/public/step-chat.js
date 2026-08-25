@@ -46,6 +46,24 @@
         saveMessages();
     }
 
+    function getRecentHistory() {
+        const candidates = state.messages
+            .slice(0, -1) // The current user message is sent separately.
+            .filter(item => ['user', 'assistant'].includes(item.role))
+            .slice(-30);
+        const accepted = [];
+        let characters = 0;
+        for (let index = candidates.length - 1; index >= 0; index -= 1) {
+            const item = candidates[index];
+            const remaining = 20000 - characters;
+            if (remaining <= 0) break;
+            const text = item.text.slice(-remaining);
+            accepted.unshift({ role: item.role, text });
+            characters += text.length;
+        }
+        return accepted;
+    }
+
     function createMessage(role, text, rememberMessage = true) {
         const transcript = document.getElementById('chatTranscript');
         const message = document.createElement('div');
@@ -181,9 +199,9 @@
         message.appendChild(actions);
     }
 
-    function renderLeaderboard(result, tone) {
+    function renderLeaderboard(result, tone, reply = null) {
         const label = result.leaderboard === 'team' ? 'team' : 'individual';
-        const message = createMessage('assistant', `${toneLead(tone, 'leaderboard')} Top ranked ${label}s:`);
+        const message = createMessage('assistant', reply || `${toneLead(tone, 'leaderboard')} Top ranked ${label}s:`);
         const rows = result.ranked.slice(0, 10);
         addList(message, rows.map((row, index) => {
             const name = result.leaderboard === 'team' ? row.team : row.name;
@@ -197,13 +215,13 @@
         }
     }
 
-    function renderSteps(result, tone) {
+    function renderSteps(result, tone, reply = null) {
         const scope = result.scope === 'active_challenge' && result.challenge
             ? ` for ${result.challenge.name}`
             : result.scope === 'requested_range' ? ' for that date range' : ' across all recorded history';
         const summary = result.summary || { total_steps: 0, days_logged: 0, daily_average: 0 };
         const summaryText = `${toneLead(tone, 'steps')} Your logged-day average${scope} is ${formatNumber(Math.round(summary.daily_average))} steps across ${summary.days_logged} day${summary.days_logged === 1 ? '' : 's'} (${formatNumber(summary.total_steps)} total steps).`;
-        const message = createMessage('assistant', summaryText);
+        const message = createMessage('assistant', reply || summaryText);
         addList(message, result.entries.slice(0, 20).map(entry => `${entry.date}: ${formatNumber(entry.count)}`));
         if (!result.entries.length) {
             const empty = document.createElement('p');
@@ -213,10 +231,16 @@
     }
 
     function renderResult(payload) {
-        const { result, tone = 'encouraging' } = payload;
+        const { result, tone = 'encouraging', reply = null } = payload;
         if (result.kind === 'step_preview') return renderStepPreview(result, tone);
-        if (result.kind === 'leaderboard') return renderLeaderboard(result, tone);
-        if (result.kind === 'steps') return renderSteps(result, tone);
+        if (result.kind === 'leaderboard') return renderLeaderboard(result, tone, reply);
+        if (result.kind === 'steps') return renderSteps(result, tone, reply);
+        if (result.kind === 'clarification') {
+            const message = createMessage('assistant', reply || result.message);
+            if (result.candidates?.length) addList(message, result.candidates);
+            return;
+        }
+        if (reply) return createMessage('assistant', reply);
         if (result.kind === 'target_average') {
             const scope = result.scope === 'active_challenge' && result.challenge
                 ? ` in ${result.challenge.name}`
@@ -243,7 +267,9 @@
             } else if (result.status === 'ended') {
                 timing = `${challenge.name} ran from ${formatDate(challenge.start_date)} through ${formatDate(challenge.end_date)} and has ended.`;
             } else {
-                timing = `${challenge.name} runs through ${formatDate(challenge.end_date)}. This is day ${result.current_day} of ${result.total_days}, with ${result.remaining_days} day${result.remaining_days === 1 ? '' : 's'} left including today.`;
+                const perspective = result.as_of_date ? `As of ${formatDate(result.as_of_date)}, that will be` : 'This is';
+                const inclusion = result.as_of_date ? 'including that date' : 'including today';
+                timing = `${challenge.name} runs through ${formatDate(challenge.end_date)}. ${perspective} day ${result.current_day} of ${result.total_days}, with ${result.remaining_days} day${result.remaining_days === 1 ? '' : 's'} left ${inclusion}.`;
             }
             return createMessage('assistant', `${toneLead(tone, 'challenge')} ${timing}`);
         }
@@ -294,11 +320,6 @@
             };
             return createMessage('assistant', lines[tone] || lines.encouraging);
         }
-        if (result.kind === 'clarification') {
-            const message = createMessage('assistant', result.message);
-            if (result.candidates?.length) addList(message, result.candidates);
-            return;
-        }
         createMessage('assistant', result.message || 'I can help with step entries, challenge details, standings, targets, and the occasional morale boost.');
     }
 
@@ -339,8 +360,17 @@
         }
     }
 
+    function syncVisualViewport() {
+        const overlay = document.getElementById('stepChatOverlay');
+        if (!overlay) return;
+        const viewport = window.visualViewport;
+        overlay.style.setProperty('--chat-visual-height', `${Math.round(viewport?.height || window.innerHeight)}px`);
+        overlay.style.setProperty('--chat-visual-top', `${Math.round(viewport?.offsetTop || 0)}px`);
+    }
+
     function openChat() {
         const overlay = document.getElementById('stepChatOverlay');
+        syncVisualViewport();
         overlay.hidden = false;
         document.body.style.overflow = 'hidden';
         document.getElementById('chatInput').focus();
@@ -360,6 +390,20 @@
         const sendButton = document.getElementById('chatSendBtn');
         const toneSelect = document.getElementById('chatToneSelect');
         if (!overlay || !form) return;
+
+        // Escape the dashboard container's stacking context so Tidbits and
+        // other page cards can never paint above the modal.
+        document.body.appendChild(overlay);
+        syncVisualViewport();
+        window.visualViewport?.addEventListener('resize', syncVisualViewport);
+        window.visualViewport?.addEventListener('scroll', syncVisualViewport);
+        window.addEventListener('orientationchange', syncVisualViewport);
+        input.addEventListener('focus', () => {
+            setTimeout(() => {
+                syncVisualViewport();
+                transcript.scrollTop = transcript.scrollHeight;
+            }, 50);
+        });
 
         const storedTone = sessionStorage.getItem(TONE_STORAGE_KEY);
         if (['encouraging', 'neutral', 'droll', 'sarcastic'].includes(storedTone)) toneSelect.value = storedTone;
@@ -398,6 +442,7 @@
             try {
                 const payload = await postJson('/api/chat', {
                     message,
+                    history: getRecentHistory(),
                     tone: toneSelect.value,
                     ...getClientDateContext()
                 });

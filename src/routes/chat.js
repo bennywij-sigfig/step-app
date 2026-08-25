@@ -4,6 +4,8 @@ const { ALLOWED_TONES } = require('../services/chat-intent');
 const { isValidDate } = require('../utils/validation');
 
 const MESSAGE_LIMIT = 2000;
+const HISTORY_MESSAGE_LIMIT = 30;
+const HISTORY_CHAR_LIMIT = 20000;
 const PLAN_TTL_MS = 5 * 60 * 1000;
 const MAX_SESSION_PLANS = 5;
 
@@ -18,6 +20,52 @@ function createChatRouter({
   now = () => Date.now()
 }) {
   const router = express.Router();
+
+  function validateHistory(rawHistory) {
+    if (!Array.isArray(rawHistory)) return [];
+    const recent = rawHistory.slice(-HISTORY_MESSAGE_LIMIT);
+    const accepted = [];
+    let totalCharacters = 0;
+    for (let index = recent.length - 1; index >= 0; index -= 1) {
+      const item = recent[index];
+      if (!item || !['user', 'assistant'].includes(item.role) || typeof item.text !== 'string') continue;
+      const text = item.text.trim().slice(0, 4000);
+      if (!text) continue;
+      const remaining = HISTORY_CHAR_LIMIT - totalCharacters;
+      if (remaining <= 0) break;
+      accepted.unshift({ role: item.role, text: text.slice(-remaining) });
+      totalCharacters += Math.min(text.length, remaining);
+    }
+    return accepted;
+  }
+
+  function narrationFacts(result) {
+    if (result.kind === 'leaderboard') {
+      const averageField = result.leaderboard === 'team' ? 'team_steps_per_day_reported' : 'steps_per_day_reported';
+      return {
+        kind: result.kind,
+        leaderboard: result.leaderboard,
+        challenge: result.challenge ? { name: result.challenge.name, end_date: result.challenge.end_date } : null,
+        ranked: result.ranked.slice(0, 10).map((row, index) => ({
+          rank: index + 1,
+          name: result.leaderboard === 'team' ? row.team : row.name,
+          average: Math.round(Number(row[averageField]) || 0)
+        })),
+        unranked_count: result.unranked.length
+      };
+    }
+    if (result.kind === 'steps') {
+      return {
+        kind: result.kind,
+        scope: result.scope,
+        challenge: result.challenge,
+        summary: result.summary,
+        recent_entries: result.entries.slice(0, 7)
+      };
+    }
+    if (result.kind === 'step_preview') return null;
+    return result;
+  }
 
   function applyClientDateContext(context, body) {
     const clientDate = body?.client_date;
@@ -68,9 +116,10 @@ function createChatRouter({
     }
 
     try {
+      const history = validateHistory(req.body?.history);
       const serverContext = await service.getContext();
       const context = applyClientDateContext(serverContext, req.body);
-      const intent = await provider.interpret(message.trim(), context);
+      const intent = await provider.interpret(message.trim(), context, history);
       if (ALLOWED_TONES.has(req.body?.tone)) intent.tone = req.body.tone;
       const result = await service.executeIntent(req.session.userId, intent);
 
@@ -91,7 +140,17 @@ function createChatRouter({
         }
       }
 
-      res.json({ intent: intent.intent, tone: intent.tone, result });
+      let reply = null;
+      const facts = narrationFacts(result);
+      if (facts && typeof provider.compose === 'function') {
+        try {
+          reply = await provider.compose(message.trim(), history, intent.tone, facts);
+        } catch (error) {
+          console.warn('Trotter voice pass failed; using deterministic fallback:', error.message);
+        }
+      }
+
+      res.json({ intent: intent.intent, tone: intent.tone, result, reply });
     } catch (error) {
       if (error.code === 'CHAT_NOT_CONFIGURED') {
         return res.status(503).json({ error: 'Chat beta is not configured yet' });
@@ -142,5 +201,7 @@ function createChatRouter({
 module.exports = {
   createChatRouter,
   MESSAGE_LIMIT,
+  HISTORY_MESSAGE_LIMIT,
+  HISTORY_CHAR_LIMIT,
   PLAN_TTL_MS
 };

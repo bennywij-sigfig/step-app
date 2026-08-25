@@ -107,6 +107,13 @@ describe('Step Chat deterministic write service', () => {
         total_days: 365, remaining_days: 129
       });
 
+      const tomorrow = await service.executeIntent(1, {
+        intent: 'challenge_info', as_of_date: '2025-08-26', tone: 'neutral'
+      });
+      expect(tomorrow).toMatchObject({
+        status: 'active', as_of_date: '2025-08-26', current_day: 238, remaining_days: 128
+      });
+
       const encouragement = await service.executeIntent(1, { intent: 'encouragement', tone: 'droll' });
       expect(encouragement).toMatchObject({
         kind: 'encouragement', scope: 'active_challenge',
