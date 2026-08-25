@@ -456,6 +456,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('stepsChart').innerHTML = '<p>Error loading chart</p>';
             }
         }
+
+        // Refresh the existing dashboard after Step Chat commits entries.
+        window.addEventListener('step-chat-saved', loadSteps);
         
         // Render steps chart
         function renderStepsChart(steps) {

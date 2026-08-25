@@ -45,6 +45,47 @@ const apiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   }
 });
 
+// Chat has a separate, lower ceiling because each request may incur model cost.
+const chatApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: parseInt(process.env.CHAT_API_LIMIT_MAX, 10) || 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.session?.userId
+    ? `chat_user_${req.session.userId}`
+    : `chat_ip_${ipKeyGenerator(req)}`,
+  handler: (req, res) => res.status(429).json({
+    error: 'Chat limit reached. Please try again later.',
+    retryAfter: 3600
+  })
+});
+
+// Global model-call budgets bound aggregate spend even if many authenticated
+// users are active at once. Confirmation requests do not use these budgets.
+const chatGlobalHourlyLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: parseInt(process.env.CHAT_GLOBAL_HOURLY_LIMIT_MAX, 10) || 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: () => 'chat_global_hourly',
+  handler: (req, res) => res.status(429).json({
+    error: 'Trotter is taking a short budget break. Please try again later.',
+    retryAfter: 3600
+  })
+});
+
+const chatGlobalDailyLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  max: parseInt(process.env.CHAT_GLOBAL_DAILY_LIMIT_MAX, 10) || 5000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: () => 'chat_global_daily',
+  handler: (req, res) => res.status(429).json({
+    error: 'Trotter reached today’s shared usage budget. It will be back after the reset.',
+    retryAfter: 86400
+  })
+});
+
 const adminApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: parseInt(process.env.ADMIN_API_LIMIT_MAX) || 400, // increased from 200 to 400 per hour per session
@@ -130,6 +171,9 @@ const mcpBurstLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
 module.exports = {
   magicLinkLimiter,
   apiLimiter,
+  chatApiLimiter,
+  chatGlobalHourlyLimiter,
+  chatGlobalDailyLimiter,
   adminApiLimiter,
   mcpApiLimiter,
   mcpBurstLimiter,

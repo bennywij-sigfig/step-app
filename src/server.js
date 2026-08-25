@@ -20,11 +20,17 @@ const {
 const {
   magicLinkLimiter,
   apiLimiter,
+  chatApiLimiter,
+  chatGlobalHourlyLimiter,
+  chatGlobalDailyLimiter,
   adminApiLimiter,
   mcpApiLimiter,
   mcpBurstLimiter
 } = require('./middleware/rateLimiters');
 const { sendEmail } = require('./services/email');
+const { createGeminiChatProvider } = require('./services/chat-provider');
+const { createStepChatService } = require('./services/step-chat');
+const { createChatRouter } = require('./routes/chat');
 const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
 const { hashToken, generateSecureToken } = require('./utils/token');
 const {
@@ -458,6 +464,36 @@ app.get('/api/csrf-token', requireApiAuth, (req, res) => {
   }
   res.json({ csrfToken: req.session.csrfToken });
 });
+
+// Constrained Step Chat beta. The database proxy follows test-time database
+// reinitialization instead of retaining the connection present at startup.
+const chatDb = {
+  get: (...args) => db.get(...args),
+  all: (...args) => db.all(...args),
+  run: (...args) => db.run(...args)
+};
+const stepChatService = createStepChatService({
+  db: chatDb,
+  getIndividualLeaderboard: getIndividualLeaderboardWithRates,
+  getTeamLeaderboard: getTeamLeaderboardWithRates,
+  createTransactionConnection: () => new Promise((resolve, reject) => {
+    const transactionDb = new sqlite3.Database(db.filename, error => {
+      if (error) return reject(error);
+      transactionDb.configure('busyTimeout', 5000);
+      resolve(transactionDb);
+    });
+  })
+});
+const chatProvider = createGeminiChatProvider();
+app.use('/api/chat', createChatRouter({
+  requireApiAuth,
+  validateCSRFToken,
+  chatApiLimiter,
+  chatGlobalHourlyLimiter,
+  chatGlobalDailyLimiter,
+  provider: chatProvider,
+  service: stepChatService
+}));
 
 // Health check endpoint with comprehensive database monitoring
 app.get('/health', async (req, res) => {
