@@ -138,6 +138,26 @@ describe('Step Chat routes', () => {
     expect(response.body.reply).toBe('A natural Trotter response.');
   });
 
+  test('injects the validated current date into date-aware calculations', async () => {
+    const interpret = jest.fn(async () => ({ intent: 'challenge_info', tone: 'neutral', as_of_date: null }));
+    const executeIntent = jest.fn(async () => ({ kind: 'challenge_info', has_challenge: false }));
+    const { app } = buildApp({ providerOverrides: { interpret }, serviceOverrides: { executeIntent } });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({
+        message: 'How long until the challenge starts?',
+        client_date: '2026-08-24',
+        client_timezone: 'America/Los_Angeles'
+      })
+      .expect(200);
+
+    expect(executeIntent).toHaveBeenCalledWith(42, {
+      intent: 'challenge_info', tone: 'neutral', as_of_date: '2026-08-24'
+    });
+  });
+
   test('creates a single-use plan and confirms the exact server-side preview', async () => {
     const preview = {
       kind: 'step_preview',

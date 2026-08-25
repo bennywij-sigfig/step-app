@@ -263,7 +263,10 @@
             const challenge = result.challenge;
             let timing;
             if (result.status === 'upcoming') {
-                timing = `${challenge.name} starts ${formatDate(challenge.start_date)} and ends ${formatDate(challenge.end_date)}. It lasts ${result.total_days} days.`;
+                const countdown = result.days_until_start === 1
+                    ? ' It starts tomorrow.'
+                    : ` It starts in ${result.days_until_start} days.`;
+                timing = `${challenge.name} starts ${formatDate(challenge.start_date)} and ends ${formatDate(challenge.end_date)}.${countdown} It lasts ${result.total_days} days.`;
             } else if (result.status === 'ended') {
                 timing = `${challenge.name} ran from ${formatDate(challenge.start_date)} through ${formatDate(challenge.end_date)} and has ended.`;
             } else {

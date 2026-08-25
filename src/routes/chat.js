@@ -121,6 +121,11 @@ function createChatRouter({
       const context = applyClientDateContext(serverContext, req.body);
       const intent = await provider.interpret(message.trim(), context, history);
       if (ALLOWED_TONES.has(req.body?.tone)) intent.tone = req.body.tone;
+      // Challenge countdowns must use the validated browser-local date rather
+      // than asking the voice model to infer today's date from prose.
+      if (['challenge_info', 'challenge_outlook', 'calculate_overtake', 'calculate_target_average'].includes(intent.intent) && !intent.as_of_date) {
+        intent.as_of_date = context.currentDate;
+      }
       const result = await service.executeIntent(req.session.userId, intent);
 
       if (result.kind === 'step_preview') {

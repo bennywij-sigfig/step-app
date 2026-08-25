@@ -103,16 +103,36 @@ describe('Step Chat deterministic write service', () => {
     try {
       const timing = await service.executeIntent(1, { intent: 'challenge_info', tone: 'neutral' });
       expect(timing).toMatchObject({
-        kind: 'challenge_info', has_challenge: true, status: 'active', current_day: 237,
-        total_days: 365, remaining_days: 129
+        kind: 'challenge_info', has_challenge: true, status: 'active', current_day: 238,
+        total_days: 365, remaining_days: 128
+      });
+
+      const beforeStart = await service.executeIntent(1, {
+        intent: 'challenge_info', as_of_date: '2024-12-20', tone: 'neutral'
+      });
+      expect(beforeStart).toMatchObject({
+        status: 'upcoming', as_of_date: '2024-12-20', current_day: 0, days_until_start: 12
       });
 
       const tomorrow = await service.executeIntent(1, {
         intent: 'challenge_info', as_of_date: '2025-08-26', tone: 'neutral'
       });
       expect(tomorrow).toMatchObject({
-        status: 'active', as_of_date: '2025-08-26', current_day: 238, remaining_days: 128
+        status: 'active', as_of_date: '2025-08-26', current_day: 238,
+        remaining_days: 128, days_until_start: 0, days_until_end: 127
       });
+
+      const finalDay = await service.executeIntent(1, {
+        intent: 'challenge_info', as_of_date: '2025-12-31', tone: 'neutral'
+      });
+      expect(finalDay).toMatchObject({
+        status: 'active', current_day: 365, remaining_days: 1, days_until_end: 0
+      });
+
+      const afterEnd = await service.executeIntent(1, {
+        intent: 'challenge_info', as_of_date: '2026-01-01', tone: 'neutral'
+      });
+      expect(afterEnd).toMatchObject({ status: 'ended', remaining_days: 0, days_until_end: 0 });
 
       const encouragement = await service.executeIntent(1, { intent: 'encouragement', tone: 'droll' });
       expect(encouragement).toMatchObject({
@@ -201,6 +221,13 @@ describe('Step Chat deterministic write service', () => {
       await new Promise(resolve => mainDb.close(() => resolve()));
       fs.rmSync(tempDir, { recursive: true, force: true });
     }
+  });
+
+  test('projections use their authoritative as-of date and reject post-challenge calculations', async () => {
+    await expect(service.executeIntent(1, {
+      intent: 'calculate_target_average', target_average: 10000, days: null,
+      as_of_date: '2026-01-01', tone: 'neutral'
+    })).rejects.toThrow('challenge has ended');
   });
 
   test('default projections exclude remaining dates that are already logged', async () => {

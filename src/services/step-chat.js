@@ -2,7 +2,6 @@ const { isValidDate } = require('../utils/validation');
 const {
   getCurrentChallengeDay,
   getTotalChallengeDays,
-  getChallengeStatus,
   getLatestSupportedLocalDate,
   isDateInChallengePeriod
 } = require('../utils/challenge');
@@ -276,19 +275,51 @@ function createStepChatService({
     return { kind: 'leaderboard', leaderboard: 'team', challenge: null, ranked: rows, unranked: [] };
   }
 
-  async function getProjectionDays(challenge, requestedDays, userId) {
+  function getChallengeTiming(challenge, asOfDate = null) {
+    const referenceDate = asOfDate || getLatestSupportedLocalDate();
+    const totalDays = getTotalChallengeDays(challenge);
+    const referenceTime = Date.parse(`${referenceDate}T00:00:00Z`);
+    const startTime = Date.parse(`${challenge.start_date}T00:00:00Z`);
+    const endTime = Date.parse(`${challenge.end_date}T00:00:00Z`);
+    const status = referenceDate < challenge.start_date
+      ? 'upcoming'
+      : referenceDate > challenge.end_date ? 'ended' : 'active';
+    const daysUntilStart = status === 'upcoming'
+      ? Math.ceil((startTime - referenceTime) / 86400000)
+      : 0;
+    const daysUntilEnd = status === 'ended'
+      ? 0
+      : Math.ceil((endTime - referenceTime) / 86400000);
+    const currentDay = status === 'upcoming'
+      ? 0
+      : status === 'ended'
+        ? totalDays
+        : Math.floor((referenceTime - startTime) / 86400000) + 1;
+    const remainingDays = status === 'ended'
+      ? 0
+      : status === 'upcoming'
+        ? totalDays
+        : daysUntilEnd + 1;
+    return {
+      as_of_date: referenceDate,
+      status,
+      current_day: currentDay,
+      total_days: totalDays,
+      remaining_days: remainingDays,
+      days_until_start: daysUntilStart,
+      days_until_end: daysUntilEnd
+    };
+  }
+
+  async function getProjectionDays(challenge, requestedDays, userId, asOfDate = null) {
     if (!challenge) return requestedDays || 7;
-    const status = getChallengeStatus(challenge);
-    if (status === 'ended') {
+    const timing = getChallengeTiming(challenge, asOfDate);
+    if (timing.status === 'ended') {
       throw userError('The active challenge has ended, so there are no remaining days for a projection');
     }
 
-    const totalDays = getTotalChallengeDays(challenge);
-    const currentDay = status === 'upcoming' ? 1 : getCurrentChallengeDay(challenge);
-    const firstAvailable = new Date(`${challenge.start_date}T00:00:00Z`);
-    firstAvailable.setUTCDate(firstAvailable.getUTCDate() + currentDay - 1);
-    const firstAvailableDate = firstAvailable.toISOString().slice(0, 10);
-    const remainingCalendarDays = status === 'upcoming' ? totalDays : Math.max(0, totalDays - currentDay + 1);
+    const firstAvailableDate = timing.status === 'upcoming' ? challenge.start_date : timing.as_of_date;
+    const remainingCalendarDays = timing.remaining_days;
     const alreadyLogged = await get(
       `SELECT COUNT(*) AS count FROM steps
        WHERE user_id = ? AND challenge_id = ? AND date >= ? AND date <= ?`,
@@ -306,10 +337,10 @@ function createStepChatService({
     return days;
   }
 
-  async function calculateTargetAverage(userId, targetAverage, requestedDays) {
+  async function calculateTargetAverage(userId, targetAverage, requestedDays, asOfDate = null) {
     const history = await getMySteps(userId, null, null);
     const challenge = await getActiveChallenge();
-    const days = await getProjectionDays(challenge, requestedDays, userId);
+    const days = await getProjectionDays(challenge, requestedDays, userId, asOfDate);
     const currentTotal = history.summary.total_steps;
     const currentDays = history.summary.days_logged;
     const requiredAdditional = Math.max(0, Math.ceil(targetAverage * (currentDays + days) - currentTotal));
@@ -325,6 +356,7 @@ function createStepChatService({
         days: currentDays,
         average: history.summary.daily_average
       },
+      as_of_date: asOfDate,
       days,
       required_total: requiredAdditional,
       required_daily_average: requiredDailyAverage,
@@ -336,68 +368,45 @@ function createStepChatService({
   async function challengeInfo(asOfDate = null) {
     const challenge = await getActiveChallenge();
     if (!challenge) return { kind: 'challenge_info', has_challenge: false, as_of_date: asOfDate };
-    const totalDays = getTotalChallengeDays(challenge);
-    let status;
-    let currentDay;
-    let remainingDays;
-
-    if (asOfDate) {
-      status = asOfDate < challenge.start_date ? 'upcoming' : asOfDate > challenge.end_date ? 'ended' : 'active';
-      if (status === 'upcoming') {
-        currentDay = 0;
-        remainingDays = totalDays;
-      } else if (status === 'ended') {
-        currentDay = totalDays;
-        remainingDays = 0;
-      } else {
-        const start = Date.parse(`${challenge.start_date}T00:00:00Z`);
-        const asOf = Date.parse(`${asOfDate}T00:00:00Z`);
-        currentDay = Math.floor((asOf - start) / 86400000) + 1;
-        remainingDays = totalDays - currentDay + 1;
-      }
-    } else {
-      status = getChallengeStatus(challenge);
-      currentDay = getCurrentChallengeDay(challenge);
-      remainingDays = status === 'ended'
-        ? 0
-        : status === 'upcoming'
-          ? totalDays
-          : Math.max(0, totalDays - currentDay + 1);
-    }
+    const timing = getChallengeTiming(challenge, asOfDate);
     return {
       kind: 'challenge_info',
       has_challenge: true,
-      as_of_date: asOfDate,
+      as_of_date: timing.as_of_date,
       challenge: {
         id: challenge.id,
         name: challenge.name,
         start_date: challenge.start_date,
         end_date: challenge.end_date
       },
-      status,
-      current_day: currentDay,
-      total_days: totalDays,
-      remaining_days: remainingDays
+      status: timing.status,
+      current_day: timing.current_day,
+      total_days: timing.total_days,
+      remaining_days: timing.remaining_days,
+      days_until_start: timing.days_until_start,
+      days_until_end: timing.days_until_end
     };
   }
 
-  async function challengeOutlook(userId, leaderboardType) {
+  async function challengeOutlook(userId, leaderboardType, asOfDate = null) {
     const leaderboard = leaderboardType === 'team'
       ? await teamLeaderboard()
       : await individualLeaderboard();
     const ranked = leaderboard.ranked;
     const challenge = leaderboard.challenge;
-    const status = challenge ? getChallengeStatus(challenge) : 'all_time';
-    const remainingDays = !challenge || status === 'ended'
-      ? 0
-      : status === 'upcoming'
-        ? getTotalChallengeDays(challenge)
-        : Math.max(0, getTotalChallengeDays(challenge) - getCurrentChallengeDay(challenge) + 1);
+    const timing = challenge ? getChallengeTiming(challenge, asOfDate) : null;
+    const status = timing?.status || 'all_time';
+    const remainingDays = timing?.remaining_days || 0;
+    const timingFacts = timing ? {
+      as_of_date: timing.as_of_date,
+      days_until_start: timing.days_until_start,
+      days_until_end: timing.days_until_end
+    } : { as_of_date: asOfDate, days_until_start: 0, days_until_end: 0 };
 
     if (leaderboardType === 'team') {
       const user = await get('SELECT team FROM users WHERE id = ?', [userId]);
       if (!user?.team) {
-        return { kind: 'outlook', leaderboard: 'team', status, remaining_days: remainingDays, has_entry: false, reason: 'no_team' };
+        return { kind: 'outlook', leaderboard: 'team', status, remaining_days: remainingDays, ...timingFacts, has_entry: false, reason: 'no_team' };
       }
       const allRows = [...ranked, ...leaderboard.unranked];
       const mine = allRows.find(row => row.team === user.team);
@@ -405,7 +414,7 @@ function createStepChatService({
       const leader = ranked[0] || null;
       const myAverage = Number(mine?.team_steps_per_day_reported) || 0;
       return {
-        kind: 'outlook', leaderboard: 'team', status, remaining_days: remainingDays,
+        kind: 'outlook', leaderboard: 'team', status, remaining_days: remainingDays, ...timingFacts,
         has_entry: Boolean(mine), name: user.team, ranked: rankIndex >= 0,
         rank: rankIndex >= 0 ? rankIndex + 1 : null, ranked_count: ranked.length,
         average: myAverage,
@@ -420,7 +429,7 @@ function createStepChatService({
     const leader = ranked[0] || null;
     const myAverage = Number(mine?.steps_per_day_reported) || 0;
     return {
-      kind: 'outlook', leaderboard: 'individual', status, remaining_days: remainingDays,
+      kind: 'outlook', leaderboard: 'individual', status, remaining_days: remainingDays, ...timingFacts,
       has_entry: Boolean(mine), ranked: rankIndex >= 0,
       rank: rankIndex >= 0 ? rankIndex + 1 : null, ranked_count: ranked.length,
       average: myAverage,
@@ -440,7 +449,7 @@ function createStepChatService({
     };
   }
 
-  async function calculateOvertake(userId, targetName, requestedDays) {
+  async function calculateOvertake(userId, targetName, requestedDays, asOfDate = null) {
     const leaderboard = await individualLeaderboard();
     const everyone = [...leaderboard.ranked, ...leaderboard.unranked];
     const query = targetName.toLocaleLowerCase();
@@ -457,7 +466,7 @@ function createStepChatService({
     const target = matches[0];
     if (Number(target.id) === Number(userId)) throw userError('Choose someone other than yourself to overtake');
     const me = everyone.find(row => Number(row.id) === Number(userId)) || { total_steps: 0, days_logged: 0, steps_per_day_reported: 0 };
-    const days = await getProjectionDays(leaderboard.challenge, requestedDays, userId);
+    const days = await getProjectionDays(leaderboard.challenge, requestedDays, userId, asOfDate);
     const targetAverage = Number(target.steps_per_day_reported) || 0;
     const myTotal = Number(me.total_steps) || 0;
     const myDays = Number(me.days_logged) || 0;
@@ -467,6 +476,7 @@ function createStepChatService({
       kind: 'overtake',
       target: { id: target.id, name: target.name, average: targetAverage },
       current: { total: myTotal, days: myDays, average: Number(me.steps_per_day_reported) || 0 },
+      as_of_date: asOfDate,
       days,
       required_total: requiredAdditional,
       required_daily_average: Math.ceil(requiredAdditional / days),
@@ -481,9 +491,9 @@ function createStepChatService({
       case 'show_my_steps': return getMySteps(userId, intent.start_date, intent.end_date);
       case 'individual_leaderboard': return individualLeaderboard();
       case 'team_leaderboard': return teamLeaderboard();
-      case 'calculate_overtake': return calculateOvertake(userId, intent.target_name, intent.days);
-      case 'calculate_target_average': return calculateTargetAverage(userId, intent.target_average, intent.days);
-      case 'challenge_outlook': return challengeOutlook(userId, intent.leaderboard);
+      case 'calculate_overtake': return calculateOvertake(userId, intent.target_name, intent.days, intent.as_of_date);
+      case 'calculate_target_average': return calculateTargetAverage(userId, intent.target_average, intent.days, intent.as_of_date);
+      case 'challenge_outlook': return challengeOutlook(userId, intent.leaderboard, intent.as_of_date);
       case 'challenge_info': return challengeInfo(intent.as_of_date);
       case 'encouragement': return encouragement(userId);
       case 'step_chitchat': return { kind: 'chitchat' };

@@ -95,6 +95,7 @@ function validateChatIntent(rawIntent) {
 
   if (intent === 'challenge_outlook') {
     normalized.leaderboard = rawIntent.leaderboard === 'team' ? 'team' : 'individual';
+    if (rawIntent.as_of_date !== undefined) normalized.as_of_date = optionalDate(rawIntent.as_of_date, 'as_of_date');
   }
 
   if (intent === 'challenge_info') {
@@ -102,6 +103,7 @@ function validateChatIntent(rawIntent) {
   }
 
   if (intent === 'calculate_overtake' || intent === 'calculate_target_average') {
+    if (rawIntent.as_of_date !== undefined) normalized.as_of_date = optionalDate(rawIntent.as_of_date, 'as_of_date');
     if (rawIntent.days !== undefined && rawIntent.days !== null) {
       if (!Number.isInteger(rawIntent.days) || rawIntent.days < 1 || rawIntent.days > 366) {
         invalid('Choose a whole number of days between 1 and 366.');

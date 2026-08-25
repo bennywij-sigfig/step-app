@@ -31,9 +31,9 @@ Allowed intent values:
 - show_my_steps: the user's step history, total, or daily/logged-day average; optional start_date and end_date
 - individual_leaderboard
 - team_leaderboard
-- calculate_overtake: target_name and optional days
-- calculate_target_average: target_average as an integer step count and optional days
-- challenge_outlook: questions about whether the user or their team will win/lose, current chances, position, or how they are doing; leaderboard is individual or team
+- calculate_overtake: target_name, optional days, and optional as_of_date when the user asks from a future/specific date
+- calculate_target_average: target_average as an integer step count, optional days, and optional as_of_date
+- challenge_outlook: questions about whether the user or their team will win/lose, current chances, position, or how they are doing; leaderboard is individual or team and as_of_date is optional
 - challenge_info: questions about challenge dates, when it starts or ends, its status, current challenge day, or how many days remain; include as_of_date YYYY-MM-DD when the user asks about tomorrow or another specific date
 - encouragement: requests for motivation, encouragement, reassurance, or a morale boost
 - step_chitchat: greetings, thanks, and harmless light conversation or jokes about walking and the step challenge
