@@ -192,6 +192,12 @@
                 font-size: 13px;
             }
         }
+        #stepsForm,
+        .form-group {
+            min-width: 0;
+            max-width: 100%;
+        }
+
         .form-group {
             margin-bottom: 14px;
         }
@@ -207,6 +213,7 @@
         .form-group input {
             display: block;
             width: 100%;
+            max-width: 100%;
             min-width: 0;
             height: 48px;
             padding: 12px;
@@ -1087,6 +1094,22 @@
 
         /* Mobile Safari/Android specific optimizations */
         @supports (-webkit-touch-callout: none) {
+            /* iOS Safari gives date controls an intrinsic landscape width unless
+               their native appearance and inline sizing are explicitly reset. */
+            .form-group input[type="date"] {
+                -webkit-appearance: none;
+                appearance: none;
+                inline-size: 100%;
+                max-inline-size: 100%;
+                min-inline-size: 0;
+                overflow: hidden;
+            }
+
+            .form-group input[type="date"]::-webkit-date-and-time-value {
+                min-width: 0;
+                text-align: left;
+            }
+
             /* iOS Safari specific optimizations */
             .validation-feedback {
                 -webkit-transform: translateY(-50%);
