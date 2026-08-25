@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Step Challenge - Dashboard</title>
     
     <!-- Prevent FOUC by applying theme immediately -->
@@ -35,7 +35,10 @@
         
         /* Global smooth scrolling for high FPS devices */
         html {
+            min-height: 100%;
             scroll-behavior: smooth;
+            /* Paint behind iPhone landscape safe areas instead of leaving white gutters. */
+            background: var(--primary-gradient);
         }
         
         body {
@@ -55,7 +58,8 @@
         .container {
             max-width: 600px;
             margin: 0 auto;
-            padding: 15px;
+            /* Landscape iPhones can be wider than the mobile breakpoint. */
+            padding: 15px max(15px, env(safe-area-inset-right)) max(15px, env(safe-area-inset-bottom)) max(15px, env(safe-area-inset-left));
         }
         
         @media (max-width: 768px) {
@@ -201,11 +205,15 @@
         }
         
         .form-group input {
+            display: block;
             width: 100%;
+            min-width: 0;
+            height: 48px;
             padding: 12px;
             border: 2px solid rgba(102, 126, 234, 0.1);
             border-radius: 10px;
             font-size: 16px;
+            line-height: normal;
             background: rgba(255, 255, 255, 0.8);
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
@@ -921,6 +929,8 @@
         /* Delightful Step Entry UX Improvements */
         .input-with-validation {
             position: relative;
+            width: 100%;
+            min-width: 0;
         }
 
         .validation-feedback {
