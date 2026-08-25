@@ -10,12 +10,12 @@ const SYSTEM_DEFAULT_VALUE = 'system-default';
 
 // Centralized theme definitions (DRY principle)
 const THEME_DEFINITIONS = {
-    'default': { name: 'Dawn Patrol', value: 'default' },
-    'golden-hour': { name: 'Golden Hour', value: 'golden-hour' },
-    'evergreen': { name: 'Evergreen', value: 'evergreen' },
-    'berry-pace': { name: 'Berry Pace', value: 'berry-pace' },
-    'tidepool': { name: 'Tidepool', value: 'tidepool' },
-    'night-run': { name: 'Night Run', value: 'night-run' }
+    'default': { name: 'Dawn Patrol', value: 'default', browserColor: '#0f3d4c' },
+    'golden-hour': { name: 'Golden Hour', value: 'golden-hour', browserColor: '#7c2d12' },
+    'evergreen': { name: 'Evergreen', value: 'evergreen', browserColor: '#14532d' },
+    'berry-pace': { name: 'Berry Pace', value: 'berry-pace', browserColor: '#581c87' },
+    'tidepool': { name: 'Tidepool', value: 'tidepool', browserColor: '#075985' },
+    'night-run': { name: 'Night Run', value: 'night-run', browserColor: '#111827' }
 };
 
 const LEGACY_THEME_MAP = {
@@ -65,6 +65,13 @@ function applyTheme(themeName) {
         document.documentElement.removeAttribute('data-theme');
     } else {
         document.documentElement.setAttribute('data-theme', normalizedTheme);
+    }
+
+    // Safari's top and bottom browser areas cannot render the page gradient,
+    // but theme-color keeps them visually connected with its darkest stop.
+    const themeColor = document.querySelector('meta[name="theme-color"]');
+    if (themeColor) {
+        themeColor.setAttribute('content', THEME_DEFINITIONS[normalizedTheme].browserColor);
     }
 }
 
