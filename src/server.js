@@ -574,11 +574,20 @@ app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
     // Send email
     const loginUrl = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
     
-    // Random quotes
+    // A varied set of walking and momentum-themed quotes for the login email.
+    // Keep the text and attribution separate so the email can style them cleanly.
     const quotes = [
-      "To alcohol! The cause of, and solution to, all of life's problems. -- Homer",
-      "Do or do not, there is no try. -- Yoda",
-      "The most important thing we learn at school is the fact that the most important things can't be learned at school. -- Murakami",
+      { text: "To alcohol! The cause of, and solution to, all of life's problems.", author: "Homer Simpson" },
+      { text: "Tokens cost money; steps are free.", author: "Not AI" },
+      { text: "My grandma walks after every meal. She's 97 and healthy.", author: "Not-a-doctor." },
+      { text: "The machines will take care of themselves, get some steps and take care of yourself.", author: "Someone profound" },
+      { text: "A good walk will solve the bug. If not, throw AI at it!", author: "Random engineer" },
+      { text: "One foot in front of the other, while we still can.", author: "Never give up." },
+      { text: "Above all, do not lose your desire to walk.", author: "Søren Kierkegaard" },
+      { text: "If I could not walk fast and far, I should just explode and perish.", author: "Charles Dickens" },
+      { text: "The true charm of pedestrianism does not lie in the walking, or in the scenery, but in the talking.", author: "Mark Twain" },
+      { text: "Walking is the best possible exercise. Habituate yourself to walk very far.", author: "Thomas Jefferson" },
+      { text: "I have two doctors, my left leg and my right.", author: "G. M. Trevelyan" }
     ];
     
     const xkcdLinks = [
@@ -617,9 +626,12 @@ app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
           </p>
           
           <div style="background: rgba(102, 126, 234, 0.1); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-            <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">Quote of the Day</h3>
-            <p style="font-style: italic; color: #555; margin: 0; font-size: 14px; line-height: 1.5;">
-              "${randomQuote}"
+            <h3 style="margin: 0 0 10px 0; color: #333; font-size: 16px;">A little momentum</h3>
+            <p style="font-style: italic; color: #555; margin: 0 0 8px 0; font-size: 14px; line-height: 1.5;">
+              &ldquo;${randomQuote.text}&rdquo;
+            </p>
+            <p style="color: #777; margin: 0; font-size: 12px;">
+              &mdash; ${randomQuote.author}
             </p>
           </div>
           
@@ -643,8 +655,8 @@ ${loginUrl}
 
 This link expires in 30 minutes for security.
 
-Quote of the Day:
-"${randomQuote}"
+A little momentum:
+“${randomQuote.text}” — ${randomQuote.author}
 
 ${randomXkcd}
 
