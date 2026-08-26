@@ -146,6 +146,23 @@ describe('bounded Trotter tool-agent contract', () => {
     expect(result.primary_result.kind).toBe('step_preview');
   });
 
+  test('rejects multiple preview calls in one submission', async () => {
+    const model = {
+      generate: jest.fn(async () => ({
+        text: null,
+        functionCalls: [
+          { name: 'preview_step_entries', args: { entries: [{ date: '2026-09-01', count: 1 }] } },
+          { name: 'preview_step_entries', args: { entries: [{ date: '2026-09-02', count: 2 }] } }
+        ]
+      }))
+    };
+    const registry = createChatToolRegistry({ service: fakeService() });
+    await expect(runTrotterAgent({
+      model, registry, message: 'make two previews', history: [], tone: 'neutral',
+      context: { userId: 42, currentDate: '2026-09-01' }
+    })).rejects.toThrow('Only one step preview');
+  });
+
   test('allows a second-round preview when a read observation was needed first', async () => {
     const model = {
       generate: jest.fn()

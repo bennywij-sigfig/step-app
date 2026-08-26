@@ -69,7 +69,9 @@ describe('Step Chat routes', () => {
     const agent = request.agent(app);
     await agent.post('/test-login').expect(200);
     const response = await agent.get('/api/chat/config').expect(200);
-    expect(response.body).toMatchObject({ enabled: true, provider: 'test', model: 'test-model', transcript_scope: '42' });
+    expect(response.body).toMatchObject({
+      enabled: true, provider: 'test', model: 'test-model', transcript_scope: '42', agent_mode: 'legacy'
+    });
     expect(JSON.stringify(response.body)).not.toContain('apiKey');
   });
 
@@ -304,6 +306,53 @@ describe('Step Chat routes', () => {
     expect(response.body.reply).toBeNull();
     expect(response.body.result).toMatchObject({ kind: 'step_preview', plan_id: expect.any(String) });
     expect(response.body.agent).toEqual({ rounds: 1, tools: ['preview_step_entries'] });
+  });
+
+  test('suppresses direct tool-agent prose that falsely claims a write', async () => {
+    const model = { generate: jest.fn(async () => ({ text: 'I successfully saved your steps.', functionCalls: [] })) };
+    const { app } = buildApp({
+      agentMode: 'tools', toolRegistry: { declarations: [], execute: jest.fn() },
+      providerOverrides: { createToolModel: jest.fn(() => model) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Did you save it?' })
+      .expect(200);
+    expect(response.body.reply).toBeNull();
+    expect(response.body.result).toEqual({
+      kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.'
+    });
+  });
+
+  test('maps tool protocol rejection and provider timeout without leaking details', async () => {
+    const toolError = new Error('Unknown Trotter tool: commit_steps');
+    toolError.code = 'CHAT_TOOL_ERROR';
+    const errorModel = { generate: jest.fn(async () => ({
+      text: null, functionCalls: [{ name: 'commit_steps', args: {} }]
+    })) };
+    const { app } = buildApp({
+      agentMode: 'tools',
+      toolRegistry: { declarations: [], execute: jest.fn(async () => { throw toolError; }) },
+      providerOverrides: { createToolModel: jest.fn(() => errorModel) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const rejected = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Commit without preview' })
+      .expect(422);
+    expect(rejected.body.error).not.toContain('commit_steps');
+
+    const timeout = new Error('provider socket detail');
+    timeout.code = 'ECONNABORTED';
+    errorModel.generate.mockRejectedValue(timeout);
+    const timedOut = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'hello again' })
+      .expect(502);
+    expect(timedOut.body.error).not.toContain('socket');
   });
 
   test('extracts a validated in-memory image and rejects invalid magic bytes', async () => {
