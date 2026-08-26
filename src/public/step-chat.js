@@ -347,6 +347,16 @@
         message.appendChild(actions);
     }
 
+    function appendVerifiedFacts(message, lines) {
+        const box = document.createElement('div');
+        box.className = 'chat-verified-facts';
+        const title = document.createElement('strong');
+        title.textContent = 'Verified';
+        box.appendChild(title);
+        addList(box, lines);
+        message.appendChild(box);
+    }
+
     function renderLeaderboard(result, tone, reply = null) {
         const label = result.leaderboard === 'team' ? 'team' : 'individual';
         const message = createMessage('assistant', reply || `${toneLead(tone, 'leaderboard')} Top ranked ${label}s:`);
@@ -388,7 +398,8 @@
             if (result.candidates?.length) addList(message, result.candidates);
             return;
         }
-        if (reply) return createMessage('assistant', reply);
+        const verifiedKinds = new Set(['target_average', 'overtake', 'challenge_info', 'outlook']);
+        if (reply && !verifiedKinds.has(result.kind)) return createMessage('assistant', reply);
         if (result.kind === 'target_average') {
             const scope = result.scope === 'active_challenge' && result.challenge
                 ? ` in ${result.challenge.name}`
@@ -397,17 +408,31 @@
                 ? ''
                 : ' That exceeds the app’s 70,000-step daily limit, so this projection is not achievable in the selected time.';
             const text = `${toneLead(tone, 'overtake')} To reach a ${formatNumber(result.target_average)}-step logged-day average${scope}, average ${formatNumber(result.required_daily_average)} steps for ${result.days} day${result.days === 1 ? '' : 's'} (${formatNumber(result.required_total)} additional steps total).${feasibility} Assumption: ${result.assumption}`;
-            return createMessage('assistant', text);
+            const message = createMessage('assistant', reply || text);
+            appendVerifiedFacts(message, [
+                `Target average: ${formatNumber(result.target_average)} steps/day`,
+                `Required pace: ${formatNumber(result.required_daily_average)} steps/day for ${result.days} day${result.days === 1 ? '' : 's'}`,
+                `Additional steps: ${formatNumber(result.required_total)}`,
+                `Within daily limit: ${result.feasible_under_daily_limit ? 'yes' : 'no'}`
+            ]);
+            return;
         }
         if (result.kind === 'overtake') {
             const feasibility = result.feasible_under_daily_limit
                 ? ''
                 : ' That exceeds the app’s 70,000-step daily limit, so this projection is not achievable in the selected time.';
             const text = `${toneLead(tone, 'overtake')} To finish above ${result.target.name}’s current ${formatNumber(Math.round(result.target.average))}-step average, average at least ${formatNumber(result.required_daily_average)} steps for ${result.days} day${result.days === 1 ? '' : 's'} (${formatNumber(result.required_total)} additional steps total).${feasibility} Assumption: ${result.assumption}`;
-            return createMessage('assistant', text);
+            const message = createMessage('assistant', reply || text);
+            appendVerifiedFacts(message, [
+                `Target: ${result.target.name} at ${formatNumber(Math.round(result.target.average))} steps/day`,
+                `Required pace: ${formatNumber(result.required_daily_average)} steps/day for ${result.days} day${result.days === 1 ? '' : 's'}`,
+                `Additional steps: ${formatNumber(result.required_total)}`,
+                `Within daily limit: ${result.feasible_under_daily_limit ? 'yes' : 'no'}`
+            ]);
+            return;
         }
         if (result.kind === 'challenge_info') {
-            if (!result.has_challenge) return createMessage('assistant', `${toneLead(tone, 'challenge')} There is no active challenge right now.`);
+            if (!result.has_challenge) return createMessage('assistant', reply || `${toneLead(tone, 'challenge')} There is no active challenge right now.`);
             const challenge = result.challenge;
             let timing;
             if (result.status === 'upcoming') {
@@ -422,14 +447,23 @@
                 const inclusion = result.as_of_date ? 'including that date' : 'including today';
                 timing = `${challenge.name} runs through ${formatDate(challenge.end_date)}. ${perspective} day ${result.current_day} of ${result.total_days}, with ${result.remaining_days} day${result.remaining_days === 1 ? '' : 's'} left ${inclusion}.`;
             }
-            return createMessage('assistant', `${toneLead(tone, 'challenge')} ${timing}`);
+            const message = createMessage('assistant', reply || `${toneLead(tone, 'challenge')} ${timing}`);
+            appendVerifiedFacts(message, [
+                `Starts: ${formatDate(challenge.start_date)}`,
+                `Ends: ${formatDate(challenge.end_date)}`,
+                `Status: ${result.status}`,
+                `Days until start: ${result.days_until_start}`,
+                `Days until end: ${result.days_until_end}`,
+                `Challenge days remaining: ${result.remaining_days}`
+            ]);
+            return;
         }
         if (result.kind === 'outlook') {
             if (!result.has_entry) {
                 const reason = result.reason === 'no_team'
                     ? 'You are not assigned to a team yet, so the team crystal ball is on administrative leave.'
                     : 'You do not have a challenge entry yet. Log a day and the leaderboard will have something to gossip about.';
-                return createMessage('assistant', `${toneLead(tone, 'outlook')} ${reason}`);
+                return createMessage('assistant', reply || `${toneLead(tone, 'outlook')} ${reason}`);
             }
             const subject = result.leaderboard === 'team' ? result.name : 'You';
             let snapshot;
@@ -441,7 +475,14 @@
                 snapshot = `${subject} ${result.leaderboard === 'team' ? 'is' : 'are'} not ranked yet. ${result.leaderboard === 'individual' ? `Your reporting rate is ${formatNumber(result.reporting_rate)}%. ` : ''}The competition cannot properly fear incomplete paperwork.`;
             }
             const remaining = result.remaining_days ? ` ${result.remaining_days} challenge day${result.remaining_days === 1 ? '' : 's'} remain.` : '';
-            return createMessage('assistant', `${toneLead(tone, 'outlook')} ${snapshot}${remaining}`);
+            const message = createMessage('assistant', reply || `${toneLead(tone, 'outlook')} ${snapshot}${remaining}`);
+            appendVerifiedFacts(message, [
+                `Ranked: ${result.ranked ? 'yes' : 'no'}`,
+                ...(result.rank ? [`Rank: ${result.rank} of ${result.ranked_count}`] : []),
+                `Current average: ${formatNumber(Math.round(result.average || 0))} steps/day`,
+                `Challenge days remaining: ${result.remaining_days}`
+            ]);
+            return;
         }
         if (result.kind === 'encouragement') {
             const days = result.summary?.days_logged || 0;

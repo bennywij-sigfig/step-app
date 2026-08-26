@@ -2,6 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const { ALLOWED_TONES } = require('../services/chat-intent');
 const { isValidDate } = require('../utils/validation');
+const { runTrotterAgent } = require('../services/chat-agent');
 
 const MESSAGE_LIMIT = 2000;
 const HISTORY_MESSAGE_LIMIT = 30;
@@ -20,6 +21,8 @@ function createChatRouter({
   chatImageGlobalLimiter = (req, res, next) => next(),
   provider,
   service,
+  toolRegistry = null,
+  agentMode = 'legacy',
   now = () => Date.now()
 }) {
   const router = express.Router();
@@ -149,7 +152,8 @@ function createChatRouter({
       history: 'browser-session-only',
       transcript_scope: String(req.session.userId),
       image_upload: typeof provider.extractImage === 'function',
-      image_limit_bytes: IMAGE_BYTE_LIMIT
+      image_limit_bytes: IMAGE_BYTE_LIMIT,
+      agent_mode: agentMode
     });
   });
 
@@ -166,6 +170,38 @@ function createChatRouter({
       const history = validateHistory(req.body?.history);
       const serverContext = await service.getContext();
       const context = applyClientDateContext(serverContext, req.body);
+
+      if (agentMode === 'tools') {
+        if (!toolRegistry || typeof provider.createToolModel !== 'function') {
+          return res.status(503).json({ error: 'Trotter tool mode is not configured.' });
+        }
+        const tone = ALLOWED_TONES.has(req.body?.tone) ? req.body.tone : 'neutral';
+        const agentResult = await runTrotterAgent({
+          model: provider.createToolModel(context),
+          registry: toolRegistry,
+          message: message.trim(),
+          history,
+          tone,
+          context: { userId: req.session.userId, currentDate: context.currentDate }
+        });
+        const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
+        const result = agentResult.primary_result || (falseWriteClaim
+          ? { kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.' }
+          : { kind: 'chitchat' });
+        if (result.kind === 'step_preview') attachPlan(req, result);
+        const reply = falseWriteClaim ? null : agentResult.text;
+        return res.json({
+          intent: 'tool_agent',
+          tone,
+          result,
+          reply,
+          agent: {
+            rounds: agentResult.rounds,
+            tools: agentResult.tool_results.map(item => item.name)
+          }
+        });
+      }
+
       const intent = await provider.interpret(message.trim(), context, history);
       if (ALLOWED_TONES.has(req.body?.tone)) intent.tone = req.body.tone;
       // Challenge countdowns must use the validated browser-local date rather
@@ -203,6 +239,10 @@ function createChatRouter({
       }
       if (error.code === 'CHAT_INTENT_INVALID' || error.code === 'CHAT_MODEL_RESPONSE_INVALID') {
         return res.status(422).json({ error: error.message });
+      }
+      if (error.code === 'CHAT_TOOL_ERROR' || error.code === 'CHAT_AGENT_PROTOCOL_ERROR') {
+        console.warn('Trotter tool-agent request rejected:', error.message);
+        return res.status(422).json({ error: 'I couldn’t safely complete that tool request. Please rephrase it.' });
       }
       if (error.code === 'STEP_CHAT_USER_ERROR') {
         return res.status(400).json({ error: error.message });

@@ -9,7 +9,13 @@ const {
   PLAN_TTL_MS
 } = require('../../../src/routes/chat');
 
-function buildApp({ providerOverrides = {}, serviceOverrides = {}, now } = {}) {
+function buildApp({
+  providerOverrides = {},
+  serviceOverrides = {},
+  toolRegistry = null,
+  agentMode = 'legacy',
+  now
+} = {}) {
   const app = express();
   app.use(express.json());
   app.use(session({ secret: 'test-secret-that-is-long-enough', resave: false, saveUninitialized: false }));
@@ -48,6 +54,8 @@ function buildApp({ providerOverrides = {}, serviceOverrides = {}, now } = {}) {
     chatApiLimiter: (req, res, next) => next(),
     provider,
     service,
+    toolRegistry,
+    agentMode,
     now
   }));
   return { app, provider, service };
@@ -247,6 +255,55 @@ describe('Step Chat routes', () => {
       .set('X-CSRF-Token', 'csrf-test')
       .send({ message: 'x'.repeat(2001) })
       .expect(400);
+  });
+
+  test('wires bounded tool-agent mode without changing the browser response shape', async () => {
+    const model = { generate: jest.fn(async () => ({ text: 'Oink and hello.', functionCalls: [] })) };
+    const registry = { declarations: [], execute: jest.fn() };
+    const { app } = buildApp({
+      agentMode: 'tools',
+      toolRegistry: registry,
+      providerOverrides: { createToolModel: jest.fn(() => model) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'hi', tone: 'neutral' })
+      .expect(200);
+    expect(response.body).toMatchObject({
+      intent: 'tool_agent', tone: 'neutral', result: { kind: 'chitchat' },
+      reply: 'Oink and hello.', agent: { rounds: 1, tools: [] }
+    });
+  });
+
+  test('tool-agent previews still receive the existing confirmation plan', async () => {
+    const model = { generate: jest.fn(async () => ({
+      text: 'I saved it.',
+      functionCalls: [{ name: 'preview_step_entries', args: { entries: [{ date: '2026-09-01', count: 8000 }] } }]
+    })) };
+    const preview = {
+      kind: 'step_preview', challengeId: 7,
+      entries: [{ date: '2026-09-01', count: 8000, existing_count: null, status: 'new' }],
+      summary: { new: 1, unchanged: 0, conflicts: 0 }
+    };
+    const registry = {
+      declarations: [{ name: 'preview_step_entries', parameters: { type: 'object', properties: {} } }],
+      execute: jest.fn(async () => preview)
+    };
+    const { app } = buildApp({
+      agentMode: 'tools', toolRegistry: registry,
+      providerOverrides: { createToolModel: jest.fn(() => model) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Log 8000 for September 1' })
+      .expect(200);
+    expect(response.body.reply).toBeNull();
+    expect(response.body.result).toMatchObject({ kind: 'step_preview', plan_id: expect.any(String) });
+    expect(response.body.agent).toEqual({ rounds: 1, tools: ['preview_step_entries'] });
   });
 
   test('extracts a validated in-memory image and rejects invalid magic bytes', async () => {

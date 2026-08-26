@@ -32,6 +32,7 @@ const {
 const { sendEmail } = require('./services/email');
 const { createGeminiChatProvider } = require('./services/chat-provider');
 const { createStepChatService } = require('./services/step-chat');
+const { createChatToolRegistry } = require('./services/chat-tools');
 const { createChatRouter } = require('./routes/chat');
 const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
 const { hashToken, generateSecureToken } = require('./utils/token');
@@ -487,6 +488,7 @@ const stepChatService = createStepChatService({
   })
 });
 const chatProvider = createGeminiChatProvider();
+const chatToolRegistry = createChatToolRegistry({ service: stepChatService });
 app.use('/api/chat', createChatRouter({
   requireApiAuth,
   validateCSRFToken,
@@ -496,7 +498,9 @@ app.use('/api/chat', createChatRouter({
   chatImageLimiter,
   chatImageGlobalLimiter,
   provider: chatProvider,
-  service: stepChatService
+  service: stepChatService,
+  toolRegistry: chatToolRegistry,
+  agentMode: process.env.CHAT_AGENT_MODE === 'tools' ? 'tools' : 'legacy'
 }));
 
 // Health check endpoint with comprehensive database monitoring
