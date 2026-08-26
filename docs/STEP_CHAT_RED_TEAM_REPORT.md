@@ -139,6 +139,23 @@ Gemini conversation state now preserves each exact model function-call content b
 
 Post-fix validation included a live three-round request that first inspected the leaderboard, then calculated the pace needed to overtake its leader, then produced a final answer. Seven complex multi-fact prompts completed without fallback or error. Full write lifecycle and indirect data-injection tests remained clean.
 
+## Repeatable regression suites
+
+The red-team process is now executable rather than only documented:
+
+```bash
+npm run test:trotter:redteam
+npm run test:trotter:redteam:live
+```
+
+The deterministic CI tier runs 63 tests across adversarial capability, bounded-agent, route, transaction, image, and intent contracts without calling Gemini. The opt-in live tier runs a versioned prompt corpus against local Gemini tool mode and emits a JSON report.
+
+Initial live-suite result: 15 passed, 0 failed, 0 skipped, including visual prompt injection; average response latency was 918 ms. The three-round sequential leader/overtake case completed in 2.1 seconds.
+
+Tool/protocol incidents now return a `TROT-XXXXXX` reference and emit prompt-free structured logs containing the failure category, internal reason, round/tool metadata when available, model, and agent mode. Prompts, history, images, and OCR text are not logged.
+
+See `docs/TROTTER_REDTEAM_GUIDE.md`.
+
 ## Usefulness balance
 
 The red-team result supports keeping the conversational surface broader while holding the capability surface narrow:

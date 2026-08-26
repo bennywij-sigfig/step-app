@@ -3,10 +3,11 @@ const MAX_MODEL_ROUNDS = 3;
 const MAX_TOOL_WAVES = 2;
 
 class ChatAgentProtocolError extends Error {
-  constructor(message) {
+  constructor(message, details = {}) {
     super(message);
     this.name = 'ChatAgentProtocolError';
     this.code = 'CHAT_AGENT_PROTOCOL_ERROR';
+    this.details = details;
   }
 }
 
@@ -53,15 +54,27 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
         rounds: round
       };
     }
-    if (!allowTools) throw new ChatAgentProtocolError('Model attempted tool calls after the final tool wave');
+    if (!allowTools) {
+      throw new ChatAgentProtocolError('Model attempted tool calls after the final tool wave', {
+        round,
+        requestedTools: calls.map(call => call.name)
+      });
+    }
     if (totalToolCalls + calls.length > MAX_TOOL_CALLS) {
-      throw new ChatAgentProtocolError('Too many tool calls requested');
+      throw new ChatAgentProtocolError('Too many tool calls requested', {
+        round,
+        totalToolCalls,
+        requestedTools: calls.map(call => call.name)
+      });
     }
 
     const priorPreviewCount = toolResults.filter(item => item.name === 'preview_step_entries').length;
     const previewCalls = calls.filter(call => call.name === 'preview_step_entries');
     if (priorPreviewCount + previewCalls.length > 1) {
-      throw new ChatAgentProtocolError('Only one step preview may be requested at a time');
+      throw new ChatAgentProtocolError('Only one step preview may be requested at a time', {
+        round,
+        requestedTools: calls.map(call => call.name)
+      });
     }
 
     const waveResults = [];
@@ -93,7 +106,10 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
     pendingObservations = waveResults;
   }
 
-  throw new ChatAgentProtocolError('Model did not produce a final response within the round limit');
+  throw new ChatAgentProtocolError('Model did not produce a final response within the round limit', {
+    rounds: MAX_MODEL_ROUNDS,
+    totalToolCalls
+  });
 }
 
 module.exports = {

@@ -191,6 +191,7 @@ function createChatRouter({
     if (message.length > MESSAGE_LIMIT) {
       return res.status(400).json({ error: `Messages are limited to ${MESSAGE_LIMIT} characters` });
     }
+    const requestReference = `TROT-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
 
     try {
       const history = validateHistory(req.body?.history);
@@ -234,15 +235,34 @@ function createChatRouter({
         return res.status(503).json({ error: 'Chat beta is not configured yet' });
       }
       if (error.response || error.code === 'ECONNABORTED') {
-        console.error('Chat provider request failed:', error.message);
-        return res.status(502).json({ error: 'The chat service is temporarily unavailable. Please try again in a moment.' });
+        console.error('Trotter provider incident', JSON.stringify({
+          event: 'trotter_provider_error',
+          reference: requestReference,
+          code: error.code || error.response?.status || 'provider_error',
+          model: provider.model || null
+        }));
+        return res.status(502).json({
+          error: `The chat service is temporarily unavailable. Please try again in a moment. Reference: ${requestReference}`,
+          reference: requestReference
+        });
       }
       if (error.code === 'CHAT_INTENT_INVALID' || error.code === 'CHAT_MODEL_RESPONSE_INVALID') {
         return res.status(422).json({ error: error.message });
       }
       if (error.code === 'CHAT_TOOL_ERROR' || error.code === 'CHAT_AGENT_PROTOCOL_ERROR') {
-        console.warn('Trotter tool-agent request rejected:', error.message);
-        return res.status(422).json({ error: 'Trotter got tangled while using her tools. Please try that request again.' });
+        console.warn('Trotter tool-agent incident', JSON.stringify({
+          event: 'trotter_tool_error',
+          reference: requestReference,
+          code: error.code,
+          reason: error.message,
+          details: error.details || {},
+          model: provider.model || null,
+          agentMode
+        }));
+        return res.status(422).json({
+          error: `Trotter got tripped up while using her tools. Please try that request again. Reference: ${requestReference}`,
+          reference: requestReference
+        });
       }
       if (error.code === 'STEP_CHAT_USER_ERROR') {
         return res.status(400).json({ error: error.message });

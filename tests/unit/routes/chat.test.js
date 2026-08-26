@@ -343,7 +343,8 @@ describe('Step Chat routes', () => {
       .set('X-CSRF-Token', 'csrf-test')
       .send({ message: 'Commit without preview' })
       .expect(422);
-    expect(rejected.body.error).toContain('got tangled');
+    expect(rejected.body.error).toContain('got tripped up');
+    expect(rejected.body.reference).toMatch(/^TROT-[A-F0-9]{6}$/);
     expect(JSON.stringify(rejected.body)).not.toContain('commit_steps');
 
     const timeout = new Error('provider socket detail');
@@ -354,6 +355,7 @@ describe('Step Chat routes', () => {
       .send({ message: 'hello again' })
       .expect(502);
     expect(timedOut.body.error).not.toContain('socket');
+    expect(timedOut.body.reference).toMatch(/^TROT-[A-F0-9]{6}$/);
   });
 
   test('extracts a validated in-memory image and rejects invalid magic bytes', async () => {

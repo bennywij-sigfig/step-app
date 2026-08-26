@@ -1,17 +1,20 @@
 const { validateChatIntent } = require('./chat-intent');
 
 class ChatToolError extends Error {
-  constructor(message) {
+  constructor(message, details = {}) {
     super(message);
     this.name = 'ChatToolError';
     this.code = 'CHAT_TOOL_ERROR';
+    this.details = details;
   }
 }
 
 function assertArguments(args, allowed) {
   if (!args || typeof args !== 'object' || Array.isArray(args)) throw new ChatToolError('Tool arguments must be an object');
   for (const key of Object.keys(args)) {
-    if (!allowed.includes(key)) throw new ChatToolError(`Unsupported tool argument: ${key}`);
+    if (!allowed.includes(key)) {
+      throw new ChatToolError(`Unsupported tool argument: ${key}`, { argument: key });
+    }
   }
 }
 
@@ -172,7 +175,7 @@ function createChatToolRegistry({ service }) {
         return { kind: 'step_preview', ...preview };
       }
       default:
-        throw new ChatToolError(`Unknown Trotter tool: ${name}`);
+        throw new ChatToolError(`Unknown Trotter tool: ${name}`, { requestedTool: name });
     }
   }
 
