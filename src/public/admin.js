@@ -1265,10 +1265,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <td>
                                             <label style="display: flex; align-items: center; gap: 5px;">
                                                 <input type="checkbox" id="challengeActive-${challenge.id}" ${challenge.is_active ? 'checked' : ''}
-                                                       ${!challenge.is_active && !challenge.teams_prepared_at ? 'disabled title="Use Start & Reset Teams to activate this challenge"' : ''}
-                                                       class="challenge-active-input" data-challenge-id="${challenge.id}">
+                                                       class="challenge-active-input" data-challenge-id="${challenge.id}"
+                                                       data-teams-prepared="${challenge.teams_prepared_at ? 'true' : 'false'}">
                                                 ${challenge.is_active ? '<span style="color: #28a745; font-weight: bold;">Active</span>' : 'Inactive'}
-                                                ${challenge.teams_prepared_at ? '<br><small style="color: #28a745;">Teams prepared</small>' : ''}
+                                                ${challenge.teams_prepared_at
+                                                    ? '<br><small style="color: #28a745;">Teams prepared</small>'
+                                                    : !challenge.is_active ? '<br><small style="color: #666;">Save to activate with current teams</small>' : ''}
                                             </label>
                                         </td>
                                         <td>
@@ -1373,7 +1375,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const startDate = document.getElementById(`challengeStartDate-${challengeId}`).value;
             const endDate = document.getElementById(`challengeEndDate-${challengeId}`).value;
             const threshold = document.getElementById(`challengeThreshold-${challengeId}`).value;
-            const isActive = document.getElementById(`challengeActive-${challengeId}`).checked;
+            const activeInput = document.getElementById(`challengeActive-${challengeId}`);
+            const isActive = activeInput.checked;
             const saveBtn = document.getElementById(`saveChallenge-${challengeId}`);
             const messageDiv = document.getElementById('challengesMessage');
             
@@ -1393,8 +1396,23 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Check if challenge is being deactivated (was active, now unchecked)
-            const wasActive = document.getElementById(`challengeActive-${challengeId}`).defaultChecked;
+            const wasActive = activeInput.defaultChecked;
             const isBeingDeactivated = wasActive && !isActive;
+            const isBeingActivated = !wasActive && isActive;
+
+            if (isBeingActivated && activeInput.dataset.teamsPrepared !== 'true') {
+                const activateWithCurrentTeams = confirm(
+                    `Activate "${name.trim()}" with the current teams?\n\n` +
+                    `This keeps every current team name and player assignment.\n\n` +
+                    `Choose Cancel if you intended to use Start & Reset Teams instead.`
+                );
+                if (!activateWithCurrentTeams) {
+                    activeInput.checked = false;
+                    saveBtn.disabled = true;
+                    saveBtn.textContent = 'Save';
+                    return;
+                }
+            }
             
             if (isBeingDeactivated) {
                 // Reset checkbox to active state while user decides

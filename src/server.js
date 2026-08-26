@@ -2967,32 +2967,36 @@ app.put('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFToken
     return res.status(400).json({ error: 'Start date must be before end date' });
   }
   
-  // If setting this challenge as active, deactivate all others first
+  const performUpdate = () => {
+    db.run(
+      `UPDATE challenges SET name = ?, start_date = ?, end_date = ?, reporting_threshold = ?, is_active = ? WHERE id = ?`,
+      [name.trim(), start_date, end_date, reporting_threshold, is_active ? 1 : 0, challengeId],
+      function(err) {
+        if (err) {
+          console.error('Error updating challenge:', err);
+          return res.status(500).json({ error: 'Database error' });
+        }
+        if (this.changes === 0) {
+          return res.status(404).json({ error: 'Challenge not found' });
+        }
+        res.json({ message: 'Challenge updated successfully' });
+      }
+    );
+  };
+
+  // Activation keeps existing teams unless the explicit Start & Reset Teams
+  // workflow was used. Ensure only one active challenge before updating.
   if (is_active) {
     db.run(`UPDATE challenges SET is_active = 0`, (err) => {
       if (err) {
         console.error('Error deactivating challenges:', err);
         return res.status(500).json({ error: 'Database error' });
       }
+      performUpdate();
     });
+  } else {
+    performUpdate();
   }
-  
-  db.run(
-    `UPDATE challenges SET name = ?, start_date = ?, end_date = ?, reporting_threshold = ?, is_active = ? WHERE id = ?`,
-    [name.trim(), start_date, end_date, reporting_threshold, is_active ? 1 : 0, challengeId],
-    function(err) {
-      if (err) {
-        console.error('Error updating challenge:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Challenge not found' });
-      }
-      
-      res.json({ message: 'Challenge updated successfully' });
-    }
-  );
 });
 
 // Delete challenge (admin only)
