@@ -306,7 +306,7 @@
 
         const actions = document.createElement('div');
         actions.className = 'chat-actions';
-        actions.appendChild(actionButton('Preview selected entries', '', async () => {
+        const previewButton = actionButton('Preview selected entries', '', async () => {
             const selectedRows = rows.filter(row => row.include.checked);
             const entries = selectedRows.map(row => ({
                 date: row.date.value,
@@ -318,6 +318,11 @@
                 createMessage('error', 'Select at least one row and provide a valid date and whole-number step count.', false);
                 return;
             }
+
+            const originalLabel = previewButton.textContent;
+            previewButton.style.width = `${previewButton.getBoundingClientRect().width}px`;
+            previewButton.textContent = 'Previewing…';
+            previewButton.setAttribute('aria-busy', 'true');
             for (const button of actions.querySelectorAll('button')) button.disabled = true;
             try {
                 const payload = await postJson('/api/chat/entries/preview', {
@@ -325,11 +330,22 @@
                     tone: document.getElementById('chatToneSelect').value
                 });
                 renderResult(payload);
+                actions.remove();
             } catch (error) {
-                createMessage('error', error.message, false);
+                const networkFailure = /load failed|failed to fetch|network/i.test(error.message);
+                createMessage(
+                    'error',
+                    networkFailure
+                        ? 'Trotter could not reach the server. Your reviewed entries are still here—please try Preview again.'
+                        : error.message,
+                    false
+                );
+                previewButton.textContent = originalLabel;
+                previewButton.removeAttribute('aria-busy');
                 for (const button of actions.querySelectorAll('button')) button.disabled = false;
             }
-        }));
+        });
+        actions.appendChild(previewButton);
         message.appendChild(actions);
     }
 
