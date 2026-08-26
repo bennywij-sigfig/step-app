@@ -643,7 +643,24 @@
             }
             sessionStorage.setItem(STORAGE_SCOPE_KEY, state.storageScope);
             state.storageKey = `${STORAGE_KEY_PREFIX}:${state.storageScope}`;
-            state.rememberOnDevice = localStorage.getItem(`${REMEMBER_KEY_PREFIX}:${state.storageScope}`) === 'true';
+            const rememberPreferenceKey = `${REMEMBER_KEY_PREFIX}:${state.storageScope}`;
+            const storedRememberPreference = localStorage.getItem(rememberPreferenceKey);
+            // Persistent transcript is the default; users can explicitly turn
+            // it off to keep messages in this tab only.
+            state.rememberOnDevice = storedRememberPreference !== 'false';
+            if (storedRememberPreference === null) localStorage.setItem(rememberPreferenceKey, 'true');
+            if (state.rememberOnDevice && !localStorage.getItem(state.storageKey)) {
+                const temporaryTranscript = sessionStorage.getItem(state.storageKey);
+                if (temporaryTranscript) {
+                    try {
+                        localStorage.setItem(state.storageKey, temporaryTranscript);
+                        sessionStorage.removeItem(state.storageKey);
+                    } catch (_) {
+                        state.rememberOnDevice = false;
+                        localStorage.setItem(rememberPreferenceKey, 'false');
+                    }
+                }
+            }
             const rememberToggle = document.getElementById('chatRememberToggle');
             if (rememberToggle) rememberToggle.checked = state.rememberOnDevice;
             for (const legacyKey of LEGACY_STORAGE_KEYS) {
