@@ -13,6 +13,14 @@
       "maxRounds": 1
     },
     {
+      "id": "capabilities-plain-language",
+      "message": "What can you help me do?",
+      "expectedKind": "chitchat",
+      "maxRounds": 1,
+      "replyPattern": "track|log",
+      "forbiddenReplyPattern": "preview|upsert|tool call|step edits"
+    },
+    {
       "id": "challenge-timing",
       "message": "When does the challenge start and end?",
       "requiredTools": ["get_challenge_info"],
@@ -45,7 +53,7 @@
       "message": "Log 82000",
       "forbiddenTools": ["preview_step_entries"],
       "expectedKind": "chitchat",
-      "replyPattern": "70,?000",
+      "replyPattern": "70,?000|seventy thousand",
       "forbiddenReplyPattern": "successfully|recorded|saved"
     },
     {

@@ -32,6 +32,9 @@ describe('Trotter tool registry contract', () => {
     for (const declaration of registry.declarations) {
       expect(declaration.parameters?.properties?.user_id).toBeUndefined();
     }
+    const trackingTool = registry.declarations.find(tool => tool.name === 'preview_step_entries');
+    expect(trackingTool.description).toContain('track steps');
+    expect(trackingTool.description).not.toMatch(/upsert|step edits/i);
   });
 
   test('binds preview writes to the session user and rejects injected user IDs', async () => {

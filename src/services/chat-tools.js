@@ -89,7 +89,7 @@ const declarations = [
   },
   {
     name: 'preview_step_entries',
-    description: 'Validate and preview one or more step entries for the authenticated user. This never saves or overwrites data and always requires UI confirmation.',
+    description: 'Help the authenticated user track steps for one date or many dates. Prepare a review of the entries; never save or overwrite without UI confirmation.',
     parameters: {
       type: 'object',
       properties: {
