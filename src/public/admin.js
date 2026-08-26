@@ -84,6 +84,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function applyMobileTableLabels(container) {
+        if (!container) return;
+        container.querySelectorAll('table').forEach(table => {
+            const labels = [...table.querySelectorAll('thead th')]
+                .map(header => header.textContent.replace(/[↑↓]/g, '').trim());
+            table.querySelectorAll('tbody tr').forEach(row => {
+                [...row.children].forEach((cell, index) => {
+                    cell.dataset.label = labels[index] || '';
+                });
+            });
+        });
+    }
+
     // Navigation
     document.getElementById('usersBtn').addEventListener('click', () => {
             showView('users');
@@ -130,6 +143,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Multi-select state management
         let selectedUserIds = new Set();
+        const userSearchInput = document.getElementById('userSearch');
+        userSearchInput.addEventListener('input', () => {
+            renderUsersTable(filterUsers(window.usersData || []), window.teamsData || []);
+        });
         let updateBatchActionBarTimeout = null;
         
         // Load users
@@ -150,10 +167,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Clear selection when reloading
                 selectedUserIds.clear();
                 
-                renderUsersTable(users, teams);
+                renderUsersTable(filterUsers(users), teams);
             } catch (error) {
                 document.getElementById('usersTable').innerHTML = '<p>Error loading users</p>';
             }
+        }
+
+        function filterUsers(users) {
+            const query = userSearchInput.value.trim().toLowerCase();
+            if (!query) return users;
+            return users.filter(user => [user.name, user.email, user.team]
+                .filter(Boolean)
+                .some(value => String(value).toLowerCase().includes(query)));
         }
 
         // Table sorting state
@@ -234,6 +259,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </table>
             `;
 
+            applyMobileTableLabels(usersTable);
+
             // Add click event listeners to sortable headers
             document.querySelectorAll('.sortable').forEach(header => {
                 header.addEventListener('click', () => {
@@ -285,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return currentSortDirection === 'asc' ? comparison : -comparison;
             });
 
-            renderUsersTable(sortedUsers, window.teamsData);
+            renderUsersTable(filterUsers(sortedUsers), window.teamsData);
             
             // Restore selection state after re-render
             if (selectedUserIds.size > 0) {
@@ -755,6 +782,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </tbody>
                     </table>
                 `;
+                applyMobileTableLabels(manageTeamsTable);
             } catch (error) {
                 document.getElementById('manageTeamsTable').innerHTML = '<p>Error loading teams</p>';
             }
@@ -1307,6 +1335,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tbody>
                         </table>
                     `;
+                    applyMobileTableLabels(challengesTable);
                 }
             } catch (error) {
                 document.getElementById('challengesTable').innerHTML = '<p>Error loading challenges</p>';
@@ -1681,6 +1710,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </tbody>
                         </table>
                     `;
+                    applyMobileTableLabels(archivesTable);
                 }
             } catch (error) {
                 console.error('Error loading archives:', error);
@@ -2171,6 +2201,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tbody>
                 </table>
             `;
+            applyMobileTableLabels(tokenTable);
         }
         
         function loadAuditTable(auditData) {
@@ -2212,6 +2243,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tbody>
                 </table>
             `;
+            applyMobileTableLabels(auditTable);
         }
         
         async function createMCPToken() {
