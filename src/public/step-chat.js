@@ -666,6 +666,7 @@
     function openChat() {
         const overlay = document.getElementById('stepChatOverlay');
         syncVisualViewport();
+        document.body.classList.add('trotter-open');
         overlay.hidden = false;
         document.body.style.overflow = 'hidden';
         document.getElementById('chatInput').focus();
@@ -673,6 +674,7 @@
 
     function closeChat() {
         document.getElementById('stepChatOverlay').hidden = true;
+        document.body.classList.remove('trotter-open');
         document.body.style.overflow = '';
         document.getElementById('chatOpenBtn').focus();
     }
