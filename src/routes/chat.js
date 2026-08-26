@@ -202,38 +202,30 @@ function createChatRouter({
           return res.status(503).json({ error: 'Trotter tool mode is not configured.' });
         }
         const tone = ALLOWED_TONES.has(req.body?.tone) ? req.body.tone : 'neutral';
-        try {
-          const agentResult = await runTrotterAgent({
-            model: provider.createToolModel(context),
-            registry: toolRegistry,
-            message: message.trim(),
-            history,
-            tone,
-            context: { userId: req.session.userId, currentDate: context.currentDate }
-          });
-          const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
-          const result = agentResult.primary_result || (falseWriteClaim
-            ? { kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.' }
-            : { kind: 'chitchat' });
-          if (result.kind === 'step_preview') attachPlan(req, result);
-          const reply = falseWriteClaim ? null : agentResult.text;
-          return res.json({
-            intent: 'tool_agent',
-            tone,
-            result,
-            reply,
-            agent: {
-              rounds: agentResult.rounds,
-              tools: agentResult.tool_results.map(item => item.name)
-            }
-          });
-        } catch (error) {
-          if (error.code !== 'CHAT_TOOL_ERROR' && error.code !== 'CHAT_AGENT_PROTOCOL_ERROR') throw error;
-          console.warn('Trotter tool agent fell back to legacy orchestration:', error.message);
-          const fallback = await runLegacyChat(req, message.trim(), history, context);
-          fallback.agent = { fallback: 'legacy', reason: 'tool_protocol' };
-          return res.json(fallback);
-        }
+        const agentResult = await runTrotterAgent({
+          model: provider.createToolModel(context),
+          registry: toolRegistry,
+          message: message.trim(),
+          history,
+          tone,
+          context: { userId: req.session.userId, currentDate: context.currentDate }
+        });
+        const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
+        const result = agentResult.primary_result || (falseWriteClaim
+          ? { kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.' }
+          : { kind: 'chitchat' });
+        if (result.kind === 'step_preview') attachPlan(req, result);
+        const reply = falseWriteClaim ? null : agentResult.text;
+        return res.json({
+          intent: 'tool_agent',
+          tone,
+          result,
+          reply,
+          agent: {
+            rounds: agentResult.rounds,
+            tools: agentResult.tool_results.map(item => item.name)
+          }
+        });
       }
 
       res.json(await runLegacyChat(req, message.trim(), history, context));
@@ -250,7 +242,7 @@ function createChatRouter({
       }
       if (error.code === 'CHAT_TOOL_ERROR' || error.code === 'CHAT_AGENT_PROTOCOL_ERROR') {
         console.warn('Trotter tool-agent request rejected:', error.message);
-        return res.status(422).json({ error: 'I couldn’t safely complete that tool request. Please rephrase it.' });
+        return res.status(422).json({ error: 'Trotter got tangled while using her tools. Please try that request again.' });
       }
       if (error.code === 'STEP_CHAT_USER_ERROR') {
         return res.status(400).json({ error: error.message });

@@ -132,7 +132,8 @@ The corrected bounded agent now allows:
 - At most one preview
 - No tools in the final round
 - Immediate return when a preview is created
-- Automatic legacy fallback for tool/protocol errors instead of a user-facing “unsafe” error
+- Neutral internal-agent error wording for tool/protocol failures; per-request legacy fallback is intentionally disabled during dogfooding so native-agent failures remain visible
+- Whole-system `CHAT_AGENT_MODE=legacy` remains the explicit operational rollback
 
 Gemini conversation state now preserves each exact model function-call content block, call ID, and thought signature across sequential waves.
 

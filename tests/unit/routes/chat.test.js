@@ -326,7 +326,7 @@ describe('Step Chat routes', () => {
     });
   });
 
-  test('falls back to legacy on tool protocol rejection and maps provider timeout safely', async () => {
+  test('surfaces tool protocol rejection without legacy fallback and maps provider timeout safely', async () => {
     const toolError = new Error('Unknown Trotter tool: commit_steps');
     toolError.code = 'CHAT_TOOL_ERROR';
     const errorModel = { generate: jest.fn(async () => ({
@@ -342,9 +342,8 @@ describe('Step Chat routes', () => {
     const rejected = await agent.post('/api/chat')
       .set('X-CSRF-Token', 'csrf-test')
       .send({ message: 'Commit without preview' })
-      .expect(200);
-    expect(rejected.body.result.kind).toBe('help');
-    expect(rejected.body.agent).toEqual({ fallback: 'legacy', reason: 'tool_protocol' });
+      .expect(422);
+    expect(rejected.body.error).toContain('got tangled');
     expect(JSON.stringify(rejected.body)).not.toContain('commit_steps');
 
     const timeout = new Error('provider socket detail');
