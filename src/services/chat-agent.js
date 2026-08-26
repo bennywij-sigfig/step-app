@@ -1,4 +1,6 @@
 const MAX_TOOL_CALLS = 4;
+const MAX_MODEL_ROUNDS = 3;
+const MAX_TOOL_WAVES = 2;
 
 class ChatAgentProtocolError extends Error {
   constructor(message) {
@@ -25,93 +27,79 @@ function normalizeCalls(response) {
 }
 
 async function runTrotterAgent({ model, registry, message, history, tone, context }) {
-  const first = await model.generate({
-    message,
-    history,
-    tone,
-    tools: registry.declarations,
-    observations: [],
-    allowTools: true
-  });
-  const calls = normalizeCalls(first);
-  if (calls.length === 0) {
-    return {
-      text: typeof first.text === 'string' ? first.text : null,
-      tool_results: [],
-      primary_result: null,
-      requires_confirmation: false,
-      rounds: 1
-    };
-  }
-  if (calls.length > MAX_TOOL_CALLS) throw new ChatAgentProtocolError('Too many tool calls requested');
-
-  const previewCalls = calls.filter(call => call.name === 'preview_step_entries');
-  if (previewCalls.length > 1) throw new ChatAgentProtocolError('Only one step preview may be requested at a time');
-
   const toolResults = [];
-  for (const call of calls) {
-    const result = await registry.execute(call.name, call.args, context);
-    toolResults.push({
-      name: call.name,
-      args: call.args,
-      id: call.id,
-      thoughtSignature: call.thoughtSignature,
-      result
-    });
-  }
-  const preview = toolResults.find(item => item.name === 'preview_step_entries');
-  if (preview) {
-    return {
-      text: null,
-      tool_results: toolResults,
-      primary_result: preview.result,
-      requires_confirmation: true,
-      rounds: 1
-    };
-  }
+  let pendingObservations = [];
+  let totalToolCalls = 0;
+  let toolWaves = 0;
 
-  const second = await model.generate({
-    message,
-    history,
-    tone,
-    tools: [],
-    observations: toolResults,
-    allowTools: false
-  });
-  const secondCalls = normalizeCalls(second);
-  if (secondCalls.length) {
-    if (secondCalls.length !== 1 || secondCalls[0].name !== 'preview_step_entries') {
-      throw new ChatAgentProtocolError('Model attempted unsupported second-round tool calls');
+  for (let round = 1; round <= MAX_MODEL_ROUNDS; round += 1) {
+    const allowTools = toolWaves < MAX_TOOL_WAVES && round < MAX_MODEL_ROUNDS;
+    const response = await model.generate({
+      message,
+      history,
+      tone,
+      tools: allowTools ? registry.declarations : [],
+      observations: pendingObservations,
+      allowTools
+    });
+    const calls = normalizeCalls(response);
+
+    if (calls.length === 0) {
+      return {
+        text: typeof response.text === 'string' ? response.text : null,
+        tool_results: toolResults,
+        primary_result: toolResults.at(-1)?.result || null,
+        requires_confirmation: false,
+        rounds: round
+      };
     }
-    const call = secondCalls[0];
-    const result = await registry.execute(call.name, call.args, context);
-    toolResults.push({
-      name: call.name,
-      args: call.args,
-      id: call.id,
-      thoughtSignature: call.thoughtSignature,
-      result
-    });
-    return {
-      text: null,
-      tool_results: toolResults,
-      primary_result: result,
-      requires_confirmation: true,
-      rounds: 2
-    };
+    if (!allowTools) throw new ChatAgentProtocolError('Model attempted tool calls after the final tool wave');
+    if (totalToolCalls + calls.length > MAX_TOOL_CALLS) {
+      throw new ChatAgentProtocolError('Too many tool calls requested');
+    }
+
+    const priorPreviewCount = toolResults.filter(item => item.name === 'preview_step_entries').length;
+    const previewCalls = calls.filter(call => call.name === 'preview_step_entries');
+    if (priorPreviewCount + previewCalls.length > 1) {
+      throw new ChatAgentProtocolError('Only one step preview may be requested at a time');
+    }
+
+    const waveResults = [];
+    for (const call of calls) {
+      const result = await registry.execute(call.name, call.args, context);
+      const observation = {
+        name: call.name,
+        args: call.args,
+        id: call.id,
+        thoughtSignature: call.thoughtSignature,
+        result
+      };
+      waveResults.push(observation);
+      toolResults.push(observation);
+    }
+    totalToolCalls += calls.length;
+    toolWaves += 1;
+
+    const preview = waveResults.find(item => item.name === 'preview_step_entries');
+    if (preview) {
+      return {
+        text: null,
+        tool_results: toolResults,
+        primary_result: preview.result,
+        requires_confirmation: true,
+        rounds: round
+      };
+    }
+    pendingObservations = waveResults;
   }
 
-  return {
-    text: typeof second.text === 'string' ? second.text : null,
-    tool_results: toolResults,
-    primary_result: toolResults.at(-1)?.result || null,
-    requires_confirmation: false,
-    rounds: 2
-  };
+  throw new ChatAgentProtocolError('Model did not produce a final response within the round limit');
 }
 
 module.exports = {
   ChatAgentProtocolError,
+  MAX_MODEL_ROUNDS,
   MAX_TOOL_CALLS,
+  MAX_TOOL_WAVES,
   runTrotterAgent
 };

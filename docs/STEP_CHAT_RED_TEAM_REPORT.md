@@ -120,6 +120,24 @@ The image-to-steps prototype was tested with synthetic screenshots and adversari
 - Extracted rows remain editable and must pass the normal deterministic challenge/date/count/conflict preview before confirmation.
 - Model notes, warnings, raw dates, and user content render through text nodes rather than HTML.
 
+## Tool-agent production correction
+
+The first production tool-agent release allowed only one tool wave plus a final response. Production logs showed normal prompts being rejected when Gemini requested a second read-tool wave. This was an orchestration limitation, not unsafe user behavior, so production was immediately returned to legacy mode.
+
+The corrected bounded agent now allows:
+
+- At most three Gemini rounds
+- At most two tool-execution waves
+- At most four total tool calls
+- At most one preview
+- No tools in the final round
+- Immediate return when a preview is created
+- Automatic legacy fallback for tool/protocol errors instead of a user-facing “unsafe” error
+
+Gemini conversation state now preserves each exact model function-call content block, call ID, and thought signature across sequential waves.
+
+Post-fix validation included a live three-round request that first inspected the leaderboard, then calculated the pace needed to overtake its leader, then produced a final answer. Seven complex multi-fact prompts completed without fallback or error. Full write lifecycle and indirect data-injection tests remained clean.
+
 ## Usefulness balance
 
 The red-team result supports keeping the conversational surface broader while holding the capability surface narrow:

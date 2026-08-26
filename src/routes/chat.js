@@ -142,6 +142,32 @@ function createChatRouter({
     return plans;
   }
 
+  async function runLegacyChat(req, message, history, context) {
+    const intent = await provider.interpret(message, context, history);
+    if (ALLOWED_TONES.has(req.body?.tone)) intent.tone = req.body.tone;
+    if (['challenge_info', 'challenge_outlook', 'calculate_overtake', 'calculate_target_average'].includes(intent.intent) && !intent.as_of_date) {
+      intent.as_of_date = context.currentDate;
+    }
+    const result = await service.executeIntent(req.session.userId, intent);
+    if (result.kind === 'step_preview') attachPlan(req, result);
+
+    let reply = null;
+    const facts = narrationFacts(result);
+    if (facts && typeof provider.compose === 'function') {
+      try {
+        const candidateReply = await provider.compose(message, history, intent.tone, facts);
+        if (voiceReplyClaimsWrite(candidateReply)) {
+          console.warn('Discarded Trotter voice reply that claimed a write occurred');
+        } else {
+          reply = candidateReply;
+        }
+      } catch (error) {
+        console.warn('Trotter voice pass failed; using deterministic fallback:', error.message);
+      }
+    }
+    return { intent: intent.intent, tone: intent.tone, result, reply };
+  }
+
   router.get('/config', requireApiAuth, (req, res) => {
     res.json({
       enabled: provider.isConfigured(),
@@ -176,59 +202,41 @@ function createChatRouter({
           return res.status(503).json({ error: 'Trotter tool mode is not configured.' });
         }
         const tone = ALLOWED_TONES.has(req.body?.tone) ? req.body.tone : 'neutral';
-        const agentResult = await runTrotterAgent({
-          model: provider.createToolModel(context),
-          registry: toolRegistry,
-          message: message.trim(),
-          history,
-          tone,
-          context: { userId: req.session.userId, currentDate: context.currentDate }
-        });
-        const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
-        const result = agentResult.primary_result || (falseWriteClaim
-          ? { kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.' }
-          : { kind: 'chitchat' });
-        if (result.kind === 'step_preview') attachPlan(req, result);
-        const reply = falseWriteClaim ? null : agentResult.text;
-        return res.json({
-          intent: 'tool_agent',
-          tone,
-          result,
-          reply,
-          agent: {
-            rounds: agentResult.rounds,
-            tools: agentResult.tool_results.map(item => item.name)
-          }
-        });
-      }
-
-      const intent = await provider.interpret(message.trim(), context, history);
-      if (ALLOWED_TONES.has(req.body?.tone)) intent.tone = req.body.tone;
-      // Challenge countdowns must use the validated browser-local date rather
-      // than asking the voice model to infer today's date from prose.
-      if (['challenge_info', 'challenge_outlook', 'calculate_overtake', 'calculate_target_average'].includes(intent.intent) && !intent.as_of_date) {
-        intent.as_of_date = context.currentDate;
-      }
-      const result = await service.executeIntent(req.session.userId, intent);
-
-      if (result.kind === 'step_preview') attachPlan(req, result);
-
-      let reply = null;
-      const facts = narrationFacts(result);
-      if (facts && typeof provider.compose === 'function') {
         try {
-          const candidateReply = await provider.compose(message.trim(), history, intent.tone, facts);
-          if (voiceReplyClaimsWrite(candidateReply)) {
-            console.warn('Discarded Trotter voice reply that claimed a write occurred');
-          } else {
-            reply = candidateReply;
-          }
+          const agentResult = await runTrotterAgent({
+            model: provider.createToolModel(context),
+            registry: toolRegistry,
+            message: message.trim(),
+            history,
+            tone,
+            context: { userId: req.session.userId, currentDate: context.currentDate }
+          });
+          const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
+          const result = agentResult.primary_result || (falseWriteClaim
+            ? { kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.' }
+            : { kind: 'chitchat' });
+          if (result.kind === 'step_preview') attachPlan(req, result);
+          const reply = falseWriteClaim ? null : agentResult.text;
+          return res.json({
+            intent: 'tool_agent',
+            tone,
+            result,
+            reply,
+            agent: {
+              rounds: agentResult.rounds,
+              tools: agentResult.tool_results.map(item => item.name)
+            }
+          });
         } catch (error) {
-          console.warn('Trotter voice pass failed; using deterministic fallback:', error.message);
+          if (error.code !== 'CHAT_TOOL_ERROR' && error.code !== 'CHAT_AGENT_PROTOCOL_ERROR') throw error;
+          console.warn('Trotter tool agent fell back to legacy orchestration:', error.message);
+          const fallback = await runLegacyChat(req, message.trim(), history, context);
+          fallback.agent = { fallback: 'legacy', reason: 'tool_protocol' };
+          return res.json(fallback);
         }
       }
 
-      res.json({ intent: intent.intent, tone: intent.tone, result, reply });
+      res.json(await runLegacyChat(req, message.trim(), history, context));
     } catch (error) {
       if (error.code === 'CHAT_NOT_CONFIGURED') {
         return res.status(503).json({ error: 'Chat beta is not configured yet' });

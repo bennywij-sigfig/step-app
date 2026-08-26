@@ -39,9 +39,10 @@ message + bounded recent history + tool declarations
 
 Limits:
 
-- Maximum two Gemini rounds per user submission
-- Maximum four function calls in the first round
-- No recursive read/tool loops after observations; the second round may request one final `preview_step_entries` action, which is executed and returned without a third model round
+- Maximum three Gemini rounds per user submission
+- Maximum two tool-execution waves and four total function calls
+- The final round cannot call tools
+- A preview in either tool wave is executed and returned immediately without another model round
 - Maximum 30 recent messages / 20,000 characters
 - Existing per-user and global budgets remain
 
@@ -119,7 +120,7 @@ For calculations and date facts, the UI should retain structured verified values
 
 1. Add characterization tests for current behavior and security invariants.
 2. Add a provider-neutral tool registry over `StepChatService`.
-3. Add a pure bounded agent runner tested with a fake model adapter.
+3. Add a pure bounded agent runner tested with a fake model adapter, including sequential two-wave reads and final-round tool rejection.
 4. Add Gemini native function-call serialization/parsing.
 5. Introduce `CHAT_AGENT_MODE=legacy|tools`; default to `legacy` initially.
 6. Run the same live prompt corpus through both modes.
@@ -182,7 +183,7 @@ Image extraction and editable review behavior must remain unchanged and continue
 - Existing unit/integration suites pass.
 - Live usefulness corpus is at least as successful as the legacy mode.
 - Chitchat uses one model round.
-- Tool-backed reads use at most two rounds.
-- Preview writes use at most two rounds and never commit.
+- Tool-backed reads use at most three rounds and two tool waves.
+- Preview writes use at most two tool waves and never commit.
 - No generic refusal regression for harmless conversation.
 - No increase in false write claims or factual date/count errors.

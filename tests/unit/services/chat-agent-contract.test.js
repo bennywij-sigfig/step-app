@@ -188,7 +188,26 @@ describe('bounded Trotter tool-agent contract', () => {
     ]);
   });
 
-  test('enforces four-call and two-round limits', async () => {
+  test('allows two bounded read-tool waves and a third-round final response', async () => {
+    const registry = createChatToolRegistry({ service: fakeService() });
+    const model = {
+      generate: jest.fn()
+        .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_challenge_info', args: {} }] })
+        .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_team_leaderboard', args: {} }] })
+        .mockResolvedValueOnce({ text: 'Here is the combined answer.', functionCalls: [] })
+    };
+    const result = await runTrotterAgent({
+      model, registry, message: 'and then?', history: [], tone: 'neutral',
+      context: { userId: 42, currentDate: '2026-08-26' }
+    });
+    expect(model.generate).toHaveBeenCalledTimes(3);
+    expect(result.rounds).toBe(3);
+    expect(result.tool_results.map(item => item.name)).toEqual([
+      'get_challenge_info', 'get_team_leaderboard'
+    ]);
+  });
+
+  test('enforces four total calls, two tool waves, and no final-round tools', async () => {
     const registry = createChatToolRegistry({ service: fakeService() });
     const tooManyModel = {
       generate: jest.fn(async () => ({
@@ -201,15 +220,16 @@ describe('bounded Trotter tool-agent contract', () => {
       context: { userId: 42, currentDate: '2026-08-26' }
     })).rejects.toThrow('Too many tool calls');
 
-    const recursiveModel = {
+    const finalRoundToolModel = {
       generate: jest.fn()
         .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_challenge_info', args: {} }] })
         .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_team_leaderboard', args: {} }] })
+        .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_my_steps', args: {} }] })
     };
     await expect(runTrotterAgent({
-      model: recursiveModel, registry, message: 'and then?', history: [], tone: 'neutral',
+      model: finalRoundToolModel, registry, message: 'keep going', history: [], tone: 'neutral',
       context: { userId: 42, currentDate: '2026-08-26' }
-    })).rejects.toThrow('second-round tool calls');
-    expect(recursiveModel.generate).toHaveBeenCalledTimes(2);
+    })).rejects.toThrow('after the final tool wave');
+    expect(finalRoundToolModel.generate).toHaveBeenCalledTimes(3);
   });
 });
