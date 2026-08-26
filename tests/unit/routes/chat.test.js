@@ -1,7 +1,13 @@
 const express = require('express');
 const session = require('express-session');
 const request = require('supertest');
-const { createChatRouter, HISTORY_CHAR_LIMIT, HISTORY_MESSAGE_LIMIT, PLAN_TTL_MS } = require('../../../src/routes/chat');
+const {
+  createChatRouter,
+  HISTORY_CHAR_LIMIT,
+  HISTORY_MESSAGE_LIMIT,
+  IMAGE_BYTE_LIMIT,
+  PLAN_TTL_MS
+} = require('../../../src/routes/chat');
 
 function buildApp({ providerOverrides = {}, serviceOverrides = {}, now } = {}) {
   const app = express();
@@ -28,6 +34,11 @@ function buildApp({ providerOverrides = {}, serviceOverrides = {}, now } = {}) {
     MAX_BATCH_SIZE: 31,
     getContext: jest.fn(async () => ({ currentDate: '2026-08-25', challenge: null })),
     executeIntent: jest.fn(async () => ({ kind: 'help', message: 'Help response' })),
+    previewEntries: jest.fn(async () => ({
+      challengeId: 9,
+      entries: [{ date: '2026-08-20', count: 8000, existing_count: null, status: 'new' }],
+      summary: { new: 1, unchanged: 0, conflicts: 0 }
+    })),
     commitPlan: jest.fn(async () => ({ saved: 1, skipped: 0, entries: [] })),
     ...serviceOverrides
   };
@@ -196,6 +207,56 @@ describe('Step Chat routes', () => {
       .set('X-CSRF-Token', 'csrf-test')
       .send({ message: 'x'.repeat(2001) })
       .expect(400);
+  });
+
+  test('extracts a validated in-memory image and rejects invalid magic bytes', async () => {
+    const extractImage = jest.fn(async () => ({
+      recognized: true,
+      entries: [{ raw_date: 'Aug 20', date: '2026-08-20', count: 8000, confidence: 'high', note: '' }],
+      warnings: []
+    }));
+    const { app } = buildApp({ providerOverrides: { extractImage } });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const extracted = await agent.post('/api/chat/image/extract')
+      .set('Content-Type', 'image/png')
+      .set('X-CSRF-Token', 'csrf-test')
+      .set('X-Client-Date', '2026-08-25')
+      .set('X-Client-Timezone', 'America/Los_Angeles')
+      .send(png)
+      .expect(200);
+    expect(extracted.body.extraction.recognized).toBe(true);
+    expect(extractImage).toHaveBeenCalledWith(expect.any(Buffer), 'image/png', {
+      currentDate: '2026-08-25', timezone: 'America/Los_Angeles', challenge: null
+    });
+
+    await agent.post('/api/chat/image/extract')
+      .set('Content-Type', 'image/png')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send(Buffer.from('not a png'))
+      .expect(400);
+
+    await agent.post('/api/chat/image/extract')
+      .set('Content-Type', 'image/png')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send(Buffer.alloc(IMAGE_BYTE_LIMIT + 1, 0x89))
+      .expect(413);
+  });
+
+  test('turns reviewed image rows into the existing single-use preview plan', async () => {
+    const { app, service } = buildApp();
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat/entries/preview')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ entries: [{ date: '2026-08-20', count: 8000 }], tone: 'droll' })
+      .expect(200);
+    expect(service.previewEntries).toHaveBeenCalledWith(42, [{ date: '2026-08-20', count: 8000 }]);
+    expect(response.body).toMatchObject({
+      intent: 'record_steps', tone: 'droll',
+      result: { kind: 'step_preview', plan_id: expect.any(String) }
+    });
   });
 
   test('expires pending plans', async () => {

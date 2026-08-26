@@ -34,11 +34,23 @@ It does not support arbitrary questions, web access, SQL, admin actions, or modi
 
 The model never receives a general-purpose write, SQL, shell, URL-fetch, filesystem, admin, or cross-user tool.
 
+## Image extraction prototype
+
+- One JPEG, PNG, or WebP screenshot per request
+- Browser resizes to a maximum 2,000px edge, converts to JPEG, and strips metadata
+- Server accepts at most 5 MB in memory and never writes the image to disk
+- Gemini extracts only explicit date/count pairs; image text is untrusted and cannot authorize actions
+- Maximum 31 editable candidates
+- Reviewed rows use the same deterministic preview, conflict, and explicit confirmation flow as typed entries
+- No chart-height inference, handwriting support, image transcript storage, or historical challenge selection
+
 ## Initial API
 
 - `GET /api/chat/config` — feature availability and limits
 - `POST /api/chat` — interpret one standalone message and return a response or write preview
 - `POST /api/chat/confirm` — commit the exact pending plan using `new_only` or `overwrite_conflicts`
+- `POST /api/chat/image/extract` — inspect one in-memory screenshot and return editable candidates
+- `POST /api/chat/entries/preview` — validate reviewed candidates and create the normal confirmation plan
 
 All endpoints require the existing authenticated session. POST endpoints require CSRF protection and a dedicated chat rate limiter.
 

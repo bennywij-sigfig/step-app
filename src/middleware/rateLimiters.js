@@ -86,6 +86,30 @@ const chatGlobalDailyLimiter = skipRateLimit ? (req, res, next) => next() : rate
   })
 });
 
+const chatImageLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: parseInt(process.env.CHAT_IMAGE_LIMIT_MAX, 10) || 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => `chat_image_user_${req.session.userId}`,
+  handler: (req, res) => res.status(429).json({
+    error: 'Trotter has inspected enough images for the moment. Please try again later.',
+    retryAfter: 3600
+  })
+});
+
+const chatImageGlobalLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: parseInt(process.env.CHAT_IMAGE_GLOBAL_LIMIT_MAX, 10) || 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: () => 'chat_image_global',
+  handler: (req, res) => res.status(429).json({
+    error: 'Trotter’s shared image budget is resting. Please try again later.',
+    retryAfter: 3600
+  })
+});
+
 const adminApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: parseInt(process.env.ADMIN_API_LIMIT_MAX) || 400, // increased from 200 to 400 per hour per session
@@ -174,6 +198,8 @@ module.exports = {
   chatApiLimiter,
   chatGlobalHourlyLimiter,
   chatGlobalDailyLimiter,
+  chatImageLimiter,
+  chatImageGlobalLimiter,
   adminApiLimiter,
   mcpApiLimiter,
   mcpBurstLimiter,

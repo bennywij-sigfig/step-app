@@ -1,5 +1,10 @@
 const { validateChatIntent } = require('../../../src/services/chat-intent');
-const { buildInterpreterPrompt, createGeminiChatProvider, stripJsonFence } = require('../../../src/services/chat-provider');
+const {
+  buildInterpreterPrompt,
+  createGeminiChatProvider,
+  stripJsonFence,
+  validateImageExtraction
+} = require('../../../src/services/chat-provider');
 
 describe('constrained chat intent validation', () => {
   test('accepts a bounded batch of step entries', () => {
@@ -66,6 +71,34 @@ describe('constrained chat intent validation', () => {
       days: 5,
       tone: 'encouraging'
     });
+  });
+});
+
+describe('image extraction validation', () => {
+  test('keeps only bounded date/count candidate fields', () => {
+    expect(validateImageExtraction({
+      recognized: true,
+      entries: [{
+        raw_date: 'Sep 1', date: '2026-09-01', count: 8234,
+        confidence: 'high', note: 'Year inferred', dangerous: '<script>'
+      }],
+      warnings: ['Check the inferred year'],
+      extra: { tool: 'delete_database' }
+    })).toEqual({
+      recognized: true,
+      entries: [{
+        raw_date: 'Sep 1', date: '2026-09-01', count: 8234,
+        confidence: 'high', note: 'Year inferred'
+      }],
+      warnings: ['Check the inferred year']
+    });
+  });
+
+  test('turns malformed dates and counts into editable null values', () => {
+    expect(validateImageExtraction({
+      recognized: true,
+      entries: [{ raw_date: '???', date: 'tomorrow', count: 999999, confidence: 'certain' }]
+    }).entries[0]).toMatchObject({ date: null, count: null, confidence: 'low' });
   });
 });
 

@@ -1332,6 +1332,57 @@
             border-top: 1px solid var(--line, #ddd);
         }
 
+        .chat-image-btn {
+            flex: 0 0 auto;
+            min-width: 48px;
+            min-height: 48px;
+            padding: 10px;
+            color: var(--primary-color);
+            background: transparent;
+            border: 1px solid var(--line, #ccc);
+            box-shadow: none;
+        }
+
+        .chat-image-review {
+            width: min(100%, 460px);
+        }
+
+        .chat-image-thumb {
+            display: block;
+            width: min(180px, 100%);
+            max-height: 150px;
+            margin: 10px 0;
+            object-fit: contain;
+            border: 1px solid var(--line, #ddd);
+            border-radius: 10px;
+        }
+
+        .chat-image-entry {
+            display: grid;
+            grid-template-columns: auto minmax(120px, 1fr) minmax(90px, 0.7fr);
+            gap: 7px;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .chat-image-entry input[type="date"],
+        .chat-image-entry input[type="number"] {
+            width: 100%;
+            min-width: 0;
+            min-height: 40px;
+            padding: 7px;
+            border: 1px solid var(--line, #ccc);
+            border-radius: 8px;
+            font: inherit;
+        }
+
+        .chat-image-confidence,
+        .chat-image-warning {
+            margin-top: 5px;
+            color: var(--muted-ink, #666);
+            font-size: 12px;
+        }
+
         .chat-composer textarea {
             flex: 1;
             min-height: 48px;
@@ -1343,11 +1394,60 @@
             font: inherit;
         }
 
-        .chat-privacy-note {
-            margin: 0;
-            padding: 0 14px 10px;
+        #chatSendBtn {
+            flex: 0 0 108px;
+            width: 108px;
+            min-width: 108px;
+        }
+
+        .chat-about {
+            position: relative;
+            flex: 0 0 auto;
+            padding: 0 14px 9px;
+        }
+
+        .chat-about-toggle {
+            width: auto;
+            min-height: 28px;
+            padding: 3px 0;
             color: var(--muted-ink, #666);
+            background: transparent !important;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none !important;
             font-size: 11px;
+            font-weight: 500;
+            text-align: left;
+        }
+
+        .chat-about-popover {
+            position: absolute;
+            right: 12px;
+            bottom: calc(100% + 5px);
+            left: 12px;
+            z-index: 2;
+            max-height: min(240px, 45dvh);
+            overflow-y: auto;
+            padding: 13px;
+            color: var(--ink, #172033);
+            background: #fff;
+            border: 1px solid var(--line, #ddd);
+            border-radius: 12px;
+            box-shadow: 0 12px 35px rgba(15, 23, 42, 0.22);
+            font-size: 12px;
+            line-height: 1.45;
+        }
+
+        .chat-about-popover[hidden] {
+            display: none;
+        }
+
+        .chat-about-popover p {
+            margin: 0 0 8px;
+        }
+
+        .chat-about-popover p:last-child {
+            margin-bottom: 0;
         }
 
         @media (max-width: 600px) {
@@ -1449,11 +1549,22 @@
             </header>
             <div id="chatTranscript" class="chat-transcript" aria-live="polite"></div>
             <form id="chatForm" class="chat-composer">
+                <button type="button" id="chatImageBtn" class="chat-image-btn" aria-label="Upload a step screenshot" title="Upload a step screenshot">📷</button>
+                <input type="file" id="chatImageInput" accept="image/jpeg,image/png,image/webp" hidden>
                 <label class="visually-hidden" for="chatInput">Message Trotter</label>
                 <textarea id="chatInput" maxlength="2000" placeholder="Try: Log 8,200 steps yesterday" required></textarea>
                 <button type="submit" id="chatSendBtn">Send</button>
             </form>
-            <p class="chat-privacy-note">Your message and recent local context are processed by Gemini. No server-side chat history; this user-scoped tab transcript lasts until you clear it or close the tab.</p>
+            <div class="chat-about">
+                <button type="button" id="chatAboutBtn" class="chat-about-toggle" aria-expanded="false" aria-controls="chatAboutPopover">
+                    Trotter is an LLM agent and can misstep. Trust her, but verify. · Details
+                </button>
+                <div id="chatAboutPopover" class="chat-about-popover" hidden>
+                    <p><strong>About Trotter</strong></p>
+                    <p>Gemini processes your message, recent local conversation context, and screenshots you choose to upload. Step Challenge does not store screenshots or server-side chat history.</p>
+                    <p>Trotter can occasionally misread an image or phrase a fact incorrectly. Review extracted dates and step counts before saving. Important entries and overwrites always require a deterministic preview and explicit confirmation.</p>
+                </div>
+            </div>
         </section>
     </div>
 

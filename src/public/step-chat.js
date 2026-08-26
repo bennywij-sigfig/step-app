@@ -4,7 +4,14 @@
     const STORAGE_SCOPE_KEY = 'stepChatTranscriptScopeV2';
     const TONE_STORAGE_KEY = 'stepChatToneV1';
     const MAX_STORED_MESSAGES = 40;
-    const state = { csrfToken: null, messages: [], configured: null, storageKey: null };
+    const state = {
+        csrfToken: null,
+        messages: [],
+        configured: null,
+        storageKey: null,
+        imageObjectUrl: null,
+        imageUploadEnabled: false
+    };
 
     const formatNumber = value => Number(value || 0).toLocaleString();
     const formatDate = value => new Date(`${value}T12:00:00`).toLocaleDateString(undefined, {
@@ -145,6 +152,147 @@
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Chat request failed');
         return data;
+    }
+
+    async function prepareImage(file) {
+        if (!file || file.size > 20 * 1024 * 1024) {
+            throw new Error('Choose an image smaller than 20 MB.');
+        }
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            throw new Error('Use a JPEG, PNG, or WebP image.');
+        }
+        let bitmap;
+        let fallbackUrl = null;
+        if (typeof createImageBitmap === 'function') {
+            bitmap = await createImageBitmap(file);
+        } else {
+            fallbackUrl = URL.createObjectURL(file);
+            bitmap = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = () => reject(new Error('That image could not be opened.'));
+                image.src = fallbackUrl;
+            });
+        }
+        try {
+            const scale = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#fff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.9));
+            if (!blob || blob.size > 5 * 1024 * 1024) {
+                throw new Error('The processed image is still too large. Try a tighter crop.');
+            }
+            return blob;
+        } finally {
+            bitmap.close?.();
+            if (fallbackUrl) URL.revokeObjectURL(fallbackUrl);
+        }
+    }
+
+    async function extractImage(blob) {
+        const csrfToken = await getCsrfToken();
+        const dateContext = getClientDateContext();
+        const response = await fetch('/api/chat/image/extract', {
+            method: 'POST',
+            headers: {
+                'Content-Type': blob.type,
+                'X-CSRF-Token': csrfToken,
+                'X-Client-Date': dateContext.client_date,
+                'X-Client-Timezone': dateContext.client_timezone
+            },
+            body: blob
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || 'Trotter could not inspect that image.');
+        return data.extraction;
+    }
+
+    function renderImageExtraction(extraction, blob) {
+        if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
+        state.imageObjectUrl = URL.createObjectURL(blob);
+        if (!extraction.recognized || !extraction.entries.length) {
+            URL.revokeObjectURL(state.imageObjectUrl);
+            state.imageObjectUrl = null;
+            createMessage('assistant', 'I could not find clear date-and-step pairs in that image. Try a tighter screenshot that shows both values.', false);
+            return;
+        }
+
+        const message = createMessage('assistant', 'I found these possible entries. Please correct anything that looks wrong before previewing the save.', false);
+        message.classList.add('chat-image-review');
+        const image = document.createElement('img');
+        image.className = 'chat-image-thumb';
+        image.src = state.imageObjectUrl;
+        image.alt = 'Uploaded step screenshot preview';
+        message.appendChild(image);
+
+        const rows = [];
+        extraction.entries.forEach((entry, index) => {
+            const row = document.createElement('div');
+            row.className = 'chat-image-entry';
+            const include = document.createElement('input');
+            include.type = 'checkbox';
+            include.checked = Boolean(entry.date && Number.isInteger(entry.count));
+            include.setAttribute('aria-label', `Include extracted entry ${index + 1}`);
+            const date = document.createElement('input');
+            date.type = 'date';
+            date.value = entry.date || '';
+            date.setAttribute('aria-label', `Date for extracted entry ${index + 1}`);
+            const count = document.createElement('input');
+            count.type = 'number';
+            count.min = '0';
+            count.max = '70000';
+            count.inputMode = 'numeric';
+            count.value = Number.isInteger(entry.count) ? String(entry.count) : '';
+            count.setAttribute('aria-label', `Steps for extracted entry ${index + 1}`);
+            row.append(include, date, count);
+            const detail = document.createElement('div');
+            detail.className = 'chat-image-confidence';
+            detail.style.gridColumn = '2 / -1';
+            detail.textContent = `${entry.confidence} confidence${entry.raw_date ? ` · read as “${entry.raw_date}”` : ''}${entry.note ? ` · ${entry.note}` : ''}`;
+            row.appendChild(detail);
+            message.appendChild(row);
+            rows.push({ include, date, count });
+        });
+
+        for (const warningText of extraction.warnings || []) {
+            const warning = document.createElement('div');
+            warning.className = 'chat-image-warning';
+            warning.textContent = `⚠ ${warningText}`;
+            message.appendChild(warning);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'chat-actions';
+        actions.appendChild(actionButton('Preview selected entries', '', async () => {
+            const selectedRows = rows.filter(row => row.include.checked);
+            const entries = selectedRows.map(row => ({
+                date: row.date.value,
+                count: row.count.value.trim() === '' ? null : Number(row.count.value)
+            }));
+            if (!entries.length || entries.some(entry =>
+                !entry.date || !Number.isInteger(entry.count) || entry.count < 0 || entry.count > 70000
+            )) {
+                createMessage('error', 'Select at least one row and provide a valid date and whole-number step count.', false);
+                return;
+            }
+            for (const button of actions.querySelectorAll('button')) button.disabled = true;
+            try {
+                const payload = await postJson('/api/chat/entries/preview', {
+                    entries,
+                    tone: document.getElementById('chatToneSelect').value
+                });
+                renderResult(payload);
+            } catch (error) {
+                createMessage('error', error.message, false);
+                for (const button of actions.querySelectorAll('button')) button.disabled = false;
+            }
+        }));
+        message.appendChild(actions);
     }
 
     function actionButton(label, className, handler) {
@@ -329,12 +477,15 @@
     async function initializeConfig() {
         const transcript = document.getElementById('chatTranscript');
         const sendButton = document.getElementById('chatSendBtn');
+        const imageButton = document.getElementById('chatImageBtn');
         sendButton.disabled = true;
+        imageButton.disabled = true;
         try {
             const response = await fetch('/api/chat/config');
             if (!response.ok) throw new Error('Chat configuration unavailable');
             const config = await response.json();
             state.configured = config.enabled;
+            state.imageUploadEnabled = config.enabled && config.image_upload;
             const previousScope = sessionStorage.getItem(STORAGE_SCOPE_KEY);
             if (previousScope && previousScope !== config.transcript_scope) {
                 for (const key of Object.keys(sessionStorage)) {
@@ -355,11 +506,13 @@
                 createMessage('assistant', 'Trotter is ready, but a server-side model and API key still need to be selected.', false);
             }
             sendButton.disabled = !config.enabled;
+            imageButton.disabled = !state.imageUploadEnabled;
         } catch (error) {
             state.configured = false;
             transcript.replaceChildren();
             createMessage('error', error.message, false);
             sendButton.disabled = true;
+            imageButton.disabled = true;
         }
     }
 
@@ -392,7 +545,16 @@
         const input = document.getElementById('chatInput');
         const sendButton = document.getElementById('chatSendBtn');
         const toneSelect = document.getElementById('chatToneSelect');
+        const imageButton = document.getElementById('chatImageBtn');
+        const imageInput = document.getElementById('chatImageInput');
+        const aboutButton = document.getElementById('chatAboutBtn');
+        const aboutPopover = document.getElementById('chatAboutPopover');
         if (!overlay || !form) return;
+
+        const closeAbout = () => {
+            aboutPopover.hidden = true;
+            aboutButton.setAttribute('aria-expanded', 'false');
+        };
 
         // Escape the dashboard container's stacking context so Tidbits and
         // other page cards can never paint above the modal.
@@ -401,6 +563,9 @@
         window.visualViewport?.addEventListener('resize', syncVisualViewport);
         window.visualViewport?.addEventListener('scroll', syncVisualViewport);
         window.addEventListener('orientationchange', syncVisualViewport);
+        window.addEventListener('beforeunload', () => {
+            if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
+        });
         input.addEventListener('focus', () => {
             setTimeout(() => {
                 syncVisualViewport();
@@ -416,14 +581,54 @@
         initializeConfig();
 
         document.getElementById('chatOpenBtn').addEventListener('click', openChat);
-        document.getElementById('chatCloseBtn').addEventListener('click', closeChat);
+        document.getElementById('chatCloseBtn').addEventListener('click', () => {
+            closeAbout();
+            closeChat();
+        });
+        aboutButton.addEventListener('click', () => {
+            const willOpen = aboutPopover.hidden;
+            aboutPopover.hidden = !willOpen;
+            aboutButton.setAttribute('aria-expanded', String(willOpen));
+        });
+        imageButton.addEventListener('click', () => imageInput.click());
+        imageInput.addEventListener('change', async () => {
+            const file = imageInput.files?.[0];
+            imageInput.value = '';
+            if (!file) return;
+            imageButton.disabled = true;
+            createMessage('user', 'Uploaded a step screenshot for review.');
+            const loading = createMessage('assistant', 'Trotter is squinting at the screenshot…', false);
+            try {
+                const blob = await prepareImage(file);
+                const extraction = await extractImage(blob);
+                loading.remove();
+                renderImageExtraction(extraction, blob);
+            } catch (error) {
+                loading.remove();
+                createMessage('error', error.message, false);
+            } finally {
+                imageButton.disabled = !state.imageUploadEnabled;
+            }
+        });
         document.getElementById('chatClearBtn').addEventListener('click', () => {
             state.messages = [];
             if (state.storageKey) sessionStorage.removeItem(state.storageKey);
+            if (state.imageObjectUrl) {
+                URL.revokeObjectURL(state.imageObjectUrl);
+                state.imageObjectUrl = null;
+            }
             transcript.replaceChildren();
             createMessage('assistant', 'Transcript cleared. What would you like to do?', false);
         });
-        overlay.addEventListener('click', event => { if (event.target === overlay) closeChat(); });
+        overlay.addEventListener('click', event => {
+            if (event.target === overlay) {
+                closeAbout();
+                closeChat();
+            }
+        });
+        document.addEventListener('click', event => {
+            if (!event.target.closest('.chat-about')) closeAbout();
+        });
         input.addEventListener('keydown', event => {
             if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
                 event.preventDefault();
@@ -431,7 +636,13 @@
             }
         });
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && !overlay.hidden) closeChat();
+            if (event.key !== 'Escape' || overlay.hidden) return;
+            if (!aboutPopover.hidden) {
+                closeAbout();
+                aboutButton.focus();
+                return;
+            }
+            closeChat();
         });
 
         form.addEventListener('submit', async event => {

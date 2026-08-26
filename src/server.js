@@ -23,6 +23,8 @@ const {
   chatApiLimiter,
   chatGlobalHourlyLimiter,
   chatGlobalDailyLimiter,
+  chatImageLimiter,
+  chatImageGlobalLimiter,
   adminApiLimiter,
   mcpApiLimiter,
   mcpBurstLimiter
@@ -107,7 +109,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"], // Allow inline styles and CDN
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"], // Allow inline scripts and CDN for MCP setup page
-      imgSrc: ["'self'", "data:", "https:"], // Allow external images for charts/icons
+      imgSrc: ["'self'", "data:", "blob:", "https:"], // Allow local image previews plus charts/icons
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "https://cdnjs.cloudflare.com"], // Allow font awesome fonts
       objectSrc: ["'none'"],
@@ -491,6 +493,8 @@ app.use('/api/chat', createChatRouter({
   chatApiLimiter,
   chatGlobalHourlyLimiter,
   chatGlobalDailyLimiter,
+  chatImageLimiter,
+  chatImageGlobalLimiter,
   provider: chatProvider,
   service: stepChatService
 }));

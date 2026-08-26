@@ -6,6 +6,7 @@ const { isValidDate } = require('../utils/validation');
 const MESSAGE_LIMIT = 2000;
 const HISTORY_MESSAGE_LIMIT = 30;
 const HISTORY_CHAR_LIMIT = 20000;
+const IMAGE_BYTE_LIMIT = 5 * 1024 * 1024;
 const PLAN_TTL_MS = 5 * 60 * 1000;
 const MAX_SESSION_PLANS = 5;
 
@@ -15,11 +16,31 @@ function createChatRouter({
   chatApiLimiter,
   chatGlobalHourlyLimiter = (req, res, next) => next(),
   chatGlobalDailyLimiter = (req, res, next) => next(),
+  chatImageLimiter = (req, res, next) => next(),
+  chatImageGlobalLimiter = (req, res, next) => next(),
   provider,
   service,
   now = () => Date.now()
 }) {
   const router = express.Router();
+  const imageBodyParser = express.raw({
+    type: ['image/jpeg', 'image/png', 'image/webp'],
+    limit: IMAGE_BYTE_LIMIT
+  });
+  const parseImageBody = (req, res, next) => imageBodyParser(req, res, error => {
+    if (error?.type === 'entity.too.large') {
+      return res.status(413).json({ error: 'That image is larger than the 5 MB upload limit.' });
+    }
+    next(error);
+  });
+
+  function validateImageBytes(buffer, mimeType) {
+    if (!Buffer.isBuffer(buffer) || buffer.length === 0) return false;
+    if (mimeType === 'image/jpeg') return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    if (mimeType === 'image/png') return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    if (mimeType === 'image/webp') return buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP';
+    return false;
+  }
 
   function validateHistory(rawHistory) {
     if (!Array.isArray(rawHistory)) return [];
@@ -82,6 +103,24 @@ function createChatRouter({
     }
   }
 
+  function attachPlan(req, result) {
+    const plans = prunePlans(req);
+    const actionable = result.summary.new + result.summary.conflicts;
+    if (actionable > 0) {
+      const planId = crypto.randomUUID();
+      const createdAt = now();
+      plans[planId] = {
+        challengeId: result.challengeId,
+        entries: result.entries,
+        createdAt,
+        expiresAt: createdAt + PLAN_TTL_MS
+      };
+      result.plan_id = planId;
+      result.expires_in_seconds = PLAN_TTL_MS / 1000;
+    }
+    return result;
+  }
+
   function prunePlans(req) {
     const currentTime = now();
     const plans = req.session.stepChatPlans || {};
@@ -102,7 +141,9 @@ function createChatRouter({
       message_limit: MESSAGE_LIMIT,
       batch_limit: service.MAX_BATCH_SIZE,
       history: 'browser-session-only',
-      transcript_scope: String(req.session.userId)
+      transcript_scope: String(req.session.userId),
+      image_upload: typeof provider.extractImage === 'function',
+      image_limit_bytes: IMAGE_BYTE_LIMIT
     });
   });
 
@@ -128,22 +169,7 @@ function createChatRouter({
       }
       const result = await service.executeIntent(req.session.userId, intent);
 
-      if (result.kind === 'step_preview') {
-        const plans = prunePlans(req);
-        const actionable = result.summary.new + result.summary.conflicts;
-        if (actionable > 0) {
-          const planId = crypto.randomUUID();
-          const createdAt = now();
-          plans[planId] = {
-            challengeId: result.challengeId,
-            entries: result.entries,
-            createdAt,
-            expiresAt: createdAt + PLAN_TTL_MS
-          };
-          result.plan_id = planId;
-          result.expires_in_seconds = PLAN_TTL_MS / 1000;
-        }
-      }
+      if (result.kind === 'step_preview') attachPlan(req, result);
 
       let reply = null;
       const facts = narrationFacts(result);
@@ -172,6 +198,56 @@ function createChatRouter({
       }
       console.error('Chat request failed:', error.message);
       res.status(500).json({ error: 'I couldn’t complete that request just now. Please try again.' });
+    }
+  });
+
+  router.post(
+    '/image/extract',
+    requireApiAuth,
+    validateCSRFToken,
+    chatImageGlobalLimiter,
+    chatImageLimiter,
+    parseImageBody,
+    async (req, res) => {
+      const mimeType = String(req.get('Content-Type') || '').split(';')[0].toLowerCase();
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(mimeType)) {
+        return res.status(415).json({ error: 'Use a JPEG, PNG, or WebP image.' });
+      }
+      if (!validateImageBytes(req.body, mimeType)) {
+        return res.status(400).json({ error: 'That file does not appear to be a valid image.' });
+      }
+      if (typeof provider.extractImage !== 'function') {
+        return res.status(503).json({ error: 'Image extraction is not configured.' });
+      }
+      try {
+        const serverContext = await service.getContext();
+        const context = applyClientDateContext(serverContext, {
+          client_date: req.get('X-Client-Date'),
+          client_timezone: req.get('X-Client-Timezone')
+        });
+        const extraction = await provider.extractImage(req.body, mimeType, context);
+        res.json({ extraction });
+      } catch (error) {
+        if (error.response || error.code === 'ECONNABORTED') {
+          console.error('Trotter image provider request failed:', error.message);
+          return res.status(502).json({ error: 'Trotter could not inspect that image right now. Please try again.' });
+        }
+        console.error('Trotter image extraction failed:', error.message);
+        res.status(422).json({ error: 'Trotter could not find usable date and step entries in that image.' });
+      }
+    }
+  );
+
+  router.post('/entries/preview', requireApiAuth, validateCSRFToken, chatApiLimiter, async (req, res) => {
+    try {
+      const result = { kind: 'step_preview', ...(await service.previewEntries(req.session.userId, req.body?.entries)) };
+      attachPlan(req, result);
+      const tone = ALLOWED_TONES.has(req.body?.tone) ? req.body.tone : 'encouraging';
+      res.json({ intent: 'record_steps', tone, result, reply: null });
+    } catch (error) {
+      if (error.code === 'STEP_CHAT_USER_ERROR') return res.status(400).json({ error: error.message });
+      console.error('Reviewed image entries preview failed:', error.message);
+      res.status(500).json({ error: 'Trotter could not preview those entries right now.' });
     }
   });
 
@@ -208,5 +284,6 @@ module.exports = {
   MESSAGE_LIMIT,
   HISTORY_MESSAGE_LIMIT,
   HISTORY_CHAR_LIMIT,
+  IMAGE_BYTE_LIMIT,
   PLAN_TTL_MS
 };
