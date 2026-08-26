@@ -296,6 +296,26 @@ if (!shouldDelayInit) {
   db.run(`CREATE INDEX IF NOT EXISTS idx_steps_challenge_date_user ON steps(challenge_id, date, user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_steps_user_challenge ON steps(user_id, challenge_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_challenges_active ON challenges(is_active) WHERE is_active = 1`);
+  // Enforce the application invariant at the database layer as well. A
+  // partial unique index allows any number of inactive rows but only one `1`.
+  db.all(`SELECT id, name FROM challenges WHERE is_active = 1`, (err, activeChallenges) => {
+    if (err) {
+      console.error('Error checking active challenges before uniqueness migration:', err);
+      return;
+    }
+    if (activeChallenges.length > 1) {
+      console.error('❌ Cannot create single-active-challenge index; multiple active challenges exist:', activeChallenges);
+      return;
+    }
+    db.run(`CREATE UNIQUE INDEX IF NOT EXISTS idx_single_active_challenge
+            ON challenges(is_active) WHERE is_active = 1`, (indexErr) => {
+      if (indexErr) {
+        console.error('❌ Failed to enforce single active challenge:', indexErr);
+      } else {
+        console.log('✅ Single active challenge constraint ready');
+      }
+    });
+  });
   
   // MCP performance indexes
   db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_user ON mcp_tokens(user_id)`);

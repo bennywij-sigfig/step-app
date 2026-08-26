@@ -2919,6 +2919,9 @@ app.post('/api/admin/challenges/:challengeId/prepare-teams', adminApiLimiter, re
     }
   } catch (error) {
     console.error('Error preparing challenge teams:', error);
+    if (error.code === 'SQLITE_CONSTRAINT' && error.message.includes('challenges.is_active')) {
+      return res.status(409).json({ error: 'Another challenge became active first. Refresh and try again.' });
+    }
     return res.status(500).json({ error: 'Failed to prepare teams for the new challenge' });
   }
 });
@@ -2974,6 +2977,11 @@ app.put('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFToken
       function(err) {
         if (err) {
           console.error('Error updating challenge:', err);
+          if (err.code === 'SQLITE_CONSTRAINT' && err.message.includes('challenges.is_active')) {
+            return res.status(409).json({
+              error: 'Another challenge became active first. Refresh and try again.'
+            });
+          }
           return res.status(500).json({ error: 'Database error' });
         }
         if (this.changes === 0) {

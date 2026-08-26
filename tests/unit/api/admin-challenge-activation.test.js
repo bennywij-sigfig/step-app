@@ -3,6 +3,7 @@ const path = require('path');
 
 const root = path.join(__dirname, '../../..');
 const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
+const database = fs.readFileSync(path.join(root, 'src/database.js'), 'utf8');
 const admin = fs.readFileSync(path.join(root, 'src/public/admin.js'), 'utf8');
 
 describe('admin challenge activation contract', () => {
@@ -16,6 +17,12 @@ describe('admin challenge activation contract', () => {
     expect(admin).toContain('Activate "${name.trim()}" with the current teams?');
     expect(admin).toContain('This keeps every current team name and player assignment.');
     expect(admin).toContain('Start & Reset Teams instead.');
+  });
+
+  test('database schema enforces at most one active challenge', () => {
+    expect(database).toContain('CREATE UNIQUE INDEX IF NOT EXISTS idx_single_active_challenge');
+    expect(database).toContain('ON challenges(is_active) WHERE is_active = 1');
+    expect(database).toContain('multiple active challenges exist');
   });
 
   test('backend deactivates other challenges successfully before activating the target', () => {
