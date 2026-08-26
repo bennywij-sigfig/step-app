@@ -146,6 +146,16 @@ describe('Step Chat deterministic write service', () => {
     }
   });
 
+  test('asks deterministic follow-ups for incomplete or invalid step requests', async () => {
+    await expect(service.executeIntent(1, { intent: 'help', reason: 'missing_date', tone: 'neutral' }))
+      .resolves.toEqual({
+        kind: 'help',
+        message: 'What date should I use? You can say today, yesterday, or give me a specific date.'
+      });
+    const invalid = await service.executeIntent(1, { intent: 'help', reason: 'invalid_count', tone: 'neutral' });
+    expect(invalid.message).toContain('0 and 70,000');
+  });
+
   test('calculates the pace needed to reach a target logged-day average', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2025-08-25T12:00:00-07:00'));
     try {

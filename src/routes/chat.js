@@ -84,8 +84,14 @@ function createChatRouter({
         recent_entries: result.entries.slice(0, 7)
       };
     }
-    if (result.kind === 'step_preview') return null;
+    if (result.kind === 'step_preview' || result.kind === 'help') return null;
     return result;
+  }
+
+  function voiceReplyClaimsWrite(reply) {
+    if (typeof reply !== 'string') return true;
+    return /\b(?:i|we|trotter)\b[\s\S]{0,70}\b(?:recorded|logged|saved|added|updated|overwrote|submitted)\b/i.test(reply)
+      || /\b(?:successfully|has been)\s+(?:recorded|logged|saved|added|updated|overwritten|submitted)\b/i.test(reply);
   }
 
   function applyClientDateContext(context, body) {
@@ -175,7 +181,12 @@ function createChatRouter({
       const facts = narrationFacts(result);
       if (facts && typeof provider.compose === 'function') {
         try {
-          reply = await provider.compose(message.trim(), history, intent.tone, facts);
+          const candidateReply = await provider.compose(message.trim(), history, intent.tone, facts);
+          if (voiceReplyClaimsWrite(candidateReply)) {
+            console.warn('Discarded Trotter voice reply that claimed a write occurred');
+          } else {
+            reply = candidateReply;
+          }
         } catch (error) {
           console.warn('Trotter voice pass failed; using deterministic fallback:', error.message);
         }
@@ -242,7 +253,7 @@ function createChatRouter({
     try {
       const result = { kind: 'step_preview', ...(await service.previewEntries(req.session.userId, req.body?.entries)) };
       attachPlan(req, result);
-      const tone = ALLOWED_TONES.has(req.body?.tone) ? req.body.tone : 'encouraging';
+      const tone = ALLOWED_TONES.has(req.body?.tone) ? req.body.tone : 'neutral';
       res.json({ intent: 'record_steps', tone, result, reply: null });
     } catch (error) {
       if (error.code === 'STEP_CHAT_USER_ERROR') return res.status(400).json({ error: error.message });

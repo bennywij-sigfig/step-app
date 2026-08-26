@@ -13,6 +13,14 @@ const ALLOWED_INTENTS = new Set([
 ]);
 
 const ALLOWED_TONES = new Set(['neutral', 'encouraging', 'droll', 'sarcastic']);
+const ALLOWED_HELP_REASONS = new Set([
+  'missing_date',
+  'missing_count',
+  'invalid_count',
+  'ambiguous_date',
+  'unsafe_or_unsupported',
+  'general'
+]);
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 class ChatIntentValidationError extends Error {
@@ -51,8 +59,12 @@ function validateChatIntent(rawIntent) {
 
   const normalized = {
     intent,
-    tone: ALLOWED_TONES.has(rawIntent.tone) ? rawIntent.tone : 'encouraging'
+    tone: ALLOWED_TONES.has(rawIntent.tone) ? rawIntent.tone : 'neutral'
   };
+
+  if (intent === 'help') {
+    normalized.reason = ALLOWED_HELP_REASONS.has(rawIntent.reason) ? rawIntent.reason : 'general';
+  }
 
   if (intent === 'record_steps') {
     if (!Array.isArray(rawIntent.entries) || rawIntent.entries.length === 0 || rawIntent.entries.length > 31) {
@@ -120,6 +132,7 @@ function validateChatIntent(rawIntent) {
 module.exports = {
   ALLOWED_INTENTS,
   ALLOWED_TONES,
+  ALLOWED_HELP_REASONS,
   ChatIntentValidationError,
   validateChatIntent
 };

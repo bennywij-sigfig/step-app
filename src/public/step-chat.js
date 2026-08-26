@@ -379,7 +379,7 @@
     }
 
     function renderResult(payload) {
-        const { result, tone = 'encouraging', reply = null } = payload;
+        const { result, tone = 'neutral', reply = null } = payload;
         if (result.kind === 'step_preview') return renderStepPreview(result, tone);
         if (result.kind === 'leaderboard') return renderLeaderboard(result, tone, reply);
         if (result.kind === 'steps') return renderSteps(result, tone, reply);
@@ -474,12 +474,20 @@
         createMessage('assistant', result.message || 'I can help with step entries, challenge details, standings, targets, and the occasional morale boost.');
     }
 
+    function setImageButtonDisabled(disabled) {
+        const button = document.getElementById('chatImageBtn');
+        const input = document.getElementById('chatImageInput');
+        if (!button || !input) return;
+        button.setAttribute('aria-disabled', String(disabled));
+        button.tabIndex = disabled ? -1 : 0;
+        input.disabled = disabled;
+    }
+
     async function initializeConfig() {
         const transcript = document.getElementById('chatTranscript');
         const sendButton = document.getElementById('chatSendBtn');
-        const imageButton = document.getElementById('chatImageBtn');
         sendButton.disabled = true;
-        imageButton.disabled = true;
+        setImageButtonDisabled(true);
         try {
             const response = await fetch('/api/chat/config');
             if (!response.ok) throw new Error('Chat configuration unavailable');
@@ -506,13 +514,13 @@
                 createMessage('assistant', 'Trotter is ready, but a server-side model and API key still need to be selected.', false);
             }
             sendButton.disabled = !config.enabled;
-            imageButton.disabled = !state.imageUploadEnabled;
+            setImageButtonDisabled(!state.imageUploadEnabled);
         } catch (error) {
             state.configured = false;
             transcript.replaceChildren();
             createMessage('error', error.message, false);
             sendButton.disabled = true;
-            imageButton.disabled = true;
+            setImageButtonDisabled(true);
         }
     }
 
@@ -590,12 +598,21 @@
             aboutPopover.hidden = !willOpen;
             aboutButton.setAttribute('aria-expanded', String(willOpen));
         });
-        imageButton.addEventListener('click', () => imageInput.click());
+        imageButton.addEventListener('click', event => {
+            if (imageButton.getAttribute('aria-disabled') === 'true') event.preventDefault();
+        });
+        imageButton.addEventListener('keydown', event => {
+            if (imageButton.getAttribute('aria-disabled') === 'true') return;
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                imageInput.click();
+            }
+        });
         imageInput.addEventListener('change', async () => {
             const file = imageInput.files?.[0];
             imageInput.value = '';
             if (!file) return;
-            imageButton.disabled = true;
+            setImageButtonDisabled(true);
             createMessage('user', 'Uploaded a step screenshot for review.');
             const loading = createMessage('assistant', 'Trotter is squinting at the screenshot…', false);
             try {
@@ -607,7 +624,7 @@
                 loading.remove();
                 createMessage('error', error.message, false);
             } finally {
-                imageButton.disabled = !state.imageUploadEnabled;
+                setImageButtonDisabled(!state.imageUploadEnabled);
             }
         });
         document.getElementById('chatClearBtn').addEventListener('click', () => {

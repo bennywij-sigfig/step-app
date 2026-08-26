@@ -69,8 +69,15 @@ describe('constrained chat intent validation', () => {
       intent: 'calculate_overtake',
       target_name: 'Ada',
       days: 5,
-      tone: 'encouraging'
+      tone: 'neutral'
     });
+  });
+
+  test('keeps deterministic clarification reasons for incomplete logging requests', () => {
+    expect(validateChatIntent({ intent: 'help', reason: 'missing_date' }))
+      .toEqual({ intent: 'help', reason: 'missing_date', tone: 'neutral' });
+    expect(validateChatIntent({ intent: 'help', reason: 'made_up_reason' }))
+      .toEqual({ intent: 'help', reason: 'general', tone: 'neutral' });
   });
 });
 

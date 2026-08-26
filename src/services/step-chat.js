@@ -485,6 +485,18 @@ function createStepChatService({
     };
   }
 
+  function helpResponse(reason = 'general') {
+    const messages = {
+      missing_date: 'What date should I use? You can say today, yesterday, or give me a specific date.',
+      missing_count: 'How many steps should I log, and for which date?',
+      invalid_count: 'Step counts must be whole numbers between 0 and 70,000. I will also need the date you want to use.',
+      ambiguous_date: 'I am not sure which date you mean. Try today, yesterday, or a specific calendar date.',
+      unsafe_or_unsupported: 'I cannot do that, but I can help with your own steps, challenge details, standings, and targets.',
+      general: 'I can help with step entries, step history or averages, challenge details, standings, targets, and morale.'
+    };
+    return { kind: 'help', message: messages[reason] || messages.general };
+  }
+
   async function executeIntent(userId, intent) {
     switch (intent.intent) {
       case 'record_steps': return { kind: 'step_preview', ...(await previewEntries(userId, intent.entries)) };
@@ -497,11 +509,8 @@ function createStepChatService({
       case 'challenge_info': return challengeInfo(intent.as_of_date);
       case 'encouragement': return encouragement(userId);
       case 'step_chitchat': return { kind: 'chitchat' };
-      default:
-        return {
-          kind: 'help',
-          message: 'I can record steps, show your step history or average, query individual or team leaderboards, and calculate a pace for a target average or to overtake someone.'
-        };
+      case 'help': return helpResponse(intent.reason);
+      default: return helpResponse('general');
     }
   }
 

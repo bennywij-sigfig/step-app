@@ -128,7 +128,14 @@ describe('Step Chat routes', () => {
 
   test('uses a read-only voice pass for non-write results', async () => {
     const compose = jest.fn(async () => 'A natural Trotter response.');
-    const { app } = buildApp({ providerOverrides: { compose } });
+    const facts = { kind: 'challenge_info', has_challenge: false, as_of_date: '2026-08-25' };
+    const { app } = buildApp({
+      providerOverrides: {
+        compose,
+        interpret: jest.fn(async () => ({ intent: 'challenge_info', tone: 'droll', as_of_date: '2026-08-25' }))
+      },
+      serviceOverrides: { executeIntent: jest.fn(async () => facts) }
+    });
     const agent = request.agent(app);
     await agent.post('/test-login').expect(200);
     const response = await agent.post('/api/chat')
@@ -144,7 +151,7 @@ describe('Step Chat routes', () => {
       'Really?',
       [{ role: 'assistant', text: 'The challenge ends September 5.' }],
       'droll',
-      { kind: 'help', message: 'Help response' }
+      facts
     );
     expect(response.body.reply).toBe('A natural Trotter response.');
   });
@@ -167,6 +174,39 @@ describe('Step Chat routes', () => {
     expect(executeIntent).toHaveBeenCalledWith(42, {
       intent: 'challenge_info', tone: 'neutral', as_of_date: '2026-08-24'
     });
+  });
+
+  test('never runs the voice pass for rejected/help requests', async () => {
+    const compose = jest.fn(async () => 'I successfully recorded 82,000 steps.');
+    const { app } = buildApp({ providerOverrides: { compose } });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Log 82000' })
+      .expect(200);
+    expect(compose).not.toHaveBeenCalled();
+    expect(response.body.reply).toBeNull();
+    expect(response.body.result.kind).toBe('help');
+  });
+
+  test('discards any read-only voice reply that falsely claims a write', async () => {
+    const compose = jest.fn(async () => 'Oink! I have successfully recorded your steps.');
+    const { app } = buildApp({
+      providerOverrides: {
+        interpret: jest.fn(async () => ({ intent: 'step_chitchat', tone: 'neutral' })),
+        compose
+      },
+      serviceOverrides: { executeIntent: jest.fn(async () => ({ kind: 'chitchat' })) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Did you save it?' })
+      .expect(200);
+    expect(compose).toHaveBeenCalled();
+    expect(response.body.reply).toBeNull();
   });
 
   test('creates a single-use plan and confirms the exact server-side preview', async () => {
