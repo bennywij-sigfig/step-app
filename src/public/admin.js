@@ -623,125 +623,87 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Load overview
+        // Load challenge-aware overview metrics
         async function loadOverview() {
             try {
-                const [usersResponse, challengeResponse] = await Promise.all([
-                    fetch('/api/admin/users'),
-                    fetch('/api/admin/current-challenge')
-                ]);
-                
-                const users = await usersResponse.json();
-                let currentChallenge = null;
-                
-                // Check if current challenge endpoint exists and get current challenge
-                if (challengeResponse.ok) {
-                    try {
-                        currentChallenge = await challengeResponse.json();
-                        if (currentChallenge && !currentChallenge.id) {
-                            currentChallenge = null; // No active challenge
-                        }
-                    } catch (e) {
-                        // No active challenge or endpoint doesn't exist
-                        currentChallenge = null;
-                    }
-                }
-                
-                // Update header text based on challenge status
+                const response = await fetch('/api/admin/overview');
+                if (!response.ok) throw new Error(`Overview request failed: ${response.status}`);
+                const overview = await response.json();
+                const challenge = overview.challenge;
                 const overviewHeader = document.querySelector('#overviewView h2');
-                if (!currentChallenge) {
-                    overviewHeader.textContent = 'System Overview';
+
+                if (challenge) {
+                    overviewHeader.textContent = `Challenge Overview: ${challenge.name}`;
+                    document.getElementById('totalUsers').textContent = challenge.eligible_users.toLocaleString();
+                    document.getElementById('totalSteps').textContent = challenge.total_steps.toLocaleString();
+                    document.getElementById('avgSteps').textContent = challenge.average_steps_per_participant.toLocaleString();
+                    document.getElementById('activeUsers').textContent = challenge.participants.toLocaleString();
+                    document.getElementById('totalUsersLabel').textContent = 'Eligible Users';
+                    document.getElementById('totalStepsLabel').textContent = 'Challenge Steps';
+                    document.getElementById('avgStepsLabel').textContent = 'Avg / Participant';
+                    document.getElementById('activeUsersLabel').textContent = 'Participants';
                 } else {
-                    overviewHeader.textContent = 'Challenge Overview';
+                    overviewHeader.textContent = 'System Overview';
+                    document.getElementById('totalUsers').textContent = overview.system.total_users.toLocaleString();
+                    document.getElementById('totalSteps').textContent = overview.system.total_steps.toLocaleString();
+                    document.getElementById('avgSteps').textContent = overview.system.average_steps_per_user.toLocaleString();
+                    document.getElementById('activeUsers').textContent = overview.system.users_with_steps.toLocaleString();
+                    document.getElementById('totalUsersLabel').textContent = 'Total Users';
+                    document.getElementById('totalStepsLabel').textContent = 'All-Time Steps';
+                    document.getElementById('avgStepsLabel').textContent = 'All-Time Avg / User';
+                    document.getElementById('activeUsersLabel').textContent = 'Users With Steps';
                 }
-                
-                // System-wide statistics (always shown)
-                const totalUsers = users.length;
-                const totalSteps = users.reduce((sum, user) => sum + user.total_steps, 0);
-                const avgSteps = totalUsers > 0 ? Math.round(totalSteps / totalUsers) : 0;
-                const activeUsers = users.filter(user => user.days_logged > 0).length;
-                
-                document.getElementById('totalUsers').textContent = totalUsers;
-                document.getElementById('totalSteps').textContent = totalSteps.toLocaleString();
-                document.getElementById('avgSteps').textContent = avgSteps.toLocaleString();
-                document.getElementById('activeUsers').textContent = activeUsers;
-                
-                // Add or update active challenge section
-                updateActiveChallengeSection(currentChallenge, users);
-                
+
+                updateActiveChallengeSection(challenge);
             } catch (error) {
                 console.error('Error loading overview:', error);
+                document.getElementById('message').innerHTML = '<div class="message error">Unable to load overview metrics.</div>';
             }
         }
-        
-        // Update or create active challenge statistics section
-        function updateActiveChallengeSection(currentChallenge, users) {
-            const overviewView = document.getElementById('overviewView');
+
+        function updateActiveChallengeSection(challenge) {
             let challengeSection = document.getElementById('active-challenge-stats');
-            
-            if (!currentChallenge) {
-                // Remove challenge section if no active challenge
-                if (challengeSection) {
-                    challengeSection.remove();
-                }
+            if (!challenge) {
+                if (challengeSection) challengeSection.remove();
                 return;
             }
-            
-            // Calculate challenge-specific statistics
-            const challengeStartDate = new Date(currentChallenge.start_date + 'T00:00:00');
-            const challengeEndDate = new Date(currentChallenge.end_date + 'T00:00:00');
-            const today = new Date();
-            
-            // Get challenge participants and their steps within challenge period
-            const challengeParticipants = users.filter(user => {
-                // User has logged steps within the challenge period
-                return user.days_logged > 0; // This is a simplification - ideally we'd check dates
-            });
-            
-            const totalChallengeParticipants = challengeParticipants.length;
-            const participationRate = users.length > 0 ? Math.round((totalChallengeParticipants / users.length) * 100) : 0;
-            
-            // Calculate days into challenge
-            const daysIntoChallenge = Math.max(0, Math.ceil((today - challengeStartDate) / (1000 * 60 * 60 * 24)));
-            const totalChallengeDays = Math.ceil((challengeEndDate - challengeStartDate) / (1000 * 60 * 60 * 24)) + 1;
-            
+
+            const currentDay = challenge.current_day || 0;
             const challengeStatsHTML = `
                 <div id="active-challenge-stats" style="margin-top: 30px; padding: 20px; background: rgba(102, 126, 234, 0.08); border-radius: 12px; border: 2px solid rgba(102, 126, 234, 0.15);">
                     <h3 style="margin: 0 0 20px 0; color: var(--primary-color); display: flex; align-items: center; gap: 8px;">
-                        🏆 Active Challenge: ${escapeHtml(currentChallenge.name)}
+                        🏆 Active Challenge: ${escapeHtml(challenge.name)}
                     </h3>
                     <div class="stats" style="margin-bottom: 15px;">
                         <div class="stat-card">
-                            <div class="stat-number">${totalChallengeParticipants}</div>
-                            <div class="stat-label">Challenge Participants</div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-number">${participationRate}%</div>
+                            <div class="stat-number">${challenge.participation_rate}%</div>
                             <div class="stat-label">Participation Rate</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">${daysIntoChallenge}</div>
-                            <div class="stat-label">Days Elapsed</div>
+                            <div class="stat-number">${currentDay}</div>
+                            <div class="stat-label">Current Day</div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-number">${totalChallengeDays}</div>
+                            <div class="stat-number">${challenge.total_days}</div>
                             <div class="stat-label">Total Days</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number">${challenge.step_entries.toLocaleString()}</div>
+                            <div class="stat-label">Daily Entries</div>
                         </div>
                     </div>
                     <div style="font-size: 14px; color: #666; margin-top: 15px;">
-                        <strong>Period:</strong> ${challengeStartDate.toLocaleDateString()} - ${challengeEndDate.toLocaleDateString()}
-                        ${currentChallenge.reporting_threshold ? `<br><strong>Reporting Threshold:</strong> ${currentChallenge.reporting_threshold}% for ranked participation` : ''}
+                        <strong>Status:</strong> ${escapeHtml(challenge.status || 'unknown')}<br>
+                        <strong>Period:</strong> ${escapeHtml(challenge.start_date)} - ${escapeHtml(challenge.end_date)}
+                        ${challenge.reporting_threshold ? `<br><strong>Reporting Threshold:</strong> ${challenge.reporting_threshold}% for ranked participation` : ''}
                     </div>
                 </div>
             `;
-            
+
             if (challengeSection) {
-                // Update existing section
                 challengeSection.outerHTML = challengeStatsHTML;
             } else {
-                // Add new section after the main stats
-                const statsSection = document.getElementById('stats');
-                statsSection.insertAdjacentHTML('afterend', challengeStatsHTML);
+                document.getElementById('stats').insertAdjacentHTML('afterend', challengeStatsHTML);
             }
         }
 

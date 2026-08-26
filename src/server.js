@@ -2710,6 +2710,73 @@ app.get('/api/admin/current-challenge', adminApiLimiter, requireApiAdmin, (req, 
   });
 });
 
+// Challenge-aware admin overview metrics
+app.get('/api/admin/overview', adminApiLimiter, requireApiAdmin, async (req, res) => {
+  try {
+    const [system, challenge] = await Promise.all([
+      dbGetAsync(`
+        SELECT
+          COUNT(DISTINCT u.id) AS total_users,
+          COUNT(DISTINCT CASE WHEN u.archived_at IS NULL THEN u.id END) AS active_accounts,
+          COUNT(DISTINCT CASE WHEN u.archived_at IS NOT NULL THEN u.id END) AS archived_accounts,
+          COUNT(DISTINCT CASE WHEN s.id IS NOT NULL THEN u.id END) AS users_with_steps,
+          COALESCE(SUM(s.count), 0) AS total_steps,
+          COUNT(s.id) AS step_entries
+        FROM users u
+        LEFT JOIN steps s ON s.user_id = u.id
+      `),
+      getActiveChallenge()
+    ]);
+
+    let challengeMetrics = null;
+    if (challenge) {
+      const metrics = await dbGetAsync(`
+        SELECT
+          COUNT(DISTINCT u.id) AS eligible_users,
+          COUNT(DISTINCT CASE WHEN s.id IS NOT NULL THEN u.id END) AS participants,
+          COALESCE(SUM(s.count), 0) AS total_steps,
+          COUNT(s.id) AS step_entries
+        FROM users u
+        LEFT JOIN steps s ON s.user_id = u.id AND s.challenge_id = ?
+        WHERE u.archived_at IS NULL
+      `, [challenge.id]);
+      const participants = Number(metrics.participants) || 0;
+      const eligibleUsers = Number(metrics.eligible_users) || 0;
+      const totalSteps = Number(metrics.total_steps) || 0;
+      challengeMetrics = {
+        ...withChallengeTiming(challenge),
+        eligible_users: eligibleUsers,
+        participants,
+        total_steps: totalSteps,
+        step_entries: Number(metrics.step_entries) || 0,
+        average_steps_per_participant: participants > 0 ? Math.round(totalSteps / participants) : 0,
+        participation_rate: eligibleUsers > 0 ? Math.round((participants * 100) / eligibleUsers) : 0,
+        current_day: getCurrentChallengeDay(challenge),
+        total_days: getTotalChallengeDays(challenge)
+      };
+    }
+
+    const totalUsers = Number(system.total_users) || 0;
+    const totalSteps = Number(system.total_steps) || 0;
+    res.json({
+      scope: challengeMetrics ? 'active_challenge' : 'system',
+      system: {
+        total_users: totalUsers,
+        active_accounts: Number(system.active_accounts) || 0,
+        archived_accounts: Number(system.archived_accounts) || 0,
+        users_with_steps: Number(system.users_with_steps) || 0,
+        total_steps: totalSteps,
+        step_entries: Number(system.step_entries) || 0,
+        average_steps_per_user: totalUsers > 0 ? Math.round(totalSteps / totalUsers) : 0
+      },
+      challenge: challengeMetrics
+    });
+  } catch (error) {
+    console.error('Admin overview error:', error);
+    res.status(500).json({ error: 'Failed to load overview metrics' });
+  }
+});
+
 // Create new challenge (admin only)
 app.post('/api/admin/challenges', requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
   const { name, start_date, end_date, reporting_threshold } = req.body;
