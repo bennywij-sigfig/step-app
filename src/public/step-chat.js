@@ -1,14 +1,21 @@
 (() => {
-    const STORAGE_KEY_PREFIX = 'stepChatTranscriptV2';
-    const LEGACY_STORAGE_KEY = 'stepChatTranscriptV1';
-    const STORAGE_SCOPE_KEY = 'stepChatTranscriptScopeV2';
+    const STORAGE_KEY_PREFIX = 'stepChatTranscriptV3';
+    const LEGACY_STORAGE_KEYS = ['stepChatTranscriptV1', 'stepChatTranscriptV2'];
+    const STORAGE_SCOPE_KEY = 'stepChatTranscriptScopeV3';
+    const REMEMBER_KEY_PREFIX = 'stepChatRememberV1';
     const TONE_STORAGE_KEY = 'stepChatToneV1';
-    const MAX_STORED_MESSAGES = 40;
+    const MAX_STORED_MESSAGES = 300;
+    const MAX_STORED_CHARACTERS = 500000;
+    const TRANSCRIPT_TTL_MS = 21 * 24 * 60 * 60 * 1000;
+    const CONTEXT_MESSAGE_LIMIT = 50;
+    const CONTEXT_CHARACTER_LIMIT = 35000;
     const state = {
         csrfToken: null,
         messages: [],
         configured: null,
         storageKey: null,
+        storageScope: null,
+        rememberOnDevice: false,
         imageObjectUrl: null,
         imageUploadEnabled: false
     };
@@ -26,49 +33,80 @@
         return { client_timezone: timezone, client_date: `${values.year}-${values.month}-${values.day}` };
     };
 
-    function loadStoredMessages() {
-        state.messages = [];
-        if (!state.storageKey) return;
-        try {
-            const parsed = JSON.parse(sessionStorage.getItem(state.storageKey) || '[]');
-            if (Array.isArray(parsed)) {
-                state.messages = parsed
-                    .filter(item => item && ['user', 'assistant', 'error'].includes(item.role) && typeof item.text === 'string')
-                    .slice(-MAX_STORED_MESSAGES);
-            }
-        } catch (_) {
-            state.messages = [];
-        }
-    }
-
-    function saveMessages() {
-        if (state.storageKey) {
-            sessionStorage.setItem(state.storageKey, JSON.stringify(state.messages.slice(-MAX_STORED_MESSAGES)));
-        }
-    }
-
-    function remember(role, text) {
-        state.messages.push({ role, text: String(text).slice(0, 4000) });
-        state.messages = state.messages.slice(-MAX_STORED_MESSAGES);
-        saveMessages();
-    }
-
-    function getRecentHistory() {
-        const candidates = state.messages
-            .slice(0, -1) // The current user message is sent separately.
-            .filter(item => ['user', 'assistant'].includes(item.role))
-            .slice(-30);
+    function trimMessages(messages, maxMessages, maxCharacters) {
         const accepted = [];
         let characters = 0;
-        for (let index = candidates.length - 1; index >= 0; index -= 1) {
-            const item = candidates[index];
-            const remaining = 20000 - characters;
+        for (let index = messages.length - 1; index >= 0 && accepted.length < maxMessages; index -= 1) {
+            const item = messages[index];
+            if (!item || !['user', 'assistant', 'error'].includes(item.role) || typeof item.text !== 'string') continue;
+            const remaining = maxCharacters - characters;
             if (remaining <= 0) break;
             const text = item.text.slice(-remaining);
             accepted.unshift({ role: item.role, text });
             characters += text.length;
         }
         return accepted;
+    }
+
+    function transcriptStorage() {
+        return state.rememberOnDevice ? localStorage : sessionStorage;
+    }
+
+    function loadStoredMessages() {
+        state.messages = [];
+        if (!state.storageKey) return;
+        try {
+            const storage = transcriptStorage();
+            const raw = storage.getItem(state.storageKey);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            const envelope = Array.isArray(parsed) ? { updatedAt: Date.now(), messages: parsed } : parsed;
+            if (!envelope || !Array.isArray(envelope.messages)) return;
+            if (Date.now() - Number(envelope.updatedAt || 0) > TRANSCRIPT_TTL_MS) {
+                storage.removeItem(state.storageKey);
+                return;
+            }
+            state.messages = trimMessages(envelope.messages, MAX_STORED_MESSAGES, MAX_STORED_CHARACTERS);
+        } catch (_) {
+            state.messages = [];
+        }
+    }
+
+    function saveMessages() {
+        if (!state.storageKey) return;
+        state.messages = trimMessages(state.messages, MAX_STORED_MESSAGES, MAX_STORED_CHARACTERS);
+        try {
+            transcriptStorage().setItem(state.storageKey, JSON.stringify({
+                updatedAt: Date.now(),
+                messages: state.messages
+            }));
+        } catch (_) {
+            // If persistent storage is unavailable or full, preserve the current
+            // tab transcript without failing the chat request.
+            state.rememberOnDevice = false;
+            if (state.storageScope) localStorage.setItem(`${REMEMBER_KEY_PREFIX}:${state.storageScope}`, 'false');
+            const toggle = document.getElementById('chatRememberToggle');
+            if (toggle) toggle.checked = false;
+            sessionStorage.setItem(state.storageKey, JSON.stringify({
+                updatedAt: Date.now(),
+                messages: state.messages
+            }));
+        }
+    }
+
+    function remember(role, text) {
+        state.messages.push({ role, text: String(text).slice(0, 4000) });
+        saveMessages();
+    }
+
+    function getRecentHistory() {
+        return trimMessages(
+            state.messages
+                .slice(0, -1) // The current user message is sent separately.
+                .filter(item => ['user', 'assistant'].includes(item.role)),
+            CONTEXT_MESSAGE_LIMIT,
+            CONTEXT_CHARACTER_LIMIT
+        );
     }
 
     function createMessage(role, text, rememberMessage = true) {
@@ -347,14 +385,31 @@
         message.appendChild(actions);
     }
 
-    function appendVerifiedFacts(message, lines) {
+    function appendVerifiedFacts(message, lines, options = {}) {
+        const { collapsed = false, summary = 'Verified' } = options;
+        if (collapsed) {
+            const details = document.createElement('details');
+            details.className = 'chat-verified-facts collapsed';
+            const heading = document.createElement('summary');
+            heading.textContent = summary;
+            details.appendChild(heading);
+            addList(details, lines);
+            message.appendChild(details);
+            return;
+        }
         const box = document.createElement('div');
         box.className = 'chat-verified-facts';
         const title = document.createElement('strong');
-        title.textContent = 'Verified';
+        title.textContent = summary;
         box.appendChild(title);
         addList(box, lines);
         message.appendChild(box);
+    }
+
+    function shortDate(value) {
+        return new Date(`${value}T12:00:00`).toLocaleDateString(undefined, {
+            month: 'short', day: 'numeric'
+        });
     }
 
     function renderLeaderboard(result, tone, reply = null) {
@@ -388,7 +443,7 @@
         }
     }
 
-    function renderResult(payload) {
+    function renderResult(payload, sourceMessage = '') {
         const { result, tone = 'neutral', reply = null } = payload;
         if (result.kind === 'step_preview') return renderStepPreview(result, tone);
         if (result.kind === 'leaderboard') return renderLeaderboard(result, tone, reply);
@@ -448,6 +503,11 @@
                 timing = `${challenge.name} runs through ${formatDate(challenge.end_date)}. ${perspective} day ${result.current_day} of ${result.total_days}, with ${result.remaining_days} day${result.remaining_days === 1 ? '' : 's'} left ${inclusion}.`;
             }
             const message = createMessage('assistant', reply || `${toneLead(tone, 'challenge')} ${timing}`);
+            const timingSummary = result.status === 'upcoming'
+                ? `Verified: starts ${shortDate(challenge.start_date)} in ${result.days_until_start} day${result.days_until_start === 1 ? '' : 's'}`
+                : result.status === 'active'
+                    ? `Verified: ends ${shortDate(challenge.end_date)} in ${result.days_until_end} day${result.days_until_end === 1 ? '' : 's'}`
+                    : `Verified: ended ${shortDate(challenge.end_date)}`;
             appendVerifiedFacts(message, [
                 `Starts: ${formatDate(challenge.start_date)}`,
                 `Ends: ${formatDate(challenge.end_date)}`,
@@ -455,7 +515,7 @@
                 `Days until start: ${result.days_until_start}`,
                 `Days until end: ${result.days_until_end}`,
                 `Challenge days remaining: ${result.remaining_days}`
-            ]);
+            ], { collapsed: Boolean(reply), summary: timingSummary });
             return;
         }
         if (result.kind === 'outlook') {
@@ -476,12 +536,18 @@
             }
             const remaining = result.remaining_days ? ` ${result.remaining_days} challenge day${result.remaining_days === 1 ? '' : 's'} remain.` : '';
             const message = createMessage('assistant', reply || `${toneLead(tone, 'outlook')} ${snapshot}${remaining}`);
-            appendVerifiedFacts(message, [
-                `Ranked: ${result.ranked ? 'yes' : 'no'}`,
-                ...(result.rank ? [`Rank: ${result.rank} of ${result.ranked_count}`] : []),
-                `Current average: ${formatNumber(Math.round(result.average || 0))} steps/day`,
-                `Challenge days remaining: ${result.remaining_days}`
-            ]);
+            const asksForNumbers = /\b(rank|place|gap|behind|ahead|average|how many|number|position)\b/i.test(sourceMessage);
+            if (!reply || asksForNumbers) {
+                const rankSummary = result.rank
+                    ? `Verified: #${result.rank} of ${result.ranked_count}`
+                    : `Verified: ${result.ranked ? 'ranked' : 'not ranked'}`;
+                appendVerifiedFacts(message, [
+                    `Ranked: ${result.ranked ? 'yes' : 'no'}`,
+                    ...(result.rank ? [`Rank: ${result.rank} of ${result.ranked_count}`] : []),
+                    `Current average: ${formatNumber(Math.round(result.average || 0))} steps/day`,
+                    `Challenge days remaining: ${result.remaining_days}`
+                ], { collapsed: Boolean(reply), summary: rankSummary });
+            }
             return;
         }
         if (result.kind === 'encouragement') {
@@ -524,6 +590,23 @@
         input.disabled = disabled;
     }
 
+    function setRememberOnDevice(enabled) {
+        if (!state.storageKey || !state.storageScope) return;
+        const preferenceKey = `${REMEMBER_KEY_PREFIX}:${state.storageScope}`;
+        if (enabled) {
+            sessionStorage.removeItem(state.storageKey);
+            state.rememberOnDevice = true;
+            localStorage.setItem(preferenceKey, 'true');
+        } else {
+            localStorage.removeItem(state.storageKey);
+            localStorage.setItem(preferenceKey, 'false');
+            state.rememberOnDevice = false;
+        }
+        saveMessages();
+        const toggle = document.getElementById('chatRememberToggle');
+        if (toggle) toggle.checked = state.rememberOnDevice;
+    }
+
     async function initializeConfig() {
         const transcript = document.getElementById('chatTranscript');
         const sendButton = document.getElementById('chatSendBtn');
@@ -535,15 +618,22 @@
             const config = await response.json();
             state.configured = config.enabled;
             state.imageUploadEnabled = config.enabled && config.image_upload;
+            state.storageScope = config.transcript_scope;
             const previousScope = sessionStorage.getItem(STORAGE_SCOPE_KEY);
-            if (previousScope && previousScope !== config.transcript_scope) {
+            if (previousScope && previousScope !== state.storageScope) {
                 for (const key of Object.keys(sessionStorage)) {
                     if (key.startsWith(`${STORAGE_KEY_PREFIX}:`)) sessionStorage.removeItem(key);
                 }
             }
-            sessionStorage.setItem(STORAGE_SCOPE_KEY, config.transcript_scope);
-            state.storageKey = `${STORAGE_KEY_PREFIX}:${config.transcript_scope}`;
-            sessionStorage.removeItem(LEGACY_STORAGE_KEY);
+            sessionStorage.setItem(STORAGE_SCOPE_KEY, state.storageScope);
+            state.storageKey = `${STORAGE_KEY_PREFIX}:${state.storageScope}`;
+            state.rememberOnDevice = localStorage.getItem(`${REMEMBER_KEY_PREFIX}:${state.storageScope}`) === 'true';
+            const rememberToggle = document.getElementById('chatRememberToggle');
+            if (rememberToggle) rememberToggle.checked = state.rememberOnDevice;
+            for (const legacyKey of LEGACY_STORAGE_KEYS) {
+                sessionStorage.removeItem(legacyKey);
+                sessionStorage.removeItem(`${legacyKey}:${state.storageScope}`);
+            }
             loadStoredMessages();
             transcript.replaceChildren();
             if (state.messages.length) {
@@ -598,6 +688,7 @@
         const imageInput = document.getElementById('chatImageInput');
         const aboutButton = document.getElementById('chatAboutBtn');
         const aboutPopover = document.getElementById('chatAboutPopover');
+        const rememberToggle = document.getElementById('chatRememberToggle');
         if (!overlay || !form) return;
 
         const closeAbout = () => {
@@ -644,6 +735,7 @@
             aboutPopover.hidden = !willOpen;
             aboutButton.setAttribute('aria-expanded', String(willOpen));
         });
+        rememberToggle.addEventListener('change', () => setRememberOnDevice(rememberToggle.checked));
         imageButton.addEventListener('click', event => {
             if (imageButton.getAttribute('aria-disabled') === 'true') event.preventDefault();
         });
@@ -675,7 +767,10 @@
         });
         document.getElementById('chatClearBtn').addEventListener('click', () => {
             state.messages = [];
-            if (state.storageKey) sessionStorage.removeItem(state.storageKey);
+            if (state.storageKey) {
+                sessionStorage.removeItem(state.storageKey);
+                localStorage.removeItem(state.storageKey);
+            }
             if (state.imageObjectUrl) {
                 URL.revokeObjectURL(state.imageObjectUrl);
                 state.imageObjectUrl = null;
@@ -724,7 +819,7 @@
                     tone: toneSelect.value,
                     ...getClientDateContext()
                 });
-                renderResult(payload);
+                renderResult(payload, message);
             } catch (error) {
                 createMessage('error', error.message);
             } finally {

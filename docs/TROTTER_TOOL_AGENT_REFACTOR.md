@@ -43,7 +43,7 @@ Limits:
 - Maximum two tool-execution waves and four total function calls
 - The final round cannot call tools
 - A preview in either tool wave is executed and returned immediately without another model round
-- Maximum 30 recent messages / 20,000 characters
+- Maximum 50 recent messages / 35,000 characters sent as working context; optionally remembered browser transcript remains separately capped
 - Existing per-user and global budgets remain
 
 ## Tool surface

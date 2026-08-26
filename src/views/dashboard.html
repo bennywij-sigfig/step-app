@@ -1319,6 +1319,20 @@
             margin-top: 5px;
         }
 
+        .chat-verified-facts.collapsed {
+            padding-top: 7px;
+        }
+
+        .chat-verified-facts.collapsed summary {
+            cursor: pointer;
+            font-weight: 600;
+            list-style-position: inside;
+        }
+
+        .chat-verified-facts.collapsed:not([open]) {
+            padding-bottom: 0;
+        }
+
         .chat-actions {
             display: flex;
             flex-wrap: wrap;
@@ -1478,6 +1492,25 @@
             margin-bottom: 0;
         }
 
+        .chat-remember-option {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin: 10px 0 5px;
+            font-weight: 600;
+        }
+
+        .chat-remember-option input {
+            width: 18px;
+            height: 18px;
+            margin: 0;
+        }
+
+        .chat-remember-note {
+            color: var(--muted-ink, #666);
+            font-size: 11px;
+        }
+
         @media (max-width: 600px) {
             .chat-overlay,
             body.dashboard-page > .chat-overlay {
@@ -1587,12 +1620,17 @@
             </form>
             <div class="chat-about">
                 <button type="button" id="chatAboutBtn" class="chat-about-toggle" aria-expanded="false" aria-controls="chatAboutPopover">
-                    Trotter is AI. Trust her, but verify. · Details
+                    Trotter can misstep. Trust her, but verify. · Details
                 </button>
                 <div id="chatAboutPopover" class="chat-about-popover" hidden>
                     <p><strong>About Trotter</strong></p>
                     <p>Gemini processes your message, recent local conversation context, and screenshots you choose to upload. Step Challenge does not store screenshots or server-side chat history.</p>
                     <p>Trotter can occasionally misread an image or phrase a fact incorrectly. Review extracted dates and step counts before saving. Important entries and overwrites always require a deterministic preview and explicit confirmation.</p>
+                    <label class="chat-remember-option">
+                        <input type="checkbox" id="chatRememberToggle">
+                        Remember chats on this device for 21 days
+                    </label>
+                    <p class="chat-remember-note">Use this only on a private device. Trotter still sends only recent context—not the full saved transcript—to Gemini.</p>
                 </div>
             </div>
         </section>

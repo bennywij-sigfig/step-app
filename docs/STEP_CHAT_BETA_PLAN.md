@@ -16,10 +16,11 @@ It does not support arbitrary questions, web access, SQL, admin actions, or modi
 ## Conversation retention
 
 - The server does not store chat transcripts.
-- Each model request may receive the current message plus up to 30 recent user/assistant messages, capped at 20,000 characters, to resolve conversational references.
+- Each model request may receive the current message plus up to 50 recent user/assistant messages, capped at 35,000 characters, to resolve conversational references.
 - Recent context is supplied by the browser, treated as untrusted, and cannot grant permissions or authorize actions.
-- The visible transcript is kept in browser `sessionStorage` only, scoped to the authenticated user, so it survives a refresh in the same tab but is removed when the tab/session ends.
-- Changing authenticated users clears the previous user's transcript from the tab.
+- The visible transcript keeps up to 300 messages / 500,000 characters. It is user-scoped and kept in `sessionStorage` by default.
+- Users may opt in to “Remember chats on this device,” which stores the transcript in `localStorage` for up to 21 days. This is intended only for private devices.
+- Changing authenticated users clears the previous user's session transcript from the tab; persistent transcripts remain isolated by user scope.
 - A Clear button removes the browser transcript immediately.
 - Pending write plans are kept in the authenticated server session for at most five minutes; these are structured entries, not conversation text.
 

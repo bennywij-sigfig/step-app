@@ -5,8 +5,8 @@ const { isValidDate } = require('../utils/validation');
 const { runTrotterAgent } = require('../services/chat-agent');
 
 const MESSAGE_LIMIT = 2000;
-const HISTORY_MESSAGE_LIMIT = 30;
-const HISTORY_CHAR_LIMIT = 20000;
+const HISTORY_MESSAGE_LIMIT = 50;
+const HISTORY_CHAR_LIMIT = 35000;
 const IMAGE_BYTE_LIMIT = 5 * 1024 * 1024;
 const PLAN_TTL_MS = 5 * 60 * 1000;
 const MAX_SESSION_PLANS = 5;
