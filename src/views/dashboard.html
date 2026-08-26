@@ -1395,19 +1395,24 @@
 
         .chat-composer textarea {
             flex: 1;
+            height: 48px;
             min-height: 48px;
             max-height: 120px;
-            resize: vertical;
-            padding: 11px;
+            resize: none;
+            overflow-y: auto;
+            padding: 11px 12px;
             border: 2px solid var(--line, #ddd);
             border-radius: 10px;
             font: inherit;
+            line-height: 1.35;
         }
 
         #chatSendBtn {
             flex: 0 0 108px;
             width: 108px;
             min-width: 108px;
+            height: 48px;
+            min-height: 48px;
         }
 
         .chat-about {
@@ -1564,7 +1569,7 @@
                     <input type="file" id="chatImageInput" class="visually-hidden" accept="image/jpeg,image/png,image/webp">
                 </label>
                 <label class="visually-hidden" for="chatInput">Message Trotter</label>
-                <textarea id="chatInput" maxlength="2000" placeholder="Try: Log 8,200 steps" required></textarea>
+                <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Try: Log 8,200 steps" required></textarea>
                 <button type="submit" id="chatSendBtn">Send</button>
             </form>
             <div class="chat-about">

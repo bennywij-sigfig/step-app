@@ -563,6 +563,10 @@
             aboutPopover.hidden = true;
             aboutButton.setAttribute('aria-expanded', 'false');
         };
+        const resizeComposerInput = () => {
+            input.style.height = '48px';
+            input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
+        };
 
         // Escape the dashboard container's stacking context so Tidbits and
         // other page cards can never paint above the modal.
@@ -574,6 +578,7 @@
         window.addEventListener('beforeunload', () => {
             if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
         });
+        input.addEventListener('input', resizeComposerInput);
         input.addEventListener('focus', () => {
             setTimeout(() => {
                 syncVisualViewport();
@@ -668,6 +673,7 @@
             if (!message) return;
             createMessage('user', message);
             input.value = '';
+            resizeComposerInput();
             sendButton.disabled = true;
             sendButton.textContent = 'Thinking…';
             try {
