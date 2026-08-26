@@ -70,7 +70,8 @@ function substitute(text, values) {
   async function ask(testCase) {
     const message = substitute(testCase.message, values);
     const history = (testCase.history || []).map(item => ({ ...item, text: substitute(item.text, values) }));
-    return page.evaluate(async ({ message, history, csrf, browserDate }) => {
+    const tone = testCase.tone || 'neutral';
+    return page.evaluate(async ({ message, history, tone, csrf, browserDate }) => {
       const started = performance.now();
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -78,7 +79,7 @@ function substitute(text, values) {
         body: JSON.stringify({
           message,
           history,
-          tone: 'neutral',
+          tone,
           client_date: browserDate.date,
           client_timezone: browserDate.timezone
         })
@@ -88,7 +89,7 @@ function substitute(text, values) {
         body: await response.json().catch(() => ({})),
         latency_ms: Math.round(performance.now() - started)
       };
-    }, { message, history, csrf, browserDate });
+    }, { message, history, tone, csrf, browserDate });
   }
 
   let failed = false;

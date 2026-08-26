@@ -12,7 +12,7 @@ const ALLOWED_INTENTS = new Set([
   'help'
 ]);
 
-const ALLOWED_TONES = new Set(['neutral', 'encouraging', 'droll', 'sarcastic']);
+const ALLOWED_TONES = new Set(['neutral', 'encouraging', 'droll', 'sarcastic', 'annoying']);
 const ALLOWED_HELP_REASONS = new Set([
   'missing_date',
   'missing_count',

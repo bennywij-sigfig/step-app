@@ -21,6 +21,22 @@
       "forbiddenReplyPattern": "preview|upsert|tool call|step edits"
     },
     {
+      "id": "neutral-no-pig-banter",
+      "message": "Say hello and briefly explain what you do.",
+      "tone": "neutral",
+      "expectedKind": "chitchat",
+      "maxRounds": 1,
+      "forbiddenReplyPattern": "\\boink\\b|\\bpig\\b|\\bhoof|\\btrough\\b|\\btrot\\b"
+    },
+    {
+      "id": "annoying-pig-banter",
+      "message": "Say hello and briefly explain what you do.",
+      "tone": "annoying",
+      "expectedKind": "chitchat",
+      "maxRounds": 1,
+      "replyPattern": "oink|pig|hoof|trough"
+    },
+    {
       "id": "challenge-timing",
       "message": "When does the challenge start and end?",
       "requiredTools": ["get_challenge_info"],

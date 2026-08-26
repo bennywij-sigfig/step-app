@@ -159,6 +159,14 @@
                 outlook: 'Naturally, the leaderboard refuses to make promises.',
                 challenge: 'Apparently calendars are part of fitness now.'
             },
+            annoying: {
+                preview: 'OINK OINK! Your glorious step payload is ready for a proper snout-first inspection!',
+                leaderboard: 'OINK! The leaderboard trough has been filled with fresh numbers!',
+                steps: 'Oinkity oink! Here is the hoof-stamped record of your magnificent movement!',
+                overtake: 'OINK! Trotter has crunched the numbers with maximum porcine intensity!',
+                outlook: 'Oink oink! The competitive piglet forecast is officially in!',
+                challenge: 'OINK! Gather round the trough for an aggressively enthusiastic calendar update!'
+            },
             neutral: {
                 preview: 'Review these entries before saving.',
                 leaderboard: 'Current leaderboard snapshot.',
@@ -581,7 +589,10 @@
                     : 'Every grand campaign begins with someone reluctantly putting on shoes.',
                 sarcastic: days
                     ? `Look at that: ${days} logged day${days === 1 ? '' : 's'} and a ${formatNumber(average)}-step average. Apparently consistency works. Rude, but useful.`
-                    : 'You could wait for motivation to file the proper paperwork, or you could take ten minutes and make it catch up.'
+                    : 'You could wait for motivation to file the proper paperwork, or you could take ten minutes and make it catch up.',
+                annoying: days
+                    ? `OINK OINK OINK! ${days} hoof-tastic logged day${days === 1 ? '' : 's'} at ${formatNumber(average)} steps on average! Trotter is squealing at the trough with entirely too much enthusiasm!`
+                    : 'OINK! The step trough is empty, the tiny pig hooves are tapping, and Trotter demands one gloriously over-celebrated walk!'
             };
             return createMessage('assistant', lines[tone] || lines.encouraging);
         }
@@ -590,7 +601,8 @@
                 encouraging: 'Hi! I’m Trotter: part scorekeeper, part pace calculator, and fully in favor of a good walk. What are we working on?',
                 neutral: 'I’m Trotter. I can help record steps, explain the challenge, inspect standings, and calculate useful targets.',
                 droll: 'I’m Trotter, a highly specialized conversational layer over a database of people walking around on purpose.',
-                sarcastic: 'I’m Trotter: because apparently feet needed analytics, conflict handling, and a personality setting.'
+                sarcastic: 'I’m Trotter: because apparently feet needed analytics, conflict handling, and a personality setting.',
+                annoying: 'OINK OINK! I’m Trotter, your relentlessly enthusiastic step pig! I track the hoofy numbers, patrol the leaderboard trough, and celebrate every trot with far more oinking than anyone requested!'
             };
             return createMessage('assistant', lines[tone] || lines.encouraging);
         }
@@ -754,7 +766,7 @@
         });
 
         const storedTone = sessionStorage.getItem(TONE_STORAGE_KEY);
-        if (['encouraging', 'neutral', 'droll', 'sarcastic'].includes(storedTone)) toneSelect.value = storedTone;
+        if (['encouraging', 'neutral', 'droll', 'sarcastic', 'annoying'].includes(storedTone)) toneSelect.value = storedTone;
         toneSelect.addEventListener('change', () => sessionStorage.setItem(TONE_STORAGE_KEY, toneSelect.value));
 
         createMessage('assistant', 'Trotter is trotting over…', false);
