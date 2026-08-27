@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
+const { assertExistingDatabaseWritable } = require('./utils/database-safety');
 
 // Use persistent volume in production, local file in development, or test database path if specified
 const dbPath = process.env.DB_PATH || 
@@ -36,28 +37,17 @@ if (process.env.NODE_ENV === 'production') {
     process.exit(1);
   }
 
-  // If database file exists but is readonly, move it and create fresh
-  if (fs.existsSync(dbPath)) {
-    try {
-      fs.accessSync(dbPath, fs.constants.W_OK);
+  // Never replace an existing production database automatically. A permissions
+  // or mount problem must fail startup and preserve the original for recovery.
+  try {
+    assertExistingDatabaseWritable(dbPath);
+    if (fs.existsSync(dbPath)) {
       console.log(`✅ Database file ${dbPath} is writable`);
-    } catch (err) {
-      console.log(`🔧 Database file is readonly, creating backup and fresh database`);
-      const backupPath = `${dbPath}.readonly.backup`;
-      try {
-        // Create backup of readonly database
-        if (!fs.existsSync(backupPath)) {
-          fs.copyFileSync(dbPath, backupPath);
-          console.log(`📦 Backed up readonly database to ${backupPath}`);
-        }
-        // Remove readonly database
-        fs.unlinkSync(dbPath);
-        console.log(`🗑️  Removed readonly database file`);
-      } catch (removeErr) {
-        console.error(`❌ Cannot backup/remove readonly database:`, removeErr.message);
-        process.exit(1);
-      }
     }
+  } catch (err) {
+    console.error(`❌ ${err.message}`);
+    console.error('Refusing to delete or replace the existing database. Repair the volume or restore it explicitly.');
+    process.exit(1);
   }
 }
 
