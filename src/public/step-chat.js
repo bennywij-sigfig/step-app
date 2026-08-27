@@ -17,7 +17,8 @@
         storageScope: null,
         rememberOnDevice: false,
         imageObjectUrl: null,
-        imageUploadEnabled: false
+        imageUploadEnabled: false,
+        imageBusy: false
     };
 
     const formatNumber = value => Number(value || 0).toLocaleString();
@@ -618,6 +619,34 @@
         input.disabled = disabled;
     }
 
+    async function processImageFile(file) {
+        if (!state.imageUploadEnabled) {
+            createMessage('error', 'Image upload is not available right now.', false);
+            return;
+        }
+        if (state.imageBusy) {
+            createMessage('error', 'Trotter is already inspecting an image.', false);
+            return;
+        }
+
+        state.imageBusy = true;
+        setImageButtonDisabled(true);
+        createMessage('user', 'Uploaded a step screenshot for review.');
+        const loading = createMessage('assistant', 'Trotter is squinting at the screenshot…', false);
+        try {
+            const blob = await prepareImage(file);
+            const extraction = await extractImage(blob);
+            loading.remove();
+            renderImageExtraction(extraction, blob);
+        } catch (error) {
+            loading.remove();
+            createMessage('error', error.message, false);
+        } finally {
+            state.imageBusy = false;
+            setImageButtonDisabled(!state.imageUploadEnabled);
+        }
+    }
+
     function setRememberOnDevice(enabled) {
         if (!state.storageKey || !state.storageScope) return;
         const preferenceKey = `${REMEMBER_KEY_PREFIX}:${state.storageScope}`;
@@ -758,6 +787,20 @@
             if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
         });
         input.addEventListener('input', resizeComposerInput);
+        input.addEventListener('paste', event => {
+            const clipboard = event.clipboardData;
+            if (!clipboard) return;
+
+            const imageItem = Array.from(clipboard.items || []).find(item =>
+                item.kind === 'file' && String(item.type).toLowerCase().startsWith('image/')
+            );
+            const file = imageItem?.getAsFile()
+                || Array.from(clipboard.files || []).find(candidate => String(candidate.type).toLowerCase().startsWith('image/'));
+            if (!file) return;
+
+            event.preventDefault();
+            processImageFile(file);
+        });
         input.addEventListener('focus', () => {
             setTimeout(() => {
                 syncVisualViewport();
@@ -793,24 +836,10 @@
                 imageInput.click();
             }
         });
-        imageInput.addEventListener('change', async () => {
+        imageInput.addEventListener('change', () => {
             const file = imageInput.files?.[0];
             imageInput.value = '';
-            if (!file) return;
-            setImageButtonDisabled(true);
-            createMessage('user', 'Uploaded a step screenshot for review.');
-            const loading = createMessage('assistant', 'Trotter is squinting at the screenshot…', false);
-            try {
-                const blob = await prepareImage(file);
-                const extraction = await extractImage(blob);
-                loading.remove();
-                renderImageExtraction(extraction, blob);
-            } catch (error) {
-                loading.remove();
-                createMessage('error', error.message, false);
-            } finally {
-                setImageButtonDisabled(!state.imageUploadEnabled);
-            }
+            if (file) processImageFile(file);
         });
         document.getElementById('chatClearBtn').addEventListener('click', () => {
             state.messages = [];
