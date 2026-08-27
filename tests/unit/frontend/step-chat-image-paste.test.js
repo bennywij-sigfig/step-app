@@ -8,7 +8,9 @@ const js = fs.readFileSync(path.join(root, 'src/public/step-chat.js'), 'utf8');
 describe('Trotter image paste contract', () => {
   test('advertises image paste in the composer', () => {
     expect(html).toContain('aria-label="Upload or paste a step screenshot"');
-    expect(html).toContain('placeholder="Message Trotter or paste a step screenshot"');
+    expect(html).toContain('placeholder="Message or paste a pic/screenshot"');
+    expect(html).toContain('.chat-composer textarea::placeholder');
+    expect(html).toContain('font-size: 11px');
   });
 
   test('routes pasted image files through the shared image workflow', () => {

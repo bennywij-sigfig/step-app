@@ -1441,6 +1441,10 @@
             line-height: 1.35;
         }
 
+        .chat-composer textarea::placeholder {
+            font-size: 11px;
+        }
+
         #chatSendBtn {
             flex: 0 0 108px;
             width: 108px;
@@ -1668,7 +1672,7 @@
                     <input type="file" id="chatImageInput" class="visually-hidden" accept="image/jpeg,image/png,image/webp">
                 </label>
                 <label class="visually-hidden" for="chatInput">Message Trotter</label>
-                <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Message Trotter or paste a step screenshot" required></textarea>
+                <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Message or paste a pic/screenshot" required></textarea>
                 <button type="submit" id="chatSendBtn">Send</button>
             </form>
             <div class="chat-about">
