@@ -10,7 +10,8 @@
  *   node scripts/backup.js --cleanup          # Cleanup old backups
  */
 
-const { execSync, execFileSync } = require('child_process');
+const { execFileSync } = require('child_process');
+const { createAttachedVolumeSnapshot } = require('./fly-volume-snapshot');
 
 function runProductionNode(source) {
   const encoded = Buffer.from(source).toString('base64');
@@ -59,23 +60,9 @@ async function createApplicationBackup() {
 async function createVolumeSnapshot() {
   try {
     log('📸 Creating Fly.io volume snapshot...');
-    
-    // Get the current volume ID
-    const volumesOutput = execSync('fly volumes list --json', { encoding: 'utf8' });
-    const volumes = JSON.parse(volumesOutput);
-    const dataVolume = volumes.find(v => v.name === 'data' && v.attached_machine_id);
-    
-    if (!dataVolume) {
-      throw new Error('No attached data volume found');
-    }
-    
-    log(`📋 Found volume: ${dataVolume.id} (attached to ${dataVolume.attached_machine_id})`);
-    
-    // Create snapshot
-    const snapshotCommand = `fly volumes snapshots create ${dataVolume.id}`;
-    execSync(snapshotCommand, { stdio: 'inherit' });
-    
-    log('✅ Volume snapshot created successfully');
+    const { volume, snapshot } = await createAttachedVolumeSnapshot();
+    log(`📋 Snapshotted attached volume: ${volume.name} (${volume.id})`);
+    log(`✅ Volume snapshot ${snapshot.id} created successfully`);
   } catch (err) {
     error(`Volume snapshot failed: ${err.message}`);
     process.exit(1);

@@ -9,6 +9,7 @@
 
 const { execSync } = require('child_process');
 const path = require('path');
+const { createAttachedVolumeSnapshot } = require('./fly-volume-snapshot');
 
 function log(message) {
   console.log(`[${new Date().toISOString()}] ${message}`);
@@ -24,16 +25,8 @@ async function preDeployBackup() {
   try {
     // Step 1: Create volume snapshot
     log('📸 Creating volume snapshot...');
-    const volumesOutput = execSync('fly volumes list --json', { encoding: 'utf8' });
-    const volumes = JSON.parse(volumesOutput);
-    const dataVolume = volumes.find(v => v.name === 'data' && v.attached_machine_id);
-    
-    if (dataVolume) {
-      execSync(`fly volumes snapshots create ${dataVolume.id}`, { stdio: 'inherit' });
-      log('✅ Volume snapshot created');
-    } else {
-      log('⚠️ No attached data volume found, skipping volume snapshot');
-    }
+    const { volume, snapshot } = await createAttachedVolumeSnapshot();
+    log(`✅ Volume snapshot ${snapshot.id} created for attached volume ${volume.name} (${volume.id})`);
     
     // Step 2: Create application-level backup
     log('🛡️ Creating application backup...');

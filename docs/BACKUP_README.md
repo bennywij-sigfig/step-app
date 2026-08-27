@@ -22,6 +22,8 @@ This document outlines the comprehensive backup strategy for the Step Challenge 
 - **Retention**: 10 backups (configurable)
 - **Format**: Complete SQLite database files
 
+The snapshot scripts discover the single volume currently attached to the app; they do not depend on a historical volume name. They fail closed if zero or multiple attached volumes are found and wait for Fly to report the new snapshot as complete before deployment continues.
+
 ## 🚀 Usage
 
 ### **Manual Backup Commands:**
@@ -50,11 +52,12 @@ npm run deploy:skip-backup
 # Create backup via SSH
 node src/scripts/backup.js --production
 
-# Create volume snapshot
-fly volumes snapshots create vol_rny0lp9ye2nkzz84
+# Create and verify a snapshot of the app's attached volume
+npm run backup:volume
 
-# List available snapshots
-fly volumes snapshots list vol_rny0lp9ye2nkzz84
+# Find the attached volume and list its snapshots
+fly volumes list --json
+fly volumes snapshots list ATTACHED_VOLUME_ID
 ```
 
 ## 🔄 Restore Procedures
@@ -80,7 +83,7 @@ cp /data/backups/steps-YYYY-MM-DDTHH-MM-SS.db /data/steps.db
 ### **From Volume Snapshot:**
 ```bash
 # 1. Create new volume from snapshot
-fly volumes create data_restored --snapshot-id snap_xxxxx --size 1GB
+fly volumes create data_restored --snapshot-id SNAPSHOT_ID --size 1 --region ord
 
 # 2. Scale down current machine
 fly scale count 0
