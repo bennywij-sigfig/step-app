@@ -1,6 +1,8 @@
 const { validateChatIntent } = require('../../../src/services/chat-intent');
 const {
+  buildComposePrompt,
   buildInterpreterPrompt,
+  buildToolSystemPrompt,
   createGeminiChatProvider,
   stripJsonFence,
   validateImageExtraction
@@ -127,6 +129,22 @@ describe('chat provider prompt boundary', () => {
     expect(prompt).toContain('10K daily average');
     expect(prompt).toContain('who are you?');
     expect(prompt).toContain('how many days remain');
+  });
+
+  test('keeps capability reminders opt-in and avoids a fixed self-description', () => {
+    const toolPrompt = buildToolSystemPrompt({
+      currentDate: '2026-08-25',
+      timezone: 'America/Los_Angeles',
+      challenge: { start_date: '2026-08-01', end_date: '2026-08-31' }
+    }, 'neutral');
+    const composePrompt = buildComposePrompt('encouraging');
+
+    for (const prompt of [toolPrompt, composePrompt]) {
+      expect(prompt).toContain("unless they explicitly ask what Trotter can do");
+      expect(prompt).toContain('instead of using a fixed slogan or stock sentence');
+      expect(prompt).toContain('already present in the recent conversation');
+      expect(prompt).not.toContain('track steps for one day or across many days');
+    }
   });
 
   test('removes optional JSON code fences', () => {
