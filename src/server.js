@@ -6,6 +6,7 @@ const path = require('path');
 const axios = require('axios');
 const session = require('express-session');
 const SQLiteSessionStore = require('./services/sqlite-session-store');
+const { createSessionLifetimeMiddleware } = require('./middleware/sessionLifetime');
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 let db = require('./database');
@@ -153,9 +154,18 @@ app.use(session({
   store: sessionStore,
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  rolling: true,
+  cookie: {
     secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    maxAge: 36 * 60 * 60 * 1000, // 36-hour idle timeout
+    httpOnly: true,
+    sameSite: 'lax'
+  }
+}));
+app.use(createSessionLifetimeMiddleware({
+  cookieOptions: {
+    path: '/',
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax'
   }
@@ -896,6 +906,7 @@ app.get('/auth/login', (req, res) => {
                   }
                   req.session.userId = this.lastID;
                   req.session.email = normalizedEmail;
+                  req.session.authenticatedAt = Date.now();
                 
                   req.session.save((err) => {
                     if (err) {
@@ -922,6 +933,7 @@ app.get('/auth/login', (req, res) => {
             }
             req.session.userId = user.id;
             req.session.email = normalizedEmail;
+            req.session.authenticatedAt = Date.now();
           
             req.session.save((err) => {
               if (err) {

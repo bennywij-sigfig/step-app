@@ -137,7 +137,7 @@ primary_region = 'ord'
 ### Security Configuration
 - **Proxy Trust**: Enabled for Fly.io (`app.set('trust proxy', 1)`)
 - **Secure Cookies**: Enabled in production with HTTPS
-- **Session Security**: 24-hour expiry, httpOnly, sameSite: 'lax'
+- **Session Security**: Rolling 36-hour idle expiry with a 15-day absolute lifetime, httpOnly, sameSite: 'lax'
 
 ## Environment Variables Reference
 

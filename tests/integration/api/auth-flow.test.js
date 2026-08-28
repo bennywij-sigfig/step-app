@@ -181,6 +181,33 @@ describe('Authentication Flow Integration Tests', () => {
   });
 
   describe('Session Management', () => {
+    test('should issue and roll a 36-hour authenticated session cookie', async () => {
+      const agent = request.agent(app);
+      const magicLinkResponse = await agent
+        .post('/dev/get-magic-link')
+        .send({ email: 'rolling-session@example.com' })
+        .expect(200);
+      const loginPath = new URL(magicLinkResponse.body.magicLink).pathname
+        + new URL(magicLinkResponse.body.magicLink).search;
+
+      const loginResponse = await agent.get(loginPath).expect(302);
+      const loginCookie = loginResponse.headers['set-cookie']?.find(cookie => cookie.startsWith('connect.sid='));
+
+      expect(loginCookie).toBeDefined();
+      expect(loginCookie).toContain('HttpOnly');
+      expect(loginCookie).toContain('SameSite=Lax');
+
+      const expiresMatch = loginCookie.match(/Expires=([^;]+)/);
+      expect(expiresMatch).not.toBeNull();
+      const remainingLifetime = new Date(expiresMatch[1]).getTime() - Date.now();
+      expect(remainingLifetime).toBeGreaterThan(35.9 * 60 * 60 * 1000);
+      expect(remainingLifetime).toBeLessThanOrEqual(36 * 60 * 60 * 1000);
+
+      const authenticatedResponse = await agent.get('/api/user').expect(200);
+      const rolledCookie = authenticatedResponse.headers['set-cookie']?.find(cookie => cookie.startsWith('connect.sid='));
+      expect(rolledCookie).toBeDefined();
+    });
+
     test('should require authentication for protected routes', async () => {
       const response = await request(app)
         .get('/dashboard')
