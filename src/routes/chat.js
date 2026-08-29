@@ -23,7 +23,8 @@ function createChatRouter({
   service,
   toolRegistry = null,
   agentMode = 'legacy',
-  now = () => Date.now()
+  now = () => Date.now(),
+  imageRequestLog = (...args) => console.info(...args)
 }) {
   const router = express.Router();
   const imageBodyParser = express.raw({
@@ -36,6 +37,46 @@ function createChatRouter({
     }
     next(error);
   });
+  const logImageRequest = (req, res, next) => {
+    const reference = `TROT-IMG-${crypto.randomBytes(4).toString('hex').toUpperCase()}`;
+    const startedAt = Date.now();
+    const declaredBytes = Number(req.get('Content-Length'));
+    const baseEvent = {
+      reference,
+      content_type: String(req.get('Content-Type') || '').split(';')[0].toLowerCase() || null,
+      declared_bytes: Number.isSafeInteger(declaredBytes) && declaredBytes >= 0 ? declaredBytes : null
+    };
+    let finalized = false;
+
+    req.imageRequestReference = reference;
+    res.set('X-Trotter-Request-Reference', reference);
+    imageRequestLog('Trotter image request', JSON.stringify({
+      event: 'started',
+      ...baseEvent,
+      authenticated: Boolean(req.session?.userId)
+    }));
+
+    const finalize = event => {
+      if (finalized) return;
+      finalized = true;
+      const receivedBytes = Buffer.isBuffer(req.body) ? req.body.length : null;
+      imageRequestLog('Trotter image request', JSON.stringify({
+        event,
+        ...baseEvent,
+        status: res.statusCode,
+        outcome: event === 'client_disconnected'
+          ? 'client_disconnected'
+          : res.statusCode < 400 ? 'success' : res.statusCode < 500 ? 'client_error' : 'server_error',
+        duration_ms: Date.now() - startedAt,
+        received_bytes: receivedBytes
+      }));
+    };
+    res.once('finish', () => finalize('completed'));
+    res.once('close', () => {
+      if (!res.writableEnded) finalize('client_disconnected');
+    });
+    next();
+  };
 
   function validateImageBytes(buffer, mimeType) {
     if (!Buffer.isBuffer(buffer) || buffer.length === 0) return false;
@@ -274,6 +315,7 @@ function createChatRouter({
 
   router.post(
     '/image/extract',
+    logImageRequest,
     requireApiAuth,
     validateCSRFToken,
     chatImageGlobalLimiter,
@@ -299,12 +341,29 @@ function createChatRouter({
         const extraction = await provider.extractImage(req.body, mimeType, context);
         res.json({ extraction });
       } catch (error) {
+        const reference = req.imageRequestReference;
         if (error.response || error.code === 'ECONNABORTED') {
-          console.error('Trotter image provider request failed:', error.message);
-          return res.status(502).json({ error: 'Trotter could not inspect that image right now. Please try again.' });
+          imageRequestLog('Trotter image request', JSON.stringify({
+            event: 'provider_error',
+            reference,
+            code: error.code || error.response?.status || 'provider_error',
+            model: provider.model || null
+          }));
+          return res.status(502).json({
+            error: `Trotter could not inspect that image right now. Please try again. Reference: ${reference}`,
+            reference
+          });
         }
-        console.error('Trotter image extraction failed:', error.message);
-        res.status(422).json({ error: 'Trotter could not find usable date and step entries in that image.' });
+        imageRequestLog('Trotter image request', JSON.stringify({
+          event: 'extraction_error',
+          reference,
+          code: error.code || error.name || 'extraction_error',
+          model: provider.model || null
+        }));
+        res.status(422).json({
+          error: `Trotter could not find usable date and step entries in that image. Reference: ${reference}`,
+          reference
+        });
       }
     }
   );

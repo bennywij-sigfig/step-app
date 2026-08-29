@@ -14,7 +14,8 @@ function buildApp({
   serviceOverrides = {},
   toolRegistry = null,
   agentMode = 'legacy',
-  now
+  now,
+  imageRequestLog = jest.fn()
 } = {}) {
   const app = express();
   app.use(express.json());
@@ -56,9 +57,10 @@ function buildApp({
     service,
     toolRegistry,
     agentMode,
-    now
+    now,
+    imageRequestLog
   }));
-  return { app, provider, service };
+  return { app, provider, service, imageRequestLog };
 }
 
 describe('Step Chat routes', () => {
@@ -356,6 +358,77 @@ describe('Step Chat routes', () => {
       .expect(502);
     expect(timedOut.body.error).not.toContain('socket');
     expect(timedOut.body.reference).toMatch(/^TROT-[A-F0-9]{6}$/);
+  });
+
+  test('logs image request lifecycle metadata without image or user data', async () => {
+    const extractImage = jest.fn(async () => ({ recognized: false, entries: [], warnings: [] }));
+    const { app, imageRequestLog } = buildApp({ providerOverrides: { extractImage } });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const response = await agent.post('/api/chat/image/extract')
+      .set('Content-Type', 'image/png')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send(png)
+      .expect(200);
+
+    const reference = response.headers['x-trotter-request-reference'];
+    expect(reference).toMatch(/^TROT-IMG-[A-F0-9]{8}$/);
+    expect(imageRequestLog).toHaveBeenCalledTimes(2);
+    const events = imageRequestLog.mock.calls.map(([, details]) => JSON.parse(details));
+    expect(events).toEqual([
+      expect.objectContaining({
+        event: 'started', reference, content_type: 'image/png', declared_bytes: png.length, authenticated: true
+      }),
+      expect.objectContaining({
+        event: 'completed', reference, status: 200, outcome: 'success', received_bytes: png.length,
+        duration_ms: expect.any(Number)
+      })
+    ]);
+    expect(JSON.stringify(events)).not.toContain('userId');
+    expect(JSON.stringify(events)).not.toContain(png.toString('base64'));
+  });
+
+  test('correlates provider failures with logs and the user-visible reference', async () => {
+    const providerError = Object.assign(new Error('upstream timed out'), { code: 'ECONNABORTED' });
+    const { app, imageRequestLog } = buildApp({
+      providerOverrides: { extractImage: jest.fn(async () => { throw providerError; }) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const response = await agent.post('/api/chat/image/extract')
+      .set('Content-Type', 'image/png')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send(png)
+      .expect(502);
+
+    const reference = response.headers['x-trotter-request-reference'];
+    expect(response.body).toMatchObject({ reference });
+    expect(response.body.error).toContain(`Reference: ${reference}`);
+    const events = imageRequestLog.mock.calls.map(([, details]) => JSON.parse(details));
+    expect(events).toEqual([
+      expect.objectContaining({ event: 'started', reference }),
+      expect.objectContaining({ event: 'provider_error', reference, code: 'ECONNABORTED', model: 'test-model' }),
+      expect.objectContaining({ event: 'completed', reference, status: 502, outcome: 'server_error' })
+    ]);
+  });
+
+  test('logs image requests rejected before body parsing', async () => {
+    const { app, imageRequestLog } = buildApp();
+    const response = await request(app).post('/api/chat/image/extract')
+      .set('Content-Type', 'image/png')
+      .send(Buffer.from('not a png'))
+      .expect(401);
+
+    const reference = response.headers['x-trotter-request-reference'];
+    const events = imageRequestLog.mock.calls.map(([, details]) => JSON.parse(details));
+    expect(events).toEqual([
+      expect.objectContaining({ event: 'started', reference, authenticated: false }),
+      expect.objectContaining({
+        event: 'completed', reference, status: 401, outcome: 'client_error', received_bytes: null
+      })
+    ]);
   });
 
   test('extracts a validated in-memory image and rejects invalid magic bytes', async () => {
