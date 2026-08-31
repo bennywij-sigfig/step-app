@@ -716,6 +716,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            if (window.stepEntryUX?.isEnabled) window.stepEntryUX.handleSubmitStart();
+
             try {
                 const token = await getCSRFToken();
                 const response = await fetch('/api/steps', {
@@ -733,15 +735,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 
                 if (response.ok) {
-                    // Check if delightful UX is enabled and use enhanced success handling
-                    if (window.stepEntryUX && window.stepEntryUX.isEnabled) {
+                    if (window.stepEntryUX?.isEnabled) {
                         window.stepEntryUX.handleSubmitSuccess(steps, messageDiv);
-                        // Trigger chart animation
-                        setTimeout(() => {
-                            window.stepEntryUX.animateChartUpdate();
-                        }, 100);
+                        setTimeout(() => window.stepEntryUX.animateChartUpdate(), 100);
                     } else {
-                        // Fallback to standard success message
                         messageDiv.innerHTML = '<div class="message success">Steps saved successfully!</div>';
                     }
                     
@@ -751,13 +748,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     celebrateSteps(steps);
                     
                     loadSteps(); // Reload the steps list
-                } else if (response.status === 429) {
-                    const retryAfter = Math.floor(data.retryAfter / 60) || 60; // Convert to minutes
-                    messageDiv.innerHTML = '<div class="message error">Too many requests. Please wait ' + retryAfter + ' minutes before trying again.</div>';
                 } else {
-                    messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
+                    if (window.stepEntryUX?.isEnabled) window.stepEntryUX.handleSubmitError();
+                    if (response.status === 429) {
+                        const retryAfter = Math.floor(data.retryAfter / 60) || 60; // Convert to minutes
+                        messageDiv.innerHTML = '<div class="message error">Too many requests. Please wait ' + retryAfter + ' minutes before trying again.</div>';
+                    } else {
+                        messageDiv.innerHTML = '<div class="message error">' + data.error + '</div>';
+                    }
                 }
             } catch (error) {
+                if (window.stepEntryUX?.isEnabled) window.stepEntryUX.handleSubmitError();
                 messageDiv.innerHTML = '<div class="message error">Network error. Please try again.</div>';
             }
         });

@@ -26,14 +26,15 @@ class StepEntryUX {
     async init() {
         if (this.isInitialized) return;
         
-        // Check if fun features are enabled
+        // Preserve the existing opt-in boundary for enhanced button states,
+        // celebrations, smart copy, and haptics.
         this.isEnabled = localStorage.getItem('allowFun') === 'true';
         if (!this.isEnabled) return;
-        
-        await this.loadUserStats();
+
         this.setupEventListeners();
-        this.initializeSmartPlaceholders();
         this.isInitialized = true;
+        await this.loadUserStats();
+        this.initializeSmartPlaceholders();
         
         console.log('Step Entry UX initialized', { mobile: this.isMobile, haptics: this.supportsHaptics });
     }
@@ -83,7 +84,6 @@ class StepEntryUX {
     setupEventListeners() {
         const stepsInput = document.getElementById('steps');
         const submitBtn = document.getElementById('submitStepsBtn');
-        const dateInput = document.getElementById('date');
 
         if (!stepsInput || !submitBtn) return;
 
@@ -102,8 +102,6 @@ class StepEntryUX {
             form.addEventListener('input', () => this.updateButtonState());
         }
 
-        // Enhanced form submission (don't prevent default, just add UX)
-        form.addEventListener('submit', (e) => this.handleFormSubmit(e), { capture: true });
     }
 
     handleStepsInput(input) {
@@ -140,8 +138,8 @@ class StepEntryUX {
         if (value >= 0 && value <= 70000) {
             this.showValidationFeedback('✓', 'valid');
             
-            // Milestone detection with proper debugging
-            if (this.userStats) {
+            // Milestone effects are part of the opt-in fun experience.
+            if (this.isEnabled && this.userStats) {
                 console.log(`Checking milestone: entered=${value}, userBest=${this.userStats.best}`);
                 
                 if (value > this.userStats.best) {
@@ -150,12 +148,6 @@ class StepEntryUX {
                     this.createMiniCelebration(input);
                 } else if (value >= 15000) {
                     console.log('High achiever threshold met');
-                    this.showValidationFeedback('•', 'milestone');
-                }
-            } else {
-                console.log('No user stats available for milestone detection');
-                // Fallback to generic high achiever threshold
-                if (value >= 15000) {
                     this.showValidationFeedback('•', 'milestone');
                 }
             }
@@ -172,7 +164,7 @@ class StepEntryUX {
         feedback.className = `validation-feedback show ${type}`;
         
         // Mobile haptic feedback (gentle)
-        if (this.supportsHaptics && type === 'valid') {
+        if (this.isEnabled && this.supportsHaptics && type === 'valid') {
             navigator.vibrate(20); // Very short, gentle vibration
         }
     }
@@ -191,17 +183,18 @@ class StepEntryUX {
         if (!form || !submitBtn) return;
 
         const formData = new FormData(form);
-        const hasDate = formData.get('date');
+        const dateInput = document.getElementById('date');
+        const hasDate = Boolean(formData.get('date')) && (!dateInput?.validity || dateInput.validity.valid);
         const rawSteps = formData.get('steps');
         const stepCount = Number(rawSteps);
-        const hasSteps = rawSteps !== '' && Number.isInteger(stepCount) && stepCount >= 0 && stepCount <= 70000;
+        const hasSteps = rawSteps !== '' && /^-?\d+$/.test(rawSteps) &&
+            Number.isInteger(stepCount) && stepCount >= 0 && stepCount <= 70000;
 
-        // Remove previous states
-        submitBtn.classList.remove('ready-to-save', 'saving', 'saved');
+        // Do not interrupt an in-flight request or its brief success feedback.
+        if (submitBtn.classList.contains('saving') || submitBtn.classList.contains('saved')) return;
 
-        if (hasDate && hasSteps) {
-            submitBtn.classList.add('ready-to-save');
-        }
+        submitBtn.classList.remove('ready-to-save');
+        if (hasDate && hasSteps) submitBtn.classList.add('ready-to-save');
     }
 
     createMiniCelebration(element) {
@@ -232,15 +225,28 @@ class StepEntryUX {
         }
     }
 
-    handleFormSubmit(e) {
+    handleSubmitStart() {
         const submitBtn = document.getElementById('submitStepsBtn');
         if (!submitBtn) return;
 
-        // Button state: saving (don't interfere with form submission)
-        submitBtn.classList.remove('ready-to-save');
+        submitBtn.classList.remove('ready-to-save', 'saved');
         submitBtn.classList.add('saving');
         submitBtn.textContent = 'Saving...';
         submitBtn.disabled = true;
+    }
+
+    resetSubmitButton() {
+        const submitBtn = document.getElementById('submitStepsBtn');
+        if (!submitBtn) return;
+
+        submitBtn.classList.remove('ready-to-save', 'saving', 'saved');
+        submitBtn.textContent = 'Save Steps';
+        submitBtn.disabled = false;
+        this.updateButtonState();
+    }
+
+    handleSubmitError() {
+        this.resetSubmitButton();
     }
 
     handleSubmitSuccess(steps, messageDiv) {
@@ -252,27 +258,27 @@ class StepEntryUX {
         submitBtn.classList.add('saved');
         submitBtn.textContent = '✓ Saved!';
         
-        // Haptic feedback for successful save
-        if (this.supportsHaptics) {
+        if (this.isEnabled && this.supportsHaptics) {
             navigator.vibrate([50, 50, 50]); // Success pattern
         }
 
-        // Smart success message
-        this.showSmartSuccessMessage(steps, messageDiv);
+        if (this.isEnabled) {
+            this.showSmartSuccessMessage(steps, messageDiv);
+        } else if (messageDiv) {
+            messageDiv.innerHTML = '<div class="message success">Steps saved successfully!</div>';
+        }
 
-        // Reset button after delay
-        setTimeout(() => {
-            submitBtn.classList.remove('saved');
-            submitBtn.textContent = 'Save Steps';
-            submitBtn.disabled = false;
-        }, 2000);
+        // Reset button after delay. This canonical reset also recomputes whether
+        // the edited form is ready for another save.
+        setTimeout(() => this.resetSubmitButton(), 2000);
 
-        // Update placeholders based on new data
-        setTimeout(() => {
-            this.loadUserStats().then(() => {
-                this.updateSmartPlaceholders();
-            });
-        }, 500);
+        if (this.isEnabled) {
+            setTimeout(() => {
+                this.loadUserStats().then(() => {
+                    this.updateSmartPlaceholders();
+                });
+            }, 500);
+        }
     }
 
     showSmartSuccessMessage(steps, messageDiv) {
