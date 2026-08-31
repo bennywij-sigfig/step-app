@@ -75,7 +75,10 @@ function createStepChatService({
       seenDates.add(entry.date);
       if (entry.date > latestDate) throw userError(`Cannot enter steps for future date ${entry.date}`);
       if (challenge && !isDateInChallengePeriod(entry.date, challenge)) {
-        throw userError(`${entry.date} is outside ${challenge.name} (${challenge.start_date} to ${challenge.end_date})`);
+        if (entry.date < challenge.start_date) {
+          throw userError(`${challenge.name} hasn’t started yet. Steps can be logged from ${challenge.start_date}.`);
+        }
+        throw userError(`${challenge.name} only accepts dates from ${challenge.start_date} to ${challenge.end_date}.`);
       }
       return { date: entry.date, count: entry.count };
     });

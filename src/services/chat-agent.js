@@ -11,6 +11,27 @@ class ChatAgentProtocolError extends Error {
   }
 }
 
+function parseDirectStepRequest(message, currentDate) {
+  const match = String(message || '').match(
+    /^\s*(?:log|record|add)\s+(\d+|\d{1,3}(?:,\d{3})+)\s+steps?\s+(?:for|on)\s+(today|yesterday|\d{4}-\d{2}-\d{2})[.!]?\s*$/i
+  );
+  if (!match || !/^\d{4}-\d{2}-\d{2}$/.test(currentDate || '')) return null;
+
+  const digits = match[1].replace(/,/g, '');
+  if (!/^\d+$/.test(digits)) return null;
+  const count = Number(digits);
+  if (!Number.isSafeInteger(count) || count < 0 || count > 70000) return null;
+
+  let date = match[2].toLowerCase();
+  if (date === 'today') date = currentDate;
+  if (date === 'yesterday') {
+    const priorDate = new Date(`${currentDate}T00:00:00Z`);
+    priorDate.setUTCDate(priorDate.getUTCDate() - 1);
+    date = priorDate.toISOString().slice(0, 10);
+  }
+  return { date, count };
+}
+
 function normalizeCalls(response) {
   if (!response || typeof response !== 'object') throw new ChatAgentProtocolError('Invalid model response');
   if (!Array.isArray(response.functionCalls)) return [];
@@ -28,6 +49,21 @@ function normalizeCalls(response) {
 }
 
 async function runTrotterAgent({ model, registry, message, history, tone, context }) {
+  // Keep the most common explicit write phrasing deterministic. This prevents
+  // the language model from turning a valid count (for example 9,999) into an
+  // unrelated range error; the service remains authoritative for date bounds.
+  const directEntry = parseDirectStepRequest(message, context?.currentDate);
+  if (directEntry) {
+    const result = await registry.execute('preview_step_entries', { entries: [directEntry] }, context);
+    return {
+      text: null,
+      tool_results: [{ name: 'preview_step_entries', args: { entries: [directEntry] }, result }],
+      primary_result: result,
+      requires_confirmation: true,
+      rounds: 0
+    };
+  }
+
   const toolResults = [];
   let pendingObservations = [];
   let totalToolCalls = 0;
@@ -117,5 +153,6 @@ module.exports = {
   MAX_MODEL_ROUNDS,
   MAX_TOOL_CALLS,
   MAX_TOOL_WAVES,
+  parseDirectStepRequest,
   runTrotterAgent
 };

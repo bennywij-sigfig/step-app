@@ -128,6 +128,20 @@ describe('bounded Trotter tool-agent contract', () => {
     expect(result.text).toContain('Seven days');
   });
 
+  test('bypasses the model for an explicit valid entry and lets the service enforce challenge dates', async () => {
+    const model = { generate: jest.fn() };
+    const service = fakeService();
+    const registry = createChatToolRegistry({ service });
+    const result = await runTrotterAgent({
+      model, registry, message: 'log 9999 steps for today', history: [], tone: 'neutral',
+      context: { userId: 42, currentDate: '2026-08-26' }
+    });
+
+    expect(model.generate).not.toHaveBeenCalled();
+    expect(service.previewEntries).toHaveBeenCalledWith(42, [{ date: '2026-08-26', count: 9999 }]);
+    expect(result).toMatchObject({ requires_confirmation: true, rounds: 0, primary_result: { kind: 'step_preview' } });
+  });
+
   test('returns deterministic previews immediately and never asks the model to claim a write', async () => {
     const model = {
       generate: jest.fn(async () => ({

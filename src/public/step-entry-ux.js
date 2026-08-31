@@ -116,8 +116,13 @@ class StepEntryUX {
         feedback.className = 'validation-feedback';
         input.classList.remove('milestone-hint', 'contextual-placeholder');
 
-        if (isNaN(value) || value < 0) {
+        if (isNaN(value)) {
             this.hideValidationFeedback();
+            return;
+        }
+        if (value < 0 || value > 70000 || !/^-?\d+$/.test(input.value.trim()) || !Number.isInteger(Number(input.value))) {
+            this.showValidationFeedback('!', 'warning');
+            this.updateButtonState();
             return;
         }
 
@@ -132,7 +137,7 @@ class StepEntryUX {
         }
 
         // Validation states
-        if (value > 0 && value <= 70000) {
+        if (value >= 0 && value <= 70000) {
             this.showValidationFeedback('✓', 'valid');
             
             // Milestone detection with proper debugging
@@ -154,8 +159,6 @@ class StepEntryUX {
                     this.showValidationFeedback('•', 'milestone');
                 }
             }
-        } else if (value > 70000) {
-            this.showValidationFeedback('!', 'warning');
         }
 
         this.updateButtonState();
@@ -189,7 +192,9 @@ class StepEntryUX {
 
         const formData = new FormData(form);
         const hasDate = formData.get('date');
-        const hasSteps = formData.get('steps') && parseInt(formData.get('steps')) > 0;
+        const rawSteps = formData.get('steps');
+        const stepCount = Number(rawSteps);
+        const hasSteps = rawSteps !== '' && Number.isInteger(stepCount) && stepCount >= 0 && stepCount <= 70000;
 
         // Remove previous states
         submitBtn.classList.remove('ready-to-save', 'saving', 'saved');

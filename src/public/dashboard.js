@@ -272,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (stepDate.getTime() < startDate.getTime()) {
                 dateInput.style.borderColor = '#dc3545';
                 dateInput.style.backgroundColor = '#fff5f5';
-                messageDiv.innerHTML = `<div class="message error">Date must be on or after the challenge start date (${formatDate(challenge.start_date)})</div>`;
+                messageDiv.innerHTML = `<div class="message error">This challenge hasn’t started yet. You can log steps from ${formatDate(challenge.start_date)}.</div>`;
                 return;
             }
             
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (stepDate.getTime() > endDate.getTime()) {
                 dateInput.style.borderColor = '#dc3545';
                 dateInput.style.backgroundColor = '#fff5f5';
-                messageDiv.innerHTML = `<div class="message error">Date must be within the challenge period (${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)})</div>`;
+                messageDiv.innerHTML = `<div class="message error">Choose a date within the challenge period (${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}).</div>`;
                 return;
             }
             
@@ -665,61 +665,54 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             
             const date = document.getElementById('date').value;
-            const steps = parseInt(document.getElementById('steps').value);
+            const rawSteps = document.getElementById('steps').value.trim();
+            const steps = Number(rawSteps);
             const messageDiv = document.getElementById('stepsMessage');
+
+            if (!date) {
+                messageDiv.innerHTML = '<div class="message error">Please select a date.</div>';
+                return;
+            }
+            if (date > getLatestSupportedDate()) {
+                messageDiv.innerHTML = '<div class="message error">Cannot enter steps for future dates.</div>';
+                return;
+            }
             
             // Comprehensive client-side date validation for all browsers (including Safari)
             if (currentUser && currentUser.current_challenge) {
                 const challenge = currentUser.current_challenge;
-                
-                // Validate date format first
-                if (!date || date.trim() === '') {
-                    messageDiv.innerHTML = '<div class="message error">Please select a date.</div>';
-                    return;
-                }
-                
-                // Parse dates carefully for inclusive date range
                 const stepDate = new Date(date + 'T12:00:00'); // Use noon to avoid timezone edge cases
                 const startDate = new Date(challenge.start_date + 'T00:00:00');
                 const endDate = new Date(challenge.end_date + 'T23:59:59');
                 
-                // Check if date parsing was successful
                 if (isNaN(stepDate.getTime())) {
                     messageDiv.innerHTML = '<div class="message error">Please enter a valid date.</div>';
                     return;
                 }
-                
-                // Prevent future date entries (user's local time is authoritative)  
-                const now = new Date();
-                const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-                
-                if (stepDate.getTime() > todayEnd.getTime()) {
-                    messageDiv.innerHTML = '<div class="message error">Cannot enter steps for future dates.</div>';
-                    return;
-                }
-                
-                // Compare dates using getTime() for cross-browser compatibility
-                // Block dates before challenge start
                 if (stepDate.getTime() < startDate.getTime()) {
-                    messageDiv.innerHTML = `<div class="message error">Step logging is only allowed from the challenge start date onwards (${formatDate(challenge.start_date)}).</div>`;
+                    messageDiv.innerHTML = `<div class="message error">This challenge hasn’t started yet. You can log steps from ${formatDate(challenge.start_date)}.</div>`;
                     return;
                 }
-                
-                // Block dates after challenge end date (no retroactive entry beyond challenge period)
                 if (stepDate.getTime() > endDate.getTime()) {
-                    messageDiv.innerHTML = `<div class="message error">Step logging is only allowed within the challenge period (${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}).</div>`;
+                    messageDiv.innerHTML = `<div class="message error">Choose a date within the challenge period (${formatDate(challenge.start_date)} to ${formatDate(challenge.end_date)}).</div>`;
                     return;
                 }
             }
             
-            // Additional validation for steps input
-            if (!steps || steps <= 0) {
-                messageDiv.innerHTML = '<div class="message error">Please enter a valid number of steps.</div>';
+            if (rawSteps === '') {
+                messageDiv.innerHTML = '<div class="message error">Please enter a step count.</div>';
                 return;
             }
-            
-            if (steps > 100000) {
-                messageDiv.innerHTML = '<div class="message error">Maximum 100,000 steps per day allowed.</div>';
+            if (!/^-?\d+$/.test(rawSteps) || !Number.isInteger(steps)) {
+                messageDiv.innerHTML = '<div class="message error">Step count must be a whole number.</div>';
+                return;
+            }
+            if (steps < 0) {
+                messageDiv.innerHTML = '<div class="message error">Step count cannot be below 0.</div>';
+                return;
+            }
+            if (steps > 70000) {
+                messageDiv.innerHTML = '<div class="message error">Step count cannot exceed 70,000 per day.</div>';
                 return;
             }
             

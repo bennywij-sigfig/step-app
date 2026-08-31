@@ -254,6 +254,17 @@ describe('Step Chat deterministic write service', () => {
     }
   });
 
+  test('reports the challenge start instead of a step-count error before the challenge begins', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2024-12-20T12:00:00-08:00'));
+    try {
+      await expect(service.previewEntries(1, [
+        { date: '2024-12-20', count: 9999 }
+      ])).rejects.toThrow("Test Challenge hasn’t started yet. Steps can be logged from 2025-01-01.");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('rejects duplicate dates and out-of-range counts', async () => {
     await expect(service.previewEntries(1, [
       { date: '2025-08-20', count: 1 },

@@ -461,11 +461,14 @@ function validateNumericInput(value, fieldName, min = 0, max = Number.MAX_SAFE_I
   
   // Range validation
   if (value < min || value > max) {
-    throw new Error(`${fieldName} must be between ${min} and ${max}`);
+    throw new Error(`${fieldName} must be between ${min.toLocaleString('en-US')} and ${max.toLocaleString('en-US')}`);
   }
   
-  // Ensure integer for step counts
-  return Math.floor(Math.abs(value)); // Also ensure positive
+  if (!Number.isInteger(value)) {
+    throw new Error(`${fieldName} must be a whole number`);
+  }
+
+  return value;
 }
 
 // Routes
@@ -1242,8 +1245,11 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
         // Entries remain retroactively editable, but must belong to the selected
         // challenge's inclusive calendar-date range.
         if (!isDateInChallengePeriod(date, challenge)) {
+          const error = date < challenge.start_date
+            ? `This challenge hasn’t started yet. You can log steps from ${challenge.start_date}.`
+            : `Choose a date within the challenge period (${challenge.start_date} to ${challenge.end_date}).`;
           return res.status(400).json({
-            error: `Step logging is only allowed within the challenge period (${challenge.start_date} to ${challenge.end_date})`,
+            error,
             challenge_period: {
               start_date: challenge.start_date,
               end_date: challenge.end_date,

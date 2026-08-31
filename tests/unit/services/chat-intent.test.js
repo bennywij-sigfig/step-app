@@ -129,6 +129,8 @@ describe('chat provider prompt boundary', () => {
     expect(prompt).toContain('10K daily average');
     expect(prompt).toContain('who are you?');
     expect(prompt).toContain('how many days remain');
+    expect(prompt).toContain('Counts such as 9,999 are valid');
+    expect(prompt).toContain('Never mislabel a date-boundary problem as invalid_count');
   });
 
   test('keeps capability reminders opt-in and avoids a fixed self-description', () => {
@@ -138,6 +140,8 @@ describe('chat provider prompt boundary', () => {
       challenge: { start_date: '2026-08-01', end_date: '2026-08-31' }
     }, 'neutral');
     const composePrompt = buildComposePrompt('encouraging');
+    expect(toolPrompt).toContain('Counts such as 9,999 are valid');
+    expect(toolPrompt).toContain('deterministic tool must decide challenge-date eligibility');
 
     for (const prompt of [toolPrompt, composePrompt]) {
       expect(prompt).toContain("unless they explicitly ask what Trotter can do");

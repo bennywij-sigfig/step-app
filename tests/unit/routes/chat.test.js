@@ -281,6 +281,37 @@ describe('Step Chat routes', () => {
     });
   });
 
+  test('returns the authoritative challenge-date error for a direct valid step request', async () => {
+    const model = { generate: jest.fn() };
+    const challengeError = new Error("Test Challenge hasn’t started yet. Steps can be logged from 2026-09-01.");
+    challengeError.code = 'STEP_CHAT_USER_ERROR';
+    const registry = { declarations: [], execute: jest.fn(async () => { throw challengeError; }) };
+    const { app } = buildApp({
+      agentMode: 'tools', toolRegistry: registry,
+      providerOverrides: { createToolModel: jest.fn(() => model) },
+      serviceOverrides: {
+        getContext: jest.fn(async () => ({
+          currentDate: '2026-08-25',
+          challenge: { start_date: '2026-09-01', end_date: '2026-09-30' }
+        }))
+      }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'log 9999 steps for today' })
+      .expect(400);
+
+    expect(model.generate).not.toHaveBeenCalled();
+    expect(registry.execute).toHaveBeenCalledWith(
+      'preview_step_entries',
+      { entries: [{ date: '2026-08-25', count: 9999 }] },
+      { userId: 42, currentDate: '2026-08-25' }
+    );
+    expect(response.body.error).toBe(challengeError.message);
+  });
+
   test('tool-agent previews still receive the existing confirmation plan', async () => {
     const model = { generate: jest.fn(async () => ({
       text: 'I saved it.',
