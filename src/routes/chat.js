@@ -147,7 +147,11 @@ function createChatRouter({
       const serverDate = Date.parse(`${context.currentDate}T00:00:00Z`);
       const browserDate = Date.parse(`${clientDate}T00:00:00Z`);
       if (Math.abs(serverDate - browserDate) > 2 * 86400000) return context;
-      return { ...context, currentDate: clientDate, timezone: clientTimezone };
+      // currentDate is the canonical, generous challenge date (Singapore is
+      // the first supported region to reach a new date). A browser in Pacific
+      // time can legitimately still be on the prior local date, so it must not
+      // make Trotter report an already-open challenge as upcoming.
+      return { ...context, clientDate, clientTimezone };
     } catch (_) {
       return context;
     }
@@ -257,7 +261,9 @@ function createChatRouter({
           ? { kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.' }
           : { kind: 'chitchat' });
         if (result.kind === 'step_preview') attachPlan(req, result);
-        const reply = falseWriteClaim ? null : agentResult.text;
+        // Challenge timing is rendered from the tool result so model prose
+        // cannot contradict the inclusive Singapore-open/Pacific-close window.
+        const reply = falseWriteClaim || result.kind === 'challenge_info' ? null : agentResult.text;
         return res.json({
           intent: 'tool_agent',
           tone,

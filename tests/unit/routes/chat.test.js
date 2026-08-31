@@ -116,7 +116,7 @@ describe('Step Chat routes', () => {
     expect(accepted.at(-1).text).toContain('49:');
   });
 
-  test('uses a validated browser date for interpretation and applies the selected tone', async () => {
+  test('preserves canonical challenge date when the validated browser date is behind it', async () => {
     const { app, provider } = buildApp();
     const agent = request.agent(app);
     await agent.post('/test-login').expect(200);
@@ -131,8 +131,9 @@ describe('Step Chat routes', () => {
       .expect(200);
 
     expect(provider.interpret).toHaveBeenCalledWith('What did I do yesterday?', {
-      currentDate: '2026-08-24',
-      timezone: 'America/Los_Angeles',
+      currentDate: '2026-08-25',
+      clientDate: '2026-08-24',
+      clientTimezone: 'America/Los_Angeles',
       challenge: null
     }, []);
     expect(response.body.tone).toBe('droll');
@@ -184,7 +185,7 @@ describe('Step Chat routes', () => {
       .expect(200);
 
     expect(executeIntent).toHaveBeenCalledWith(42, {
-      intent: 'challenge_info', tone: 'neutral', as_of_date: '2026-08-24'
+      intent: 'challenge_info', tone: 'neutral', as_of_date: '2026-08-25'
     });
   });
 
@@ -279,6 +280,34 @@ describe('Step Chat routes', () => {
       intent: 'tool_agent', tone: 'neutral', result: { kind: 'chitchat' },
       reply: 'Oink and hello.', agent: { rounds: 1, tools: [] }
     });
+  });
+
+  test('uses deterministic challenge timing instead of contradictory tool-agent prose', async () => {
+    const model = { generate: jest.fn()
+      .mockResolvedValueOnce({ functionCalls: [{ name: 'get_challenge_info', args: {} }] })
+      .mockResolvedValueOnce({ text: 'It follows headquarters time.', functionCalls: [] }) };
+    const facts = {
+      kind: 'challenge_info', has_challenge: true, status: 'active', as_of_date: '2026-09-01',
+      challenge: { id: 7, name: 'Test Challenge', start_date: '2026-09-01', end_date: '2026-09-15' }
+    };
+    const registry = {
+      declarations: [{ name: 'get_challenge_info', parameters: { type: 'object', properties: {} } }],
+      execute: jest.fn(async () => facts)
+    };
+    const { app } = buildApp({
+      agentMode: 'tools', toolRegistry: registry,
+      providerOverrides: { createToolModel: jest.fn(() => model) },
+      serviceOverrides: { getContext: jest.fn(async () => ({ currentDate: '2026-09-01', challenge: facts.challenge })) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Where are we today?', client_date: '2026-08-31', client_timezone: 'America/Los_Angeles' })
+      .expect(200);
+
+    expect(response.body.result).toMatchObject({ kind: 'challenge_info', status: 'active', as_of_date: '2026-09-01' });
+    expect(response.body.reply).toBeNull();
   });
 
   test('returns the authoritative challenge-date error for a direct valid step request', async () => {
@@ -481,7 +510,10 @@ describe('Step Chat routes', () => {
       .expect(200);
     expect(extracted.body.extraction.recognized).toBe(true);
     expect(extractImage).toHaveBeenCalledWith(expect.any(Buffer), 'image/png', {
-      currentDate: '2026-08-25', timezone: 'America/Los_Angeles', challenge: null
+      currentDate: '2026-08-25',
+      clientDate: '2026-08-25',
+      clientTimezone: 'America/Los_Angeles',
+      challenge: null
     });
 
     await agent.post('/api/chat/image/extract')
