@@ -879,12 +879,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 
-                // Add explanatory footer if there's actual leaderboard content (Teams show both member count and reporting rate)
-                const hasTeamContent = (data.data && ((data.data.ranked && data.data.ranked.length > 0) || (data.data.unranked && data.data.unranked.length > 0))) || (Array.isArray(data) && data.length > 0);
-                if (hasTeamContent) {
-                    html += '<div class="leaderboard-footer">Member count · reporting rate</div>';
-                }
-                
                 teamLeaderboard.innerHTML = html;
                 attachDisclosureListeners();
             } catch (error) {
