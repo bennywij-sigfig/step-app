@@ -34,11 +34,34 @@ describe('dashboard design contract', () => {
     expect(dashboard).not.toContain("max-height 0.3s");
   });
 
-  test('recent chart is bounded to elapsed dates and has concise summary metadata', () => {
-    expect(dashboard).toContain('shiftDate(endDate, -13)');
+  test('recent chart shows up to 30 elapsed dates with concise summary metadata', () => {
+    expect(dashboard).toContain('shiftDate(endDate, -29)');
     expect(dashboard).toContain("if (endDate < challenge.start_date)");
     expect(dashboard).toContain('steps-chart-summary');
     expect(dashboard).toContain('logged ·');
+    expect(dashboard).toContain("showAxisLabel ? ' axis-label' : ''");
+  });
+
+  test('uses wider desktop layouts while retaining the compact mobile flow', () => {
+    expect(html).toContain('max-width: 1100px');
+    expect(html).toContain('class="my-steps-layout"');
+    expect(html).toMatch(/\.my-steps-layout\s*\{[\s\S]*?grid-template-columns:/);
+    expect(html).toMatch(/@media \(max-width: 900px\)[\s\S]*?\.my-steps-layout\s*\{[\s\S]*?display: block/);
+  });
+
+  test('keeps leaderboard rankings vertical and lets Trotter expand on desktop', () => {
+    expect(html).not.toMatch(/#leaderboard,\s*#teamLeaderboard\s*\{[\s\S]*?grid-template-columns/);
+    expect(html).toMatch(/\.chat-panel\s*\{[\s\S]*?width: min\(860px, 78vw\)/);
+    expect(html).toMatch(/@media \(max-width: 600px\)[\s\S]*?\.chat-panel\s*\{[\s\S]*?width: 100%/);
+  });
+
+  test('aligns view widths and distinguishes individual rows without recoloring teams', () => {
+    expect(html).toMatch(/#myStepsView,\s*#leaderboardView,\s*#teamLeaderboardView\s*\{[\s\S]*?width: 100%/);
+    expect(html).toMatch(/#leaderboard \.leaderboard-item:nth-of-type\(even\)/);
+    expect(html).toMatch(/#leaderboard \.leaderboard-item\.current-user/);
+    expect(html).not.toContain('content: "You"');
+    expect(html).toMatch(/\.leaderboard-item\.team-identified\.current-team\s*\{[\s\S]*?var\(--team-accent\) 16%/);
+    expect(dashboard).toContain('Number(user.id) === Number(currentUser.id)');
   });
 
   test('leaderboard metadata does not rely on decorative emoji or inline colors', () => {

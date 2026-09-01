@@ -473,7 +473,7 @@ document.addEventListener('DOMContentLoaded', function() {
             await Promise.all([loadLeaderboard(), loadTeamLeaderboard()]);
         });
         
-        // Render at most 14 elapsed dates. Future challenge dates made the old
+        // Render at most 30 elapsed dates. Future challenge dates made the old
         // chart look empty and compressed useful data into narrow bars.
         function renderStepsChart(steps) {
             const chartContainer = document.getElementById('stepsChart');
@@ -496,7 +496,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const stepsByDate = new Map(steps.map(step => [step.date, Number(step.count) || 0]));
             const latestSupportedDate = getLatestSupportedDate();
             let endDate = latestSupportedDate;
-            let startDate = shiftDate(endDate, -13);
+            let startDate = shiftDate(endDate, -29);
 
             if (currentUser?.current_challenge) {
                 const challenge = currentUser.current_challenge;
@@ -505,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     chartContainer.innerHTML = '<p class="steps-chart-empty">The challenge has not started yet</p>';
                     return;
                 }
-                startDate = shiftDate(endDate, -13);
+                startDate = shiftDate(endDate, -29);
                 if (startDate < challenge.start_date) startDate = challenge.start_date;
             }
 
@@ -518,13 +518,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const total = loggedDays.reduce((sum, day) => sum + day.steps, 0);
             const average = loggedDays.length ? Math.round(total / loggedDays.length) : 0;
             const maxSteps = Math.max(...days.map(day => day.steps), 1);
-            const bars = days.map(day => {
+            const bars = days.map((day, index) => {
                 const hasData = day.steps > 0;
+                const dayOfMonth = Number(day.date.slice(-2));
+                const showAxisLabel = index === 0 || index === days.length - 1 || dayOfMonth % 5 === 0;
                 const heightPercent = hasData ? Math.max(6, (day.steps / maxSteps) * 100) : 3;
                 const detail = hasData ? `${day.steps.toLocaleString()} steps` : 'No steps logged';
-                return `<div class="step-bar${hasData ? '' : ' no-data'}"
+                return `<div class="step-bar${hasData ? '' : ' no-data'}${showAxisLabel ? ' axis-label' : ''}"
                     style="height: ${heightPercent}%"
-                    data-day="${Number(day.date.slice(-2))}"
+                    data-day="${dayOfMonth}"
                     data-steps="${detail}"
                     role="img" title="${formatShortDate(day.date)}: ${detail}"
                     aria-label="${formatShortDate(day.date)}: ${detail}"></div>`;
@@ -581,7 +583,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.data.ranked && data.data.ranked.length > 0) {
                     html += '<div class="ranked-section"><h4 class="leaderboard-section-title">Ranked Participants</h4>';
                     html += data.data.ranked.map((user, index) => {
-                        const isCurrentUser = currentUser && user.name === currentUser.name;
+                        const isCurrentUser = currentUser && Number(user.id) === Number(currentUser.id);
                         const highlightClass = isCurrentUser ? ' current-user' : '';
                         
                         return `<div class="leaderboard-item${highlightClass}">
@@ -606,7 +608,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     html += '<div class="unranked-section"><h4 class="leaderboard-section-title">Unranked Participants</h4>';
                     html += '<p class="leaderboard-section-note">Need more consistent reporting to be ranked</p>';
                     html += data.data.unranked.map((user) => {
-                        const isCurrentUser = currentUser && user.name === currentUser.name;
+                        const isCurrentUser = currentUser && Number(user.id) === Number(currentUser.id);
                         const highlightClass = isCurrentUser ? ' current-user' : '';
                         
                         return `<div class="leaderboard-item${highlightClass}">
@@ -629,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Handle legacy array format (all-time rankings)
                 if (Array.isArray(data)) {
                     html = data.map((user, index) => {
-                        const isCurrentUser = currentUser && user.name === currentUser.name;
+                        const isCurrentUser = currentUser && Number(user.id) === Number(currentUser.id);
                         const highlightClass = isCurrentUser ? ' current-user' : '';
                         
                         return `<div class="leaderboard-item${highlightClass}">

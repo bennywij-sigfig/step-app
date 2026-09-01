@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { isDevelopment, devLog } = require('../utils/dev');
+const { devLog } = require('../utils/dev');
 
 // Mailgun configuration
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
@@ -8,14 +8,8 @@ const FROM_EMAIL = process.env.FROM_EMAIL || 'data@sigfig.com';
 const MAILGUN_API_URL = `https://api.mailgun.net/v3/${MAILGUN_DOMAIN}/messages`;
 
 async function sendEmail(to, subject, htmlBody, textBody) {
-  // Always log magic links in development mode for easy testing (localhost only)
-  if (isDevelopment) {
-    const linkMatch = textBody.match(/https?:\/\/[^\s]+/);
-    if (linkMatch) {
-      console.log('🔗 Magic link (development mode):', linkMatch[0]);
-    }
-  }
-  
+  // Authentication links are intentionally never logged in this transport.
+  // The HTTP route may log them after verifying a direct localhost request.
   if (!MAILGUN_API_KEY) {
     devLog('MAILGUN_API_KEY not configured. Login URL would be sent to:', to);
     devLog('Subject:', subject);

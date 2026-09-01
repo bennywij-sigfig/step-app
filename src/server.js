@@ -38,6 +38,7 @@ const { createChatToolRegistry } = require('./services/chat-tools');
 const { createChatRouter } = require('./routes/chat');
 const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
 const { hashToken, generateSecureToken } = require('./utils/token');
+const { isLocalhostRequest } = require('./utils/local-request');
 const { normalizeTeamName, teamNameKey, TeamNameValidationError } = require('./utils/team-name');
 const {
   getCurrentChallengeDay,
@@ -88,6 +89,10 @@ validateEnvironment();
 
 // Environment info (production-safe)
 const isProduction = process.env.NODE_ENV === 'production';
+const isLocalDevelopment = isDevelopment && process.env.NODE_ENV !== 'test';
+const LOCAL_SESSION_MAX_AGE = 365 * 24 * 60 * 60 * 1000;
+const SESSION_IDLE_MAX_AGE = isLocalDevelopment ? LOCAL_SESSION_MAX_AGE : 36 * 60 * 60 * 1000;
+const SESSION_ABSOLUTE_MAX_AGE = isLocalDevelopment ? LOCAL_SESSION_MAX_AGE : 15 * 24 * 60 * 60 * 1000;
 
 if (isDevelopment) {
   console.log('🔧 Development mode - debug logging enabled');
@@ -119,6 +124,9 @@ app.use(helmet({
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
+      // Safari upgrades localhost assets to HTTPS when this directive is set,
+      // leaving the dashboard HTML visible but all CSS/JS non-functional.
+      upgradeInsecureRequests: isProduction ? [] : null,
     },
   },
   crossOriginEmbedderPolicy: false, // Disable for compatibility
@@ -159,12 +167,21 @@ app.use(session({
   rolling: true,
   cookie: {
     secure: process.env.NODE_ENV === 'production', // true in production with HTTPS
-    maxAge: 36 * 60 * 60 * 1000, // 36-hour idle timeout
+    maxAge: SESSION_IDLE_MAX_AGE,
     httpOnly: true,
     sameSite: 'lax'
   }
 }));
+// Upgrade existing localhost sessions created under the production-like
+// timeout so Safari remains signed in across local server restarts.
+if (isLocalDevelopment) {
+  app.use((req, res, next) => {
+    if (req.session?.userId) req.session.cookie.maxAge = LOCAL_SESSION_MAX_AGE;
+    next();
+  });
+}
 app.use(createSessionLifetimeMiddleware({
+  absoluteMaxAge: SESSION_ABSOLUTE_MAX_AGE,
   cookieOptions: {
     path: '/',
     secure: process.env.NODE_ENV === 'production',
@@ -634,9 +651,12 @@ app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
       );
     });
 
-    // Send email
+    // Send email. Raw login tokens are logged only for direct localhost use.
     const loginUrl = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
-    
+    if (isDevelopment && isLocalhostRequest(req)) {
+      console.log('🔗 Magic link (localhost only):', loginUrl);
+    }
+
     // A varied set of walking and momentum-themed quotes for the login email.
     // Keep the text and attribution separate so the email can style them cleanly.
     const quotes = [
@@ -759,6 +779,10 @@ function getActiveDbConnection() {
 // Development-only: Get magic link directly (localhost only)
 if (isDevelopment) {
   app.post('/dev/get-magic-link', magicLinkLimiter, async (req, res) => {
+    if (!isLocalhostRequest(req)) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+
     let activeDb;
     let shouldClose = false;
     const { email: rawEmail } = req.body;
