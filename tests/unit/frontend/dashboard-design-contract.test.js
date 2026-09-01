@@ -49,6 +49,23 @@ describe('dashboard design contract', () => {
     expect(html).toMatch(/@media \(max-width: 900px\)[\s\S]*?\.my-steps-layout\s*\{[\s\S]*?display: block/);
   });
 
+  test('switches views immediately with a short reduced-motion-aware compositor animation', () => {
+    expect(dashboard).toContain('function showDashboardView(viewId, tabId, refresh = null)');
+    expect(dashboard).toContain("classList.toggle('hidden', id !== viewId)");
+    expect(dashboard).toContain("'(prefers-reduced-motion: reduce)'");
+    expect(dashboard).toContain("{ opacity: 0.94, transform: 'translateY(4px)' }");
+    expect(dashboard).toContain('duration: 140');
+    expect(dashboard).not.toContain('setTimeout(() => showDashboardView');
+  });
+
+  test('prefetches hidden leaderboards only after visible step content loads', () => {
+    expect(dashboard).toContain('await loadSteps()');
+    expect(dashboard).toContain('Promise.allSettled([loadIndividualForNavigation(), loadTeamsForNavigation()])');
+    expect(dashboard).toContain('window.requestIdleCallback(preloadLeaderboards, { timeout: 1500 })');
+    expect(dashboard).toContain('if (existing?.promise) return existing.promise');
+    expect(dashboard).toContain('Date.now() - existing.loadedAt < 30000');
+  });
+
   test('keeps leaderboard rankings vertical and lets Trotter expand on desktop', () => {
     expect(html).not.toMatch(/#leaderboard,\s*#teamLeaderboard\s*\{[\s\S]*?grid-template-columns/);
     expect(html).toMatch(/\.chat-panel\s*\{[\s\S]*?width: min\(860px, 78vw\)/);

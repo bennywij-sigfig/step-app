@@ -333,34 +333,52 @@ document.addEventListener('DOMContentLoaded', function() {
             dateInput.value = targetDate;
         }
         
-        // Navigation
+        // Navigation stays immediate; only the incoming view receives a short
+        // compositor animation, so there is no fade-out delay before content appears.
+        const dashboardViews = ['myStepsView', 'leaderboardView', 'teamLeaderboardView'];
+        const dashboardTabs = ['myStepsBtn', 'leaderboardBtn', 'teamLeaderboardBtn'];
+        const navigationLoads = new Map();
+
+        function loadForNavigation(key, loader) {
+            const existing = navigationLoads.get(key);
+            if (existing?.promise) return existing.promise;
+            if (existing?.loadedAt && Date.now() - existing.loadedAt < 30000) return Promise.resolve();
+
+            const promise = loader().finally(() => {
+                navigationLoads.set(key, { promise: null, loadedAt: Date.now() });
+            });
+            navigationLoads.set(key, { promise, loadedAt: existing?.loadedAt || 0 });
+            return promise;
+        }
+
+        const loadIndividualForNavigation = () => loadForNavigation('individual', loadLeaderboard);
+        const loadTeamsForNavigation = () => loadForNavigation('teams', loadTeamLeaderboard);
+
+        function showDashboardView(viewId, tabId, refresh = null) {
+            const view = document.getElementById(viewId);
+            dashboardViews.forEach(id => document.getElementById(id).classList.toggle('hidden', id !== viewId));
+            dashboardTabs.forEach(id => document.getElementById(id).classList.toggle('active', id === tabId));
+
+            const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            if (!reduceMotion && typeof view.animate === 'function') {
+                view.animate([
+                    { opacity: 0.94, transform: 'translateY(4px)' },
+                    { opacity: 1, transform: 'translateY(0)' }
+                ], { duration: 140, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' });
+            }
+            if (refresh) refresh();
+        }
+
         document.getElementById('myStepsBtn').addEventListener('click', () => {
-            document.getElementById('myStepsView').classList.remove('hidden');
-            document.getElementById('leaderboardView').classList.add('hidden');
-            document.getElementById('teamLeaderboardView').classList.add('hidden');
-            document.getElementById('myStepsBtn').classList.add('active');
-            document.getElementById('leaderboardBtn').classList.remove('active');
-            document.getElementById('teamLeaderboardBtn').classList.remove('active');
+            showDashboardView('myStepsView', 'myStepsBtn');
         });
-        
+
         document.getElementById('leaderboardBtn').addEventListener('click', () => {
-            document.getElementById('myStepsView').classList.add('hidden');
-            document.getElementById('leaderboardView').classList.remove('hidden');
-            document.getElementById('teamLeaderboardView').classList.add('hidden');
-            document.getElementById('myStepsBtn').classList.remove('active');
-            document.getElementById('leaderboardBtn').classList.add('active');
-            document.getElementById('teamLeaderboardBtn').classList.remove('active');
-            loadLeaderboard();
+            showDashboardView('leaderboardView', 'leaderboardBtn', loadIndividualForNavigation);
         });
-        
+
         document.getElementById('teamLeaderboardBtn').addEventListener('click', () => {
-            document.getElementById('myStepsView').classList.add('hidden');
-            document.getElementById('leaderboardView').classList.add('hidden');
-            document.getElementById('teamLeaderboardView').classList.remove('hidden');
-            document.getElementById('myStepsBtn').classList.remove('active');
-            document.getElementById('leaderboardBtn').classList.remove('active');
-            document.getElementById('teamLeaderboardBtn').classList.add('active');
-            loadTeamLeaderboard();
+            showDashboardView('teamLeaderboardView', 'teamLeaderboardBtn', loadTeamsForNavigation);
         });
         
         // CSV Download functionality
@@ -1183,9 +1201,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Load initial data
-        loadCurrentUser().then(() => {
-            loadSteps();
+        // Load the visible view first, then populate hidden leaderboards while
+        // the browser is idle. Their first tab switch can therefore paint cached
+        // DOM immediately; the normal click refresh still happens in the background.
+        loadCurrentUser().then(async () => {
+            await loadSteps();
+            const preloadLeaderboards = () => {
+                Promise.allSettled([loadIndividualForNavigation(), loadTeamsForNavigation()]);
+            };
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(preloadLeaderboards, { timeout: 1500 });
+            } else {
+                setTimeout(preloadLeaderboards, 250);
+            }
         });
         
         // Expose functions globally for admin panel testing
