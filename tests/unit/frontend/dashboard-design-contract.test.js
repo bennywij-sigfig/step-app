@@ -25,10 +25,13 @@ describe('dashboard design contract', () => {
     expect(html).toMatch(/\.user-data-list,\s*\.team-members-list\s*\{/);
   });
 
-  test('expanded leaderboard panels do not use decorative left-edge strokes', () => {
+  test('expanded leaderboard panels avoid decorative strokes and flickering height animations', () => {
     const disclosureRule = html.match(/\/\* Individual and team disclosures[\s\S]*?\.member-item\s*\{/)?.[0] || '';
     expect(disclosureRule).not.toContain('border-left');
+    expect(disclosureRule).not.toContain('border-bottom: 1px solid');
     expect(dashboard).not.toContain("style.borderLeft");
+    expect(dashboard).not.toContain('style.maxHeight');
+    expect(dashboard).not.toContain("max-height 0.3s");
   });
 
   test('recent chart is bounded to elapsed dates and has concise summary metadata', () => {

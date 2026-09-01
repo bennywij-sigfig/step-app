@@ -915,58 +915,37 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Team member disclosure functionality
         async function toggleTeamDisclosure(teamName, disclosureElement) {
+            if (disclosureElement.getAttribute('aria-busy') === 'true') return;
             const isExpanded = expandedTeams.has(teamName);
-            
+
             if (isExpanded) {
-                // Collapse
                 const membersList = document.getElementById(`members-${teamName.replace(/[^a-zA-Z0-9]/g, '_')}`);
-                if (membersList) {
-                    membersList.style.maxHeight = membersList.scrollHeight + 'px';
-                    membersList.style.overflow = 'hidden';
-                    requestAnimationFrame(() => {
-                        membersList.style.maxHeight = '0px';
-                        setTimeout(() => {
-                            membersList.remove();
-                        }, 300);
-                    });
-                }
-                
+                if (membersList) membersList.remove();
                 disclosureElement.classList.remove('expanded');
                 disclosureElement.setAttribute('aria-expanded', 'false');
                 disclosureElement.setAttribute('aria-label', `Show members of ${teamName}`);
                 expandedTeams.delete(teamName);
-            } else {
-                // Expand
-                try {
-                    const response = await fetch(`/api/teams/${encodeURIComponent(teamName)}/members`);
-                    const members = await response.json();
-                    
-                    if (response.ok) {
-                        const membersList = createMembersList(teamName, members);
-                        const teamItem = disclosureElement.closest('.leaderboard-item');
-                        teamItem.insertAdjacentElement('afterend', membersList);
-                        
-                        // Animate expansion
-                        membersList.style.maxHeight = '0px';
-                        membersList.style.overflow = 'hidden';
-                        requestAnimationFrame(() => {
-                            membersList.style.maxHeight = membersList.scrollHeight + 'px';
-                            setTimeout(() => {
-                                membersList.style.maxHeight = 'none';
-                                membersList.style.overflow = 'visible';
-                            }, 300);
-                        });
-                        
-                        disclosureElement.classList.add('expanded');
-                        disclosureElement.setAttribute('aria-expanded', 'true');
-                        disclosureElement.setAttribute('aria-label', `Hide members of ${teamName}`);
-                        expandedTeams.add(teamName);
-                    } else {
-                        console.error('Error loading team members:', members.error);
-                    }
-                } catch (error) {
-                    console.error('Error fetching team members:', error);
+                return;
+            }
+
+            disclosureElement.setAttribute('aria-busy', 'true');
+            try {
+                const response = await fetch(`/api/teams/${encodeURIComponent(teamName)}/members`);
+                const members = await response.json();
+                if (response.ok) {
+                    const membersList = createMembersList(teamName, members);
+                    disclosureElement.closest('.leaderboard-item').insertAdjacentElement('afterend', membersList);
+                    disclosureElement.classList.add('expanded');
+                    disclosureElement.setAttribute('aria-expanded', 'true');
+                    disclosureElement.setAttribute('aria-label', `Hide members of ${teamName}`);
+                    expandedTeams.add(teamName);
+                } else {
+                    console.error('Error loading team members:', members.error);
                 }
+            } catch (error) {
+                console.error('Error fetching team members:', error);
+            } finally {
+                disclosureElement.removeAttribute('aria-busy');
             }
         }
 
@@ -974,7 +953,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const membersList = document.createElement('div');
             membersList.id = `members-${teamName.replace(/[^a-zA-Z0-9]/g, '_')}`;
             membersList.className = 'team-members-list';
-            membersList.style.transition = 'max-height 0.3s ease-out';
             
             const membersHtml = members.map(member => `
                 <div class="member-item">
@@ -998,90 +976,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Toggle user daily data disclosure
         async function toggleUserDisclosure(userId, userName, disclosureElement) {
+            if (disclosureElement.getAttribute('aria-busy') === 'true') return;
             const isExpanded = expandedUsers.has(userId);
-            
+            const userItem = disclosureElement.closest('.leaderboard-item');
+
             if (isExpanded) {
-                // Collapse
                 const userDataList = document.getElementById(`user-data-${userId}`);
-                if (userDataList) {
-                    userDataList.style.maxHeight = userDataList.scrollHeight + 'px';
-                    userDataList.style.overflow = 'hidden';
-                    requestAnimationFrame(() => {
-                        userDataList.style.maxHeight = '0px';
-                        setTimeout(() => {
-                            userDataList.remove();
-                        }, 300);
-                    });
-                }
-                
+                if (userDataList) userDataList.remove();
                 disclosureElement.classList.remove('expanded');
                 disclosureElement.setAttribute('aria-expanded', 'false');
                 disclosureElement.setAttribute('aria-label', `Show daily steps for ${userName}`);
                 expandedUsers.delete(userId);
-            } else {
-                // Expand - show loading state
-                const userItem = disclosureElement.closest('.leaderboard-item');
-                const loadingIndicator = createUserDataLoading(userId, userName);
-                userItem.insertAdjacentElement('afterend', loadingIndicator);
-                
-                try {
-                    const response = await fetch(`/api/user/${userId}/daily-steps`);
-                    const userData = await response.json();
-                    
-                    // Remove loading indicator
-                    loadingIndicator.remove();
-                    
-                    if (response.ok) {
-                        const userDataList = createUserDataList(userId, userName, userData);
-                        userItem.insertAdjacentElement('afterend', userDataList);
-                        
-                        // Animate expansion
-                        userDataList.style.maxHeight = '0px';
-                        userDataList.style.overflow = 'hidden';
-                        requestAnimationFrame(() => {
-                            userDataList.style.maxHeight = userDataList.scrollHeight + 'px';
-                            setTimeout(() => {
-                                userDataList.style.maxHeight = 'none';
-                                userDataList.style.overflow = 'visible';
-                            }, 300);
-                        });
-                        
-                        disclosureElement.classList.add('expanded');
-                        disclosureElement.setAttribute('aria-expanded', 'true');
-                        disclosureElement.setAttribute('aria-label', `Hide daily steps for ${userName}`);
-                        expandedUsers.add(userId);
-                    } else {
-                        console.error('Error loading user daily data:', userData.error);
-                        // Show error state
-                        const errorDiv = createUserDataError(userId, userName, userData.error || 'Failed to load data');
-                        userItem.insertAdjacentElement('afterend', errorDiv);
-                        setTimeout(() => errorDiv.remove(), 3000); // Auto-remove after 3 seconds
-                    }
-                } catch (error) {
-                    // Remove loading indicator
-                    loadingIndicator.remove();
-                    console.error('Error fetching user daily data:', error);
-                    // Show error state
-                    const errorDiv = createUserDataError(userId, userName, 'Network error');
-                    userItem.insertAdjacentElement('afterend', errorDiv);
-                    setTimeout(() => errorDiv.remove(), 3000); // Auto-remove after 3 seconds
-                }
+                return;
             }
-        }
 
-        function createUserDataLoading(userId, userName) {
-            const loadingDiv = document.createElement('div');
-            loadingDiv.id = `user-data-${userId}`;
-            loadingDiv.className = 'user-data-list';
-            loadingDiv.style.transition = 'max-height 0.3s ease-out';
-            
-            loadingDiv.innerHTML = `
-                <div class="user-data-item" style="padding: 12px 16px; text-align: center; color: #666; font-style: italic;">
-                    <span class="loading"></span> Loading ${userName}'s daily data...
-                </div>
-            `;
-            
-            return loadingDiv;
+            disclosureElement.setAttribute('aria-busy', 'true');
+            try {
+                const response = await fetch(`/api/user/${userId}/daily-steps`);
+                const userData = await response.json();
+                if (response.ok) {
+                    const userDataList = createUserDataList(userId, userName, userData);
+                    userItem.insertAdjacentElement('afterend', userDataList);
+                    disclosureElement.classList.add('expanded');
+                    disclosureElement.setAttribute('aria-expanded', 'true');
+                    disclosureElement.setAttribute('aria-label', `Hide daily steps for ${userName}`);
+                    expandedUsers.add(userId);
+                } else {
+                    console.error('Error loading user daily data:', userData.error);
+                    const errorDiv = createUserDataError(userId, userName, userData.error || 'Failed to load data');
+                    userItem.insertAdjacentElement('afterend', errorDiv);
+                    setTimeout(() => errorDiv.remove(), 3000);
+                }
+            } catch (error) {
+                console.error('Error fetching user daily data:', error);
+                const errorDiv = createUserDataError(userId, userName, 'Network error');
+                userItem.insertAdjacentElement('afterend', errorDiv);
+                setTimeout(() => errorDiv.remove(), 3000);
+            } finally {
+                disclosureElement.removeAttribute('aria-busy');
+            }
         }
 
         function createUserDataError(userId, userName, errorMessage) {
@@ -1103,7 +1036,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const userDataList = document.createElement('div');
             userDataList.id = `user-data-${userId}`;
             userDataList.className = 'user-data-list';
-            userDataList.style.transition = 'max-height 0.3s ease-out';
             
             if (userData.daily_steps.length === 0) {
                 userDataList.innerHTML = `
@@ -1114,7 +1046,6 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 // Filter data based on active challenge date range
                 let filteredSteps;
-                let periodDescription;
                 
                 if (currentUser && currentUser.current_challenge) {
                     const challenge = currentUser.current_challenge;
@@ -1128,11 +1059,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         return stepDate >= challengeStartDate && stepDate <= challengeEndDate;
                     });
                     
-                    periodDescription = 'full active challenge period';
                 } else {
                     // No active challenge - show last 14 days
                     filteredSteps = userData.daily_steps.slice(0, 14);
-                    periodDescription = '14 days';
                 }
                 
                 const dailyDataHtml = filteredSteps.map(day => `
@@ -1142,17 +1071,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 `).join('');
                 
-                let showingText;
-                if (currentUser && currentUser.current_challenge) {
-                    showingText = ` (${periodDescription})`;
-                } else {
-                    showingText = ` (${filteredSteps.length} days total)`;
-                }
-                
-                userDataList.innerHTML = `
-                    <div class="disclosure-heading">${userName}'s daily steps${showingText}</div>
-                    ${dailyDataHtml}
-                `;
+                userDataList.innerHTML = dailyDataHtml;
             }
             
             return userDataList;
