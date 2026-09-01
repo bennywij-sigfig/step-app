@@ -63,7 +63,10 @@ describe('dashboard design contract', () => {
     expect(dashboard).toContain('Promise.allSettled([loadIndividualForNavigation(), loadTeamsForNavigation()])');
     expect(dashboard).toContain('window.requestIdleCallback(preloadLeaderboards, { timeout: 1500 })');
     expect(dashboard).toContain('if (existing?.promise) return existing.promise');
-    expect(dashboard).toContain('Date.now() - existing.loadedAt < 30000');
+    expect(dashboard).toContain('Date.now() - existing.loadedAt < 10000');
+    expect(dashboard).toContain('if (succeeded) {');
+    expect(dashboard).toContain('navigationLoads.delete(key)');
+    expect(dashboard).toContain('return false;');
   });
 
   test('keeps leaderboard rankings vertical and lets Trotter expand on desktop', () => {
