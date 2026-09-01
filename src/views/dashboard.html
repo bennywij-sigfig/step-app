@@ -68,14 +68,16 @@
         }
         
         .container {
-            max-width: 600px;
+            width: 100%;
+            max-width: 1100px;
             margin: 0 auto;
             /* Landscape iPhones can be wider than the mobile breakpoint. */
             padding: 15px max(15px, env(safe-area-inset-right)) max(15px, env(safe-area-inset-bottom)) max(15px, env(safe-area-inset-left));
         }
-        
+
         @media (max-width: 768px) {
             .container {
+                max-width: 600px;
                 padding: 8px;
             }
         }
@@ -313,7 +315,7 @@
         .steps-list {
             max-height: 400px;
             overflow-y: auto;
-            margin-top: 20px;
+            margin-top: 14px;
             /* Mobile scroll performance optimizations */
             -webkit-overflow-scrolling: touch;
             scroll-behavior: smooth;
@@ -360,6 +362,7 @@
 
         .leaderboard-identity {
             display: flex;
+            flex: 1 1 auto;
             min-width: 0;
             align-items: center;
             gap: 8px;
@@ -413,6 +416,20 @@
 
         .unranked-section .leaderboard-item {
             background: rgba(248, 250, 252, 0.46);
+        }
+
+        /* Individual rows get quiet alternating surfaces for scanability.
+           These selectors deliberately exclude team rows and their ID colors. */
+        #leaderboard .leaderboard-item {
+            background: color-mix(in srgb, var(--primary-color) 3%, white);
+        }
+
+        #leaderboard .leaderboard-item:nth-of-type(even) {
+            background: color-mix(in srgb, var(--primary-color) 7%, white);
+        }
+
+        #leaderboard .leaderboard-item.current-user {
+            background: color-mix(in srgb, var(--primary-color) 16%, white);
         }
 
         .leaderboard-section-title {
@@ -507,10 +524,49 @@
             }
         }
         
+        /* Use the wider desktop canvas for entry and history without making
+           either column feel stretched. Mobile keeps the original single flow. */
+        .my-steps-layout {
+            display: grid;
+            grid-template-columns: minmax(280px, 0.72fr) minmax(440px, 1.28fr);
+            gap: 28px;
+            align-items: start;
+        }
+
+        .step-entry-panel,
+        .recent-steps-panel {
+            min-width: 0;
+        }
+
+        .recent-steps-panel > h3 {
+            margin-top: 2px;
+            font-size: 21px;
+        }
+
+        /* All three views share the navigation's full outer width. Rankings
+           still retain one unambiguous top-to-bottom sequence. */
+        #myStepsView,
+        #leaderboardView,
+        #teamLeaderboardView {
+            width: 100%;
+        }
+
+        @media (max-width: 900px) {
+            .my-steps-layout {
+                display: block;
+            }
+
+            .recent-steps-panel > h3 {
+                margin-top: 20px;
+                font-size: 16px;
+            }
+        }
+
         /* Compact, touch-friendly recent-steps chart. */
         .steps-chart-container {
             margin: 12px 0 16px;
             padding: 14px 12px 10px;
+            overflow-x: clip;
             background: var(--surface-muted, rgba(248, 250, 252, 0.92));
             border: 1px solid var(--line, rgba(15, 61, 76, 0.14));
             border-radius: 12px;
@@ -527,10 +583,10 @@
 
         .steps-chart {
             display: grid;
-            grid-template-columns: repeat(var(--bar-count), minmax(8px, 1fr));
+            grid-template-columns: repeat(var(--bar-count), minmax(4px, 1fr));
             align-items: end;
             height: 126px;
-            gap: 5px;
+            gap: clamp(2px, 0.45vw, 5px);
             padding: 10px 2px 22px;
             border-bottom: 1px solid var(--line, rgba(15, 61, 76, 0.14));
         }
@@ -583,6 +639,17 @@
             opacity: 1;
         }
 
+        .step-bar:first-child::after {
+            right: auto;
+            left: 0;
+            transform: none;
+        }
+
+        .step-bar:last-child::after {
+            right: 0;
+            transform: none;
+        }
+
         .step-bar.no-data {
             background: color-mix(in srgb, var(--muted-ink, #526174) 20%, transparent) !important;
             opacity: 1;
@@ -597,11 +664,17 @@
         @media (max-width: 480px) {
             .steps-chart {
                 height: 112px;
-                gap: 3px;
+                gap: 2px;
             }
 
             .step-bar::before {
                 font-size: 8px;
+            }
+
+            /* Thirty bars still fit on a phone; label only useful landmarks
+               there so the axis remains legible instead of becoming crowded. */
+            .step-bar:not(.axis-label)::before {
+                display: none;
             }
         }
         
@@ -805,6 +878,12 @@
         .leaderboard-item.team-identified,
         .team-members-list.team-identified {
             background-color: color-mix(in srgb, var(--team-accent) 5%, #f8fafc);
+        }
+
+        /* Preserve each team's identity color while making the signed-in
+           user's team noticeably easier to find. */
+        .leaderboard-item.team-identified.current-team {
+            background-color: color-mix(in srgb, var(--team-accent) 16%, white);
         }
 
         /* Individual and team disclosures share one quiet visual treatment. */
@@ -1192,9 +1271,9 @@
         .chat-panel {
             display: flex;
             flex-direction: column;
-            width: min(560px, 100%);
-            height: min(620px, 100%);
-            max-height: min(720px, 100%);
+            width: min(860px, 78vw);
+            height: min(740px, calc(100dvh - 48px));
+            max-height: 100%;
             overflow: hidden;
             color: var(--ink, #172033);
             background: var(--surface, #fff);
@@ -1251,7 +1330,7 @@
 
         .chat-message {
             width: fit-content;
-            max-width: 88%;
+            max-width: min(76%, 680px);
             margin: 0 0 10px;
             padding: 10px 12px;
             border-radius: 13px;
@@ -1584,43 +1663,48 @@
     </div>
 
     <div id="myStepsView" class="card">
-        <h2>Log Your Steps</h2>
-        
-        <!-- Challenge Period Info -->
-        <div id="challengeInfo" class="challenge-info hidden"></div>
-        
-        <form id="stepsForm" novalidate>
-            <div class="form-group">
-                <label for="date">Date:</label>
-                <input type="date" id="date" name="date" required>
-            </div>
-            <div class="form-group">
-                <label for="steps">Steps:</label>
-                <div class="input-with-validation">
-                    <input type="number" id="steps" name="steps" min="0" max="70000" required placeholder="e.g. 8500" inputmode="numeric" pattern="[0-9]*">
-                    <div class="validation-feedback" id="stepsValidation"></div>
+        <div class="my-steps-layout">
+            <section class="step-entry-panel" aria-labelledby="stepEntryTitle">
+                <h2 id="stepEntryTitle">Log Your Steps</h2>
+
+                <!-- Challenge Period Info -->
+                <div id="challengeInfo" class="challenge-info hidden"></div>
+
+                <form id="stepsForm" novalidate>
+                    <div class="form-group">
+                        <label for="date">Date:</label>
+                        <input type="date" id="date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="steps">Steps:</label>
+                        <div class="input-with-validation">
+                            <input type="number" id="steps" name="steps" min="0" max="70000" required placeholder="e.g. 8500" inputmode="numeric" pattern="[0-9]*">
+                            <div class="validation-feedback" id="stepsValidation"></div>
+                        </div>
+                    </div>
+                    <div class="form-group step-form-actions">
+                        <button type="button" id="chatOpenBtn" class="chat-beta-btn">Trotter (beta)</button>
+                        <button type="submit" id="submitStepsBtn">Save Steps</button>
+                    </div>
+                </form>
+                <div id="stepsMessage"></div>
+            </section>
+
+            <section class="recent-steps-panel" aria-labelledby="recentStepsTitle">
+                <h3 id="recentStepsTitle">Your Recent Steps</h3>
+
+                <!-- Daily Steps Chart -->
+                <div class="steps-chart-container">
+                    <div id="stepsChart">
+                        <p class="steps-chart-empty">Loading chart…</p>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group step-form-actions">
-                <button type="button" id="chatOpenBtn" class="chat-beta-btn">Trotter (beta)</button>
-                <button type="submit" id="submitStepsBtn">Save Steps</button>
-            </div>
-        </form>
-        <div id="stepsMessage"></div>
-        
-        <h3>Your Recent Steps</h3>
-        
-        <!-- Daily Steps Chart -->
-        <div class="steps-chart-container">
-            <div id="stepsChart">
-                <p class="steps-chart-empty">Loading chart…</p>
-            </div>
+
+                <div id="stepsList" class="steps-list">
+                    <p>Loading your steps...</p>
+                </div>
+            </section>
         </div>
-        
-        <div id="stepsList" class="steps-list">
-            <p>Loading your steps...</p>
-        </div>
-        
     </div>
 
     <div id="stepChatOverlay" class="chat-overlay" hidden>
