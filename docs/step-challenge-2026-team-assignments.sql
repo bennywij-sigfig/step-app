@@ -9,9 +9,9 @@
 -- statement is idempotent: re-running it creates no duplicate team entries and
 -- sets the same assignments again.
 --
--- This application stores the current challenge roster in `teams` and
--- `users.team`; team assignments are not keyed to a challenge ID. Run this only
--- while Step Challenge 2026 is the active challenge.
+-- This application stores the current challenge roster in `teams` and links
+-- users through `users.team_id`; assignments are not keyed to a challenge ID.
+-- Run this only while Step Challenge 2026 is the active challenge.
 
 BEGIN IMMEDIATE;
 
@@ -79,9 +79,10 @@ SELECT DISTINCT team_name FROM roster;
 -- Email is unique in users and is the authoritative match. This permits
 -- pre-existing accounts with legacy short display names to be assigned.
 UPDATE users AS u
-SET team = (
-  SELECT r.team_name
+SET team_id = (
+  SELECT t.id
   FROM roster AS r
+  JOIN teams AS t ON t.name = r.team_name
   WHERE lower(trim(r.expected_email)) = lower(trim(u.email))
 )
 WHERE EXISTS (

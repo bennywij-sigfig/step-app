@@ -18,8 +18,11 @@ describe('Step Chat deterministic write service', () => {
 
   beforeEach(async () => {
     db = new sqlite3.Database(':memory:');
+    await run(db, `CREATE TABLE teams (
+      id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL
+    )`);
     await run(db, `CREATE TABLE users (
-      id INTEGER PRIMARY KEY, name TEXT, archived_at DATETIME
+      id INTEGER PRIMARY KEY, name TEXT, team_id INTEGER REFERENCES teams(id), archived_at DATETIME
     )`);
     await run(db, `CREATE TABLE challenges (
       id INTEGER PRIMARY KEY, name TEXT, start_date TEXT, end_date TEXT,
@@ -30,7 +33,8 @@ describe('Step Chat deterministic write service', () => {
       count INTEGER NOT NULL, challenge_id INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, date)
     )`);
-    await run(db, 'INSERT INTO users (id, name) VALUES (1, ?), (2, ?)', ['Tester', 'Target']);
+    await run(db, `INSERT INTO teams (id, name) VALUES (1, 'Team A')`);
+    await run(db, 'INSERT INTO users (id, name, team_id) VALUES (1, ?, 1), (2, ?, NULL)', ['Tester', 'Target']);
     await run(db, `INSERT INTO challenges
       (id, name, start_date, end_date, is_active, reporting_threshold, timezone)
       VALUES (9, 'Test Challenge', '2025-01-01', '2025-12-31', 1, 70, 'America/Los_Angeles')`);
@@ -146,6 +150,21 @@ describe('Step Chat deterministic write service', () => {
     }
   });
 
+  test('resolves the authenticated user team through the normalized relation', async () => {
+    const teamService = createStepChatService({
+      db,
+      getIndividualLeaderboard: async () => ({ ranked: [], unranked: [] }),
+      getTeamLeaderboard: async () => ({
+        ranked: [{ team: 'Team A', team_steps_per_day_reported: 9000 }],
+        unranked: []
+      })
+    });
+    const result = await teamService.executeIntent(1, {
+      intent: 'challenge_outlook', leaderboard: 'team', as_of_date: '2025-08-25', tone: 'neutral'
+    });
+    expect(result).toMatchObject({ has_entry: true, name: 'Team A', ranked: true, rank: 1 });
+  });
+
   test('asks deterministic follow-ups for incomplete or invalid step requests', async () => {
     await expect(service.executeIntent(1, { intent: 'help', reason: 'missing_date', tone: 'neutral' }))
       .resolves.toEqual({
@@ -185,10 +204,11 @@ describe('Step Chat deterministic write service', () => {
     let unrelatedWrite;
 
     try {
-      await mainRun('CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT, archived_at TEXT)');
+      await mainRun('CREATE TABLE teams(id INTEGER PRIMARY KEY, name TEXT UNIQUE)');
+      await mainRun('CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT, team_id INTEGER, archived_at TEXT)');
       await mainRun('CREATE TABLE challenges(id INTEGER PRIMARY KEY, name TEXT, start_date TEXT, end_date TEXT, is_active INTEGER, reporting_threshold INTEGER, timezone TEXT)');
       await mainRun('CREATE TABLE steps(id INTEGER PRIMARY KEY, user_id INTEGER, date TEXT, count INTEGER, challenge_id INTEGER, updated_at TEXT, UNIQUE(user_id,date))');
-      await mainRun("INSERT INTO users VALUES(1,'chat-user',NULL),(2,'other-user',NULL)");
+      await mainRun("INSERT INTO users(id,name,team_id,archived_at) VALUES(1,'chat-user',NULL,NULL),(2,'other-user',NULL,NULL)");
       await mainRun("INSERT INTO challenges VALUES(1,'current','2025-01-01','2025-12-31',1,70,'America/Los_Angeles')");
       await mainRun("INSERT INTO steps(user_id,date,count,challenge_id) VALUES(1,'2025-08-20',5000,1)");
 

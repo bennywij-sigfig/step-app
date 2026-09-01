@@ -196,22 +196,23 @@ class TestDatabasePool {
    */
   getTableDefinitions() {
     return [
-      // Users table - exact match from src/database.js
-      `CREATE TABLE users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        team TEXT,
-        is_admin BOOLEAN DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        archived_at DATETIME DEFAULT NULL
-      )`,
-
       // Teams table - exact match from src/database.js
       `CREATE TABLE teams (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT UNIQUE NOT NULL,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`,
+
+      // Users table retains an empty legacy column only for rollback migration tests.
+      `CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        name TEXT NOT NULL,
+        team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
+        team TEXT,
+        is_admin BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        archived_at DATETIME DEFAULT NULL
       )`,
 
       // Steps table - includes challenge_id column that gets added by ALTER TABLE in main app

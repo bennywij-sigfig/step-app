@@ -30,10 +30,10 @@ describe('challenge team rollover', () => {
 
   test('snapshots the outgoing roster and clears teams atomically', async () => {
     await new Promise((resolve, reject) => db.serialize(() => {
-      db.run(`INSERT INTO teams (name) VALUES ('Blue'), ('Green')`);
-      db.run(`INSERT INTO users (id, email, name, team, is_admin) VALUES
-        (1, 'admin@example.com', 'Admin', 'Blue', 1),
-        (2, 'player@example.com', 'Player', 'Green', 0),
+      db.run(`INSERT INTO teams (id, name) VALUES (1, 'Blue'), (2, 'Green')`);
+      db.run(`INSERT INTO users (id, email, name, team_id, is_admin) VALUES
+        (1, 'admin@example.com', 'Admin', 1, 1),
+        (2, 'player@example.com', 'Player', 2, 0),
         (3, 'unassigned@example.com', 'Unassigned', NULL, 0)`);
       db.run(`INSERT INTO challenges (id, name, start_date, end_date, is_active, reporting_threshold) VALUES
         (1, 'Outgoing', '2026-01-01', '2026-01-15', 1, 70),
@@ -59,14 +59,14 @@ describe('challenge team rollover', () => {
     });
 
     const [users, teams, memberships, savedTeams, active] = await Promise.all([
-      all(db, 'SELECT id, team FROM users ORDER BY id'),
+      all(db, 'SELECT id, team_id FROM users ORDER BY id'),
       all(db, 'SELECT * FROM teams'),
       all(db, 'SELECT user_email, team_name FROM challenge_team_memberships WHERE challenge_id = 1 ORDER BY user_id'),
       all(db, 'SELECT team_name FROM challenge_team_names WHERE challenge_id = 1 ORDER BY team_name'),
       get(db, 'SELECT id, previous_challenge_id, teams_prepared_at FROM challenges WHERE is_active = 1')
     ]);
 
-    expect(users.every(user => user.team === null)).toBe(true);
+    expect(users.every(user => user.team_id === null)).toBe(true);
     expect(teams).toHaveLength(0);
     expect(memberships).toEqual([
       { user_email: 'admin@example.com', team_name: 'Blue' },
