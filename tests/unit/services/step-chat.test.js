@@ -183,6 +183,9 @@ describe('Step Chat deterministic write service', () => {
   });
 
   test('resolves the authenticated user team through the normalized relation', async () => {
+    await expect(service.getContext(1)).resolves.toMatchObject({ currentTeamName: 'Team A' });
+    await expect(service.getMyTeam(1)).resolves.toEqual({ kind: 'my_team', has_team: true, name: 'Team A' });
+    await expect(service.getMyTeam(2)).resolves.toEqual({ kind: 'my_team', has_team: false, name: null });
     const teamService = createStepChatService({
       db,
       getIndividualLeaderboard: async () => ({ ranked: [], unranked: [] }),

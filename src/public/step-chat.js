@@ -499,6 +499,10 @@
         if (result.kind === 'team_rename_preview') return renderTeamRenamePreview(result);
         if (result.kind === 'leaderboard') return renderLeaderboard(result, tone, reply);
         if (result.kind === 'steps') return renderSteps(result, tone, reply);
+        if (result.kind === 'my_team') {
+            const text = result.has_team ? `Your team is “${result.name}”.` : 'You are not assigned to a team yet.';
+            return createMessage('assistant', reply || text);
+        }
         if (result.kind === 'clarification') {
             const message = createMessage('assistant', reply || result.message);
             if (result.candidates?.length) addList(message, result.candidates);

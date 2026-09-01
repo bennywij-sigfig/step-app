@@ -44,10 +44,15 @@ function createStepChatService({
     return getFrom(connection, 'SELECT * FROM challenges WHERE is_active = 1 LIMIT 1');
   }
 
-  async function getContext() {
-    const challenge = await getActiveChallenge();
+  async function getContext(userId = null) {
+    const [challenge, membership] = await Promise.all([
+      getActiveChallenge(),
+      userId ? get(`SELECT t.name AS team_name
+        FROM users u LEFT JOIN teams t ON t.id = u.team_id WHERE u.id = ?`, [userId]) : null
+    ]);
     return {
       currentDate: getLatestSupportedLocalDate(),
+      currentTeamName: membership?.team_name || null,
       challenge: challenge ? {
         id: challenge.id,
         name: challenge.name,
@@ -83,6 +88,13 @@ function createStepChatService({
       }
       return { date: entry.date, count: entry.count };
     });
+  }
+
+  async function getMyTeam(userId) {
+    const user = await get(`SELECT u.archived_at, t.name AS team_name
+      FROM users u LEFT JOIN teams t ON t.id = u.team_id WHERE u.id = ?`, [userId]);
+    if (!user) throw userError('User not found');
+    return { kind: 'my_team', has_team: Boolean(user.team_name), name: user.team_name || null };
   }
 
   async function getRenameableTeam(userId, connection = db) {
@@ -601,6 +613,7 @@ function createStepChatService({
     commitTeamRename,
     executeIntent,
     getContext,
+    getMyTeam,
     previewEntries,
     previewTeamRename
   };

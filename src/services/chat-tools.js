@@ -31,6 +31,11 @@ const declarations = [
     parameters: { type: 'object', properties: { as_of_date: optionalDate } }
   },
   {
+    name: 'get_my_team',
+    description: 'Get the authenticated user’s current team name. Use this for direct questions about which team the user belongs to.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
     name: 'get_my_steps',
     description: 'Get the authenticated user’s steps and average. Defaults to the active challenge; explicit dates query the user’s own history.',
     parameters: { type: 'object', properties: { start_date: optionalDate, end_date: optionalDate } }
@@ -137,6 +142,9 @@ function createChatToolRegistry({ service }) {
         });
         return service.executeIntent(userId, intent);
       }
+      case 'get_my_team':
+        assertArguments(rawArgs, []);
+        return service.getMyTeam(userId);
       case 'get_my_steps': {
         assertArguments(rawArgs, ['start_date', 'end_date']);
         const intent = validateChatIntent({ intent: 'show_my_steps', tone: 'neutral', ...rawArgs });

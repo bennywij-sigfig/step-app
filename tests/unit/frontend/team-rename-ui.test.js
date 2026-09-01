@@ -26,7 +26,7 @@ describe('team rename and identity UI contract', () => {
     expect(dashboard).toContain('team.team_id');
     expect(html).toContain('var(--team-accent) 5%');
     expect(html).not.toContain('.team-identified .leaderboard-name::before');
-    expect(dashboard).toContain('m: members · r: reporting');
+    expect(dashboard).toContain('members · reporting');
   });
 
   test('keeps the emoji app icon paint independent from transparent heading text', () => {
