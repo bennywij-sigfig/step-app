@@ -291,10 +291,10 @@ async function getChallengeParticipantCount(challengeId, dbConnection = null) {
 async function getIndividualLeaderboardWithRates(challengeId, currentDay, threshold, dbConnection = db) {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT 
+      SELECT
         u.id,
-        u.name, 
-        u.team,
+        u.name,
+        t.name AS team,
         COALESCE(SUM(s.count), 0) as total_steps,
         COALESCE(AVG(s.count), 0) as avg_steps_per_day,
         COUNT(s.id) as days_logged,
@@ -311,9 +311,10 @@ async function getIndividualLeaderboardWithRates(challengeId, currentDay, thresh
           ELSE 0
         END as meets_threshold
       FROM users u
+      LEFT JOIN teams t ON t.id = u.team_id
       LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
       WHERE u.archived_at IS NULL AND u.id IN (SELECT DISTINCT user_id FROM steps WHERE challenge_id = ?)
-      GROUP BY u.id
+      GROUP BY u.id, t.name
       ORDER BY meets_threshold DESC, steps_per_day_reported DESC, u.name ASC
     `;
     
@@ -335,8 +336,8 @@ async function getIndividualLeaderboardWithRates(challengeId, currentDay, thresh
 async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold, dbConnection = db) {
   return new Promise((resolve, reject) => {
     const query = `
-      SELECT 
-        u.team,
+      SELECT
+        t.name AS team,
         COUNT(DISTINCT u.id) as member_count,
         COALESCE(SUM(s.count), 0) as total_steps,
         COALESCE(AVG(s.count), 0) as avg_steps_per_entry,
@@ -361,10 +362,11 @@ async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold, d
           ELSE 0
         END as meets_threshold
       FROM users u
+      JOIN teams t ON t.id = u.team_id
       LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
-      WHERE u.archived_at IS NULL AND u.team IS NOT NULL AND u.team != ''
-      GROUP BY u.team
-      ORDER BY meets_threshold DESC, team_steps_per_day_reported DESC, u.team ASC
+      WHERE u.archived_at IS NULL
+      GROUP BY t.id, t.name
+      ORDER BY meets_threshold DESC, team_steps_per_day_reported DESC, t.name ASC
     `;
     
     dbConnection.all(query, [currentDay, currentDay, currentDay, currentDay, threshold, challengeId], (err, rows) => {
@@ -993,7 +995,9 @@ app.get('/dashboard.html', requireAuth, (req, res) => {
 
 // API to get current user info
 app.get('/api/user', apiLimiter, requireApiAuth, (req, res) => {
-  db.get(`SELECT id, email, name, team, is_admin FROM users WHERE id = ?`, [req.session.userId], (err, user) => {
+  db.get(`SELECT u.id, u.email, u.name, t.name AS team, u.is_admin
+          FROM users u LEFT JOIN teams t ON t.id = u.team_id
+          WHERE u.id = ?`, [req.session.userId], (err, user) => {
     if (err) {
       console.error('Error fetching user:', err);
       return res.status(500).json({ error: 'Database error' });
@@ -1306,10 +1310,10 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
     // If no active challenge, return all-time rankings
     if (!activeChallenge) {
       activeDb.all(`
-        SELECT 
+        SELECT
           u.id,
-          u.name, 
-          u.team,
+          u.name,
+          t.name AS team,
           COALESCE(SUM(s.count), 0) as total_steps,
           COALESCE(AVG(s.count), 0) as avg_steps_per_day,
           COUNT(s.id) as days_logged,
@@ -1318,9 +1322,10 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
             ELSE 0 
           END as steps_per_day_reported
         FROM users u
+        LEFT JOIN teams t ON t.id = u.team_id
         LEFT JOIN steps s ON u.id = s.user_id
         WHERE u.archived_at IS NULL
-        GROUP BY u.id
+        GROUP BY u.id, t.name
         ORDER BY steps_per_day_reported DESC
       `, (err, rows) => {
         // Close database connection if we created one
@@ -1658,14 +1663,15 @@ app.get('/api/admin/users', adminApiLimiter, requireApiAdmin, (req, res) => {
       u.id,
       u.email,
       u.name,
-      u.team,
+      t.name AS team,
       u.is_admin,
       u.archived_at,
       COALESCE(SUM(s.count), 0) as total_steps,
       COUNT(s.id) as days_logged
     FROM users u
+    LEFT JOIN teams t ON t.id = u.team_id
     LEFT JOIN steps s ON u.id = s.user_id
-    GROUP BY u.id
+    GROUP BY u.id, t.name
     ORDER BY u.archived_at ASC, u.name ASC
   `, (err, rows) => {
     if (err) {
@@ -1677,21 +1683,23 @@ app.get('/api/admin/users', adminApiLimiter, requireApiAdmin, (req, res) => {
 });
 
 // Update user team (admin only)
-app.put('/api/admin/users/:userId/team', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
+app.put('/api/admin/users/:userId/team', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, async (req, res) => {
   const { userId } = req.params;
-  const { team } = req.body;
-  
-  db.run(
-    `UPDATE users SET team = ? WHERE id = ?`,
-    [team, userId],
-    function(err) {
-      if (err) {
-        console.error('Error updating user team:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      res.json({ message: 'Team updated successfully' });
-    }
-  );
+  const normalizedTeam = typeof req.body.team === 'string' && req.body.team.trim()
+    ? req.body.team.trim()
+    : null;
+  try {
+    const selectedTeam = normalizedTeam
+      ? await dbGetAsync('SELECT id FROM teams WHERE name = ?', [normalizedTeam])
+      : null;
+    if (normalizedTeam && !selectedTeam) return res.status(400).json({ error: 'Invalid team name' });
+    const result = await dbRunAsync('UPDATE users SET team_id = ? WHERE id = ?', [selectedTeam?.id || null, userId]);
+    if (result.changes === 0) return res.status(404).json({ error: 'User not found' });
+    res.json({ message: 'Team updated successfully' });
+  } catch (error) {
+    console.error('Error updating user team:', error);
+    res.status(500).json({ error: 'Database error' });
+  }
 });
 
 // Get teams list
@@ -1769,19 +1777,6 @@ app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCS
             return res.status(404).json({ error: 'Team not found' });
           }
           
-          // Update all users with the old team name to the new team name
-          db.run(
-            `UPDATE users SET team = ? WHERE team = ?`,
-            [name.trim(), oldTeam.name],
-            (err) => {
-              if (err) {
-                console.error('Error updating user teams:', err);
-                return res.status(500).json({ error: 'Failed to update user team assignments' });
-              }
-              console.log(`✅ Updated user team assignments from "${oldTeam.name}" to "${name.trim()}"`);
-            }
-          );
-          
           res.json({ message: 'Team updated successfully' });
         }
       );
@@ -1790,38 +1785,28 @@ app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCS
 });
 
 // Delete team (soft delete by setting inactive)
-app.delete('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
+app.delete('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCSRFToken, async (req, res) => {
   const { teamId } = req.params;
-  
-  // First, remove team assignment from all users
-  db.run(
-    `UPDATE users SET team = NULL WHERE team = (SELECT name FROM teams WHERE id = ?)`,
-    [teamId],
-    (err) => {
-      if (err) {
-        console.error('Error removing team from users:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      // Then delete the team
-      db.run(
-        `DELETE FROM teams WHERE id = ?`,
-        [teamId],
-        function(err) {
-          if (err) {
-            console.error('Error deleting team:', err);
-            return res.status(500).json({ error: 'Database error' });
-          }
-          
-          if (this.changes === 0) {
-            return res.status(404).json({ error: 'Team not found' });
-          }
-          
-          res.json({ message: 'Team deleted successfully' });
-        }
-      );
+  const transactionDb = new sqlite3.Database(db.filename);
+  transactionDb.configure('busyTimeout', 30000);
+  try {
+    await dbRunAsync('BEGIN IMMEDIATE', [], transactionDb);
+    const existing = await dbGetAsync('SELECT id FROM teams WHERE id = ?', [teamId], transactionDb);
+    if (!existing) {
+      await dbRunAsync('ROLLBACK', [], transactionDb);
+      return res.status(404).json({ error: 'Team not found' });
     }
-  );
+    await dbRunAsync('UPDATE users SET team_id = NULL WHERE team_id = ?', [teamId], transactionDb);
+    await dbRunAsync('DELETE FROM teams WHERE id = ?', [teamId], transactionDb);
+    await dbRunAsync('COMMIT', [], transactionDb);
+    res.json({ message: 'Team deleted successfully' });
+  } catch (error) {
+    await dbRunAsync('ROLLBACK', [], transactionDb).catch(() => {});
+    console.error('Error deleting team:', error);
+    res.status(500).json({ error: 'Database error' });
+  } finally {
+    transactionDb.close();
+  }
 });
 
 // Delete user (admin only)
@@ -2241,7 +2226,9 @@ function performBatchTeamUpdates(updates, users, res) {
     const user = userMap.get(update.userId);
     const teamValue = update.teamId || null;
     
-    db.run('UPDATE users SET team = ? WHERE id = ?', [teamValue, update.userId], function(err) {
+    db.run(`UPDATE users
+            SET team_id = CASE WHEN ? IS NULL THEN NULL ELSE (SELECT id FROM teams WHERE name = ?) END
+            WHERE id = ?`, [teamValue, teamValue, update.userId], function(err) {
       completedUpdates++;
       
       if (err) {
@@ -2277,12 +2264,13 @@ app.get('/api/admin/export-csv', adminApiLimiter, requireApiAdmin, (req, res) =>
     SELECT 
       u.name as user_name,
       u.email as user_email,
-      COALESCE(u.team, 'No Team') as team_name,
+      COALESCE(t.name, 'No Team') as team_name,
       s.date,
       s.count as step_count,
       s.created_at,
       s.updated_at
     FROM users u
+    LEFT JOIN teams t ON t.id = u.team_id
     LEFT JOIN steps s ON u.id = s.user_id
     ORDER BY u.name ASC, s.date DESC
   `, (err, rows) => {
@@ -2339,8 +2327,8 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
     // If no active challenge, return all-time team rankings
     if (!activeChallenge) {
       activeDb.all(`
-        SELECT 
-          u.team,
+        SELECT
+          t.name AS team,
           COUNT(DISTINCT u.id) as member_count,
           COALESCE(SUM(s.count), 0) as total_steps,
           COALESCE(AVG(s.count), 0) as avg_steps_per_entry,
@@ -2354,9 +2342,10 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
             ELSE 0 
           END as team_steps_per_day_reported
         FROM users u
+        JOIN teams t ON t.id = u.team_id
         LEFT JOIN steps s ON u.id = s.user_id
-        WHERE u.archived_at IS NULL AND u.team IS NOT NULL AND u.team != ''
-        GROUP BY u.team
+        WHERE u.archived_at IS NULL
+        GROUP BY t.id, t.name
         ORDER BY team_steps_per_day_reported DESC
       `, (err, rows) => {
         if (shouldClose) activeDb.close();
@@ -2657,8 +2646,9 @@ app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, 
             ELSE 0 
           END as steps_per_day_reported
         FROM users u
+        JOIN teams t ON t.id = u.team_id
         LEFT JOIN steps s ON u.id = s.user_id
-        WHERE u.archived_at IS NULL AND u.team = ?
+        WHERE u.archived_at IS NULL AND t.name = ?
         GROUP BY u.id
         ORDER BY steps_per_day_reported DESC, u.name ASC
       `, [teamName], (err, rows) => {
@@ -2688,8 +2678,9 @@ app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, 
           ELSE 0
         END as personal_reporting_rate
       FROM users u
+      JOIN teams t ON t.id = u.team_id
       LEFT JOIN steps s ON u.id = s.user_id AND s.challenge_id = ?
-      WHERE u.archived_at IS NULL AND u.team = ?
+      WHERE u.archived_at IS NULL AND t.name = ?
       GROUP BY u.id
       ORDER BY steps_per_day_reported DESC, u.name ASC
     `, [currentDay, currentDay, activeChallenge.id, teamName], (err, rows) => {
@@ -2887,7 +2878,7 @@ app.post('/api/admin/challenges/:challengeId/prepare-teams', adminApiLimiter, re
     const currentState = await dbGetAsync(`
       SELECT
         (SELECT COUNT(*) FROM teams) AS team_count,
-        (SELECT COUNT(*) FROM users WHERE team IS NOT NULL AND team != '') AS assigned_count
+        (SELECT COUNT(*) FROM users WHERE team_id IS NOT NULL) AS assigned_count
     `);
     if (!source && (currentState.team_count > 0 || currentState.assigned_count > 0)) {
       return res.status(409).json({ error: 'Select an outgoing challenge before clearing existing team data' });
@@ -2905,11 +2896,12 @@ app.post('/api/admin/challenges/:challengeId/prepare-teams', adminApiLimiter, re
         await dbRunAsync(`
           INSERT OR IGNORE INTO challenge_team_memberships
             (challenge_id, user_id, user_name, user_email, team_name, user_archived_at)
-          SELECT ?, id, name, email, team, archived_at FROM users
+          SELECT ?, u.id, u.name, u.email, t.name, u.archived_at
+          FROM users u LEFT JOIN teams t ON t.id = u.team_id
         `, [source.id], transactionDb);
       }
 
-      const resetResult = await dbRunAsync(`UPDATE users SET team = NULL WHERE team IS NOT NULL AND team != ''`, [], transactionDb);
+      const resetResult = await dbRunAsync(`UPDATE users SET team_id = NULL WHERE team_id IS NOT NULL`, [], transactionDb);
       const teamsResult = await dbRunAsync('DELETE FROM teams', [], transactionDb);
       await dbRunAsync('UPDATE challenges SET is_active = 0', [], transactionDb);
       await dbRunAsync(`
@@ -3098,10 +3090,11 @@ app.post('/api/admin/challenges/:challengeId/archive', requireApiAdmin, validate
           
           // Now copy all step data for this challenge with user information
           db.all(`
-            SELECT s.*, u.name as user_name, u.team as user_team, u.email as user_email,
+            SELECT s.*, u.name as user_name, t.name as user_team, u.email as user_email,
                    s.updated_at as original_updated_at
-            FROM steps s 
-            JOIN users u ON s.user_id = u.id 
+            FROM steps s
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN teams t ON t.id = u.team_id
             WHERE s.challenge_id = ?
             ORDER BY s.user_id, s.date
           `, [challengeId], (stepsFetchErr, stepsData) => {
@@ -3517,13 +3510,18 @@ process.on('SIGINT', () => {
 let server;
 if (require.main === module) {
   const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : 'localhost';
-  server = app.listen(PORT, HOST, () => {
-    console.log(`🚀 Step Challenge App server running on http://${HOST}:${PORT}`);
-    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    if (isDevelopment) {
-      console.log(`🔧 Admin panel available at: http://localhost:${PORT}/admin`);
-      console.log(`❤️  Health check at: http://localhost:${PORT}/health`);
-    }
+  db.ready.then(() => {
+    server = app.listen(PORT, HOST, () => {
+      console.log(`🚀 Step Challenge App server running on http://${HOST}:${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      if (isDevelopment) {
+        console.log(`🔧 Admin panel available at: http://localhost:${PORT}/admin`);
+        console.log(`❤️  Health check at: http://localhost:${PORT}/health`);
+      }
+    });
+  }).catch(error => {
+    console.error('❌ Refusing to start with an incomplete database migration:', error.message);
+    process.exit(1);
   });
 }
 

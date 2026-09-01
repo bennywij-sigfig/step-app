@@ -129,7 +129,7 @@ describe('Database Module', () => {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           email TEXT UNIQUE NOT NULL,
           name TEXT NOT NULL,
-          team TEXT,
+          team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
           is_admin BOOLEAN DEFAULT 0,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`, (err) => {
@@ -143,7 +143,7 @@ describe('Database Module', () => {
             expect(columns[0].name).toBe('id');
             expect(columns[1].name).toBe('email');
             expect(columns[2].name).toBe('name');
-            expect(columns[3].name).toBe('team');
+            expect(columns[3].name).toBe('team_id');
             expect(columns[4].name).toBe('is_admin');
             expect(columns[5].name).toBe('created_at');
             resolve();
@@ -274,11 +274,15 @@ describe('Database Module', () => {
       // Create tables
       return new Promise((resolve, reject) => {
         db.serialize(() => {
+          db.run(`CREATE TABLE IF NOT EXISTS teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+          )`);
           db.run(`CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             name TEXT NOT NULL,
-            team TEXT,
+            team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
             is_admin BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
           )`);
@@ -309,12 +313,15 @@ describe('Database Module', () => {
           is_admin: 0
         };
 
-        db.run(
-          'INSERT INTO users (email, name, team, is_admin) VALUES (?, ?, ?, ?)',
-          [testUser.email, testUser.name, testUser.team, testUser.is_admin],
+        db.run('INSERT INTO teams (name) VALUES (?)', [testUser.team], function(teamError) {
+          if (teamError) return reject(teamError);
+          const teamId = this.lastID;
+          db.run(
+          'INSERT INTO users (email, name, team_id, is_admin) VALUES (?, ?, ?, ?)',
+          [testUser.email, testUser.name, teamId, testUser.is_admin],
           function(err) {
             if (err) return reject(err);
-            
+
             const userId = this.lastID;
             expect(userId).toBeGreaterThan(0);
             
@@ -324,13 +331,14 @@ describe('Database Module', () => {
               
               expect(row.email).toBe(testUser.email);
               expect(row.name).toBe(testUser.name);
-              expect(row.team).toBe(testUser.team);
+              expect(row.team_id).toBe(teamId);
               expect(row.is_admin).toBe(testUser.is_admin);
               expect(row.created_at).toBeDefined();
               resolve();
             });
           }
-        );
+          );
+        });
       });
     });
 
@@ -344,15 +352,15 @@ describe('Database Module', () => {
 
         // Insert first user
         db.run(
-          'INSERT INTO users (email, name, team) VALUES (?, ?, ?)',
-          [testUser.email, testUser.name, testUser.team],
+          'INSERT INTO users (email, name) VALUES (?, ?)',
+          [testUser.email, testUser.name],
           (err) => {
             if (err) return reject(err);
             
             // Try to insert duplicate email
             db.run(
-              'INSERT INTO users (email, name, team) VALUES (?, ?, ?)',
-              [testUser.email, 'Another User', 'Team Beta'],
+              'INSERT INTO users (email, name) VALUES (?, ?)',
+              [testUser.email, 'Another User'],
               (err) => {
                 expect(err).toBeDefined();
                 expect(err.message).toContain('UNIQUE constraint failed');

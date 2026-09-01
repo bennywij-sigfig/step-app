@@ -85,13 +85,13 @@ router.get('/leaderboard/individual', requireShadowAuth, (req, res) => {
 // Team leaderboard - shows total steps per team
 router.get('/leaderboard/team', requireShadowAuth, (req, res) => {
   const query = `
-    SELECT u.team, COALESCE(SUM(ss.trots), 0) as total_trots, 
+    SELECT t.name AS team, COALESCE(SUM(ss.trots), 0) as total_trots,
            COUNT(DISTINCT u.id) as member_count,
            COUNT(DISTINCT CASE WHEN ss.trots > 0 THEN u.id END) as active_members
-    FROM users u 
-    LEFT JOIN shadow_steps ss ON u.id = ss.user_id 
-    WHERE u.team IS NOT NULL AND u.team != ''
-    GROUP BY u.team 
+    FROM users u
+    JOIN teams t ON t.id = u.team_id
+    LEFT JOIN shadow_steps ss ON u.id = ss.user_id
+    GROUP BY t.id, t.name
     ORDER BY total_trots DESC 
     LIMIT 15
   `;

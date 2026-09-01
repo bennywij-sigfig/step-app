@@ -39,20 +39,21 @@ async function initializeTestDatabase(dbPath) {
     // Initialize all tables in order with proper error handling
     db.serialize(() => {
       const tables = [
+        // Teams table
+        `CREATE TABLE teams (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
         // Users table
         `CREATE TABLE users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           email TEXT UNIQUE NOT NULL,
           name TEXT NOT NULL,
+          team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
           team TEXT,
           is_admin BOOLEAN DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`,
-
-        // Teams table
-        `CREATE TABLE teams (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`,
 

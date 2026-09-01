@@ -37,12 +37,20 @@ class SimpleTestStabilizer {
         
         // Create basic schema
         db.serialize(() => {
-          // Users table
+          db.run(`CREATE TABLE IF NOT EXISTS teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+          )`);
+
+          // Keep the legacy text column so migration compatibility remains
+          // covered, but all new fixtures assign the normalized team_id.
           db.run(`CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL,
             name TEXT,
-            team TEXT DEFAULT 'No Team',
+            team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
+            team TEXT,
             is_admin BOOLEAN DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             archived_at DATETIME DEFAULT NULL

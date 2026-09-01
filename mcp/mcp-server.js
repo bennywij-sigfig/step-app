@@ -625,20 +625,12 @@ const stepTools = {
 
       const getUserInfo = () => {
         return new Promise((resolve, reject) => {
-          db.get('SELECT email, name, team FROM users WHERE id = ?', [operationUserId], (err, user) => {
+          db.get(`SELECT u.email, u.name, t.name AS team
+                  FROM users u LEFT JOIN teams t ON t.id = u.team_id
+                  WHERE u.id = ?`, [operationUserId], (err, user) => {
             if (err) return reject(err);
             if (!user) return reject(new Error('User not found'));
             resolve(user);
-          });
-        });
-      };
-
-      const getTeamInfo = (teamId) => {
-        if (!teamId) return Promise.resolve(null);
-        return new Promise((resolve, reject) => {
-          db.get('SELECT name FROM teams WHERE id = ?', [teamId], (err, team) => {
-            if (err) return reject(err);
-            resolve(team);
           });
         });
       };

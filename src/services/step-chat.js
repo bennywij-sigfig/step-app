@@ -242,13 +242,15 @@ function createStepChatService({
       return { kind: 'leaderboard', leaderboard: 'individual', challenge, ...data };
     }
     const rows = await all(`
-      SELECT u.id, u.name, u.team, COALESCE(SUM(s.count), 0) AS total_steps,
+      SELECT u.id, u.name, t.name AS team, COALESCE(SUM(s.count), 0) AS total_steps,
         COUNT(s.id) AS days_logged,
         CASE WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id) ELSE 0 END AS steps_per_day_reported,
         1 AS meets_threshold
-      FROM users u LEFT JOIN steps s ON u.id = s.user_id
+      FROM users u
+      LEFT JOIN teams t ON t.id = u.team_id
+      LEFT JOIN steps s ON u.id = s.user_id
       WHERE u.archived_at IS NULL
-      GROUP BY u.id
+      GROUP BY u.id, t.name
       ORDER BY steps_per_day_reported DESC, u.name ASC
     `);
     return { kind: 'leaderboard', leaderboard: 'individual', challenge: null, ranked: rows, unranked: [] };
@@ -266,14 +268,16 @@ function createStepChatService({
       return { kind: 'leaderboard', leaderboard: 'team', challenge, ...data };
     }
     const rows = await all(`
-      SELECT u.team, COUNT(DISTINCT u.id) AS member_count, COALESCE(SUM(s.count), 0) AS total_steps,
+      SELECT t.name AS team, COUNT(DISTINCT u.id) AS member_count, COALESCE(SUM(s.count), 0) AS total_steps,
         COUNT(s.id) AS team_entries,
         CASE WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id) ELSE 0 END AS team_steps_per_day_reported,
         1 AS meets_threshold
-      FROM users u LEFT JOIN steps s ON u.id = s.user_id
-      WHERE u.archived_at IS NULL AND u.team IS NOT NULL AND u.team != ''
-      GROUP BY u.team
-      ORDER BY team_steps_per_day_reported DESC, u.team ASC
+      FROM users u
+      JOIN teams t ON t.id = u.team_id
+      LEFT JOIN steps s ON u.id = s.user_id
+      WHERE u.archived_at IS NULL
+      GROUP BY t.id, t.name
+      ORDER BY team_steps_per_day_reported DESC, t.name ASC
     `);
     return { kind: 'leaderboard', leaderboard: 'team', challenge: null, ranked: rows, unranked: [] };
   }
@@ -407,7 +411,8 @@ function createStepChatService({
     } : { as_of_date: asOfDate, days_until_start: 0, days_until_end: 0 };
 
     if (leaderboardType === 'team') {
-      const user = await get('SELECT team FROM users WHERE id = ?', [userId]);
+      const user = await get(`SELECT t.name AS team
+        FROM users u LEFT JOIN teams t ON t.id = u.team_id WHERE u.id = ?`, [userId]);
       if (!user?.team) {
         return { kind: 'outlook', leaderboard: 'team', status, remaining_days: remainingDays, ...timingFacts, has_entry: false, reason: 'no_team' };
       }

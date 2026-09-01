@@ -67,8 +67,8 @@ class TestUserGenerator {
           
           // Insert new user
           this.db.run(
-            `INSERT INTO users (email, name, team, is_admin, created_at)
-             VALUES (?, ?, ?, 0, datetime('now'))`,
+            `INSERT INTO users (email, name, team_id, is_admin, created_at)
+             VALUES (?, ?, (SELECT id FROM teams WHERE name = ?), 0, datetime('now'))`,
             [email, name, team],
             function(err) {
               if (err) {

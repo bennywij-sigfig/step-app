@@ -45,7 +45,8 @@ describe('Leaderboard Integration Tests', () => {
     // Create test data
     await new Promise((resolve, reject) => {
       db.serialize(() => {
-        db.run(`INSERT INTO users (id, email, name, team, is_admin) VALUES (1, 'test@example.com', 'Test User', 'Team A', 1)`, (err) => {
+        db.run(`INSERT INTO teams (id, name) VALUES (1, 'Team A')`);
+        db.run(`INSERT INTO users (id, email, name, team_id, is_admin) VALUES (1, 'test@example.com', 'Test User', 1, 1)`, (err) => {
           if (err) return reject(err);
         });
         
@@ -89,7 +90,8 @@ describe('Leaderboard Integration Tests', () => {
     // Create test data
     await new Promise((resolve, reject) => {
       db.serialize(() => {
-        db.run(`INSERT INTO users (id, email, name, team, is_admin) VALUES (1, 'test2@example.com', 'Test User 2', 'Team B', 1)`, (err) => {
+        db.run(`INSERT INTO teams (id, name) VALUES (2, 'Team B')`);
+        db.run(`INSERT INTO users (id, email, name, team_id, is_admin) VALUES (1, 'test2@example.com', 'Test User 2', 2, 1)`, (err) => {
           if (err) return reject(err);
         });
         
@@ -146,7 +148,8 @@ describe('Leaderboard Integration Tests', () => {
     // Create authenticated user but no steps data
     await new Promise((resolve, reject) => {
       db.serialize(() => {
-        db.run(`INSERT INTO users (id, email, name, team, is_admin) VALUES (1, 'empty@example.com', 'Empty User', 'Team Empty', 1)`, (err) => {
+        db.run(`INSERT INTO teams (id, name) VALUES (3, 'Team Empty')`);
+        db.run(`INSERT INTO users (id, email, name, team_id, is_admin) VALUES (1, 'empty@example.com', 'Empty User', 3, 1)`, (err) => {
           if (err) return reject(err);
         });
         

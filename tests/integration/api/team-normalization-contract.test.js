@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
@@ -163,6 +164,34 @@ const binaryParser = (res, callback) => {
   res.on('end', () => callback(null, Buffer.concat(chunks)));
 };
 
+test('legacy migration aborts atomically when an assignment has no team', async () => {
+  const dbPath = path.join(__dirname, '../../test-databases', `team-normalization-invalid-${crypto.randomBytes(8).toString('hex')}.db`);
+  await createLegacyDatabase(dbPath);
+  const invalidDb = new sqlite3.Database(dbPath);
+  await run(invalidDb, `INSERT INTO users (email, name, team) VALUES ('ghost@example.com', 'Ghost', 'Missing Team')`);
+  await close(invalidDb);
+
+  const child = spawnSync(process.execPath, ['-e', `
+    const db = require('./src/database');
+    db.ready.then(() => process.exit(0)).catch(() => process.exit(2));
+  `], {
+    cwd: path.join(__dirname, '../../..'),
+    env: { ...process.env, DB_PATH: dbPath, NODE_ENV: 'test', TEST_DB_INIT: 'true' },
+    encoding: 'utf8',
+    timeout: 15000
+  });
+  expect(child.status).toBe(2);
+
+  const checkDb = new sqlite3.Database(dbPath);
+  const columns = await all(checkDb, 'PRAGMA table_info(users)');
+  expect(columns.map(column => column.name)).not.toContain('team_id');
+  expect((await all(checkDb, `SELECT team FROM users WHERE email = 'ghost@example.com'`))[0].team).toBe('Missing Team');
+  await close(checkDb);
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.unlinkSync(`${dbPath}${suffix}`); } catch (_) {}
+  }
+});
+
 describe('normalized live teams preserve current and historical behavior', () => {
   let app;
   let agent;
@@ -231,6 +260,18 @@ describe('normalized live teams preserve current and historical behavior', () =>
       { team: 'Current Green', member_count: 1 }
     ]);
 
+    await run(db, `INSERT INTO mcp_tokens
+      (token, user_id, name, permissions, scopes, expires_at)
+      VALUES ('mcp_contract_profile_token', 1, 'Contract token', 'read_only', 'profile:read', '2030-01-01T00:00:00Z')`);
+    const mcpProfile = await agent.post('/mcp')
+      .set('Authorization', 'Bearer mcp_contract_profile_token')
+      .send({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'get_user_profile', arguments: {} }, id: 1 })
+      .expect(200);
+    const profileText = mcpProfile.body.result.content[0].text;
+    expect(JSON.parse(profileText).user).toMatchObject({
+      email: 'admin@example.com', name: 'Admin Walker', team: 'Current Blue'
+    });
+
     const snapshot = await agent.get('/api/admin/challenges/1/team-snapshot').expect(200);
     expect(snapshot.body.teams).toEqual([{ team_name: 'Historic Blue' }, { team_name: 'Historic Green' }]);
     expect(snapshot.body.players.map(player => ({ email: player.user_email, team: player.team_name }))).toEqual([
@@ -241,6 +282,12 @@ describe('normalized live teams preserve current and historical behavior', () =>
 
   test('preserves existing admin assignment and team lifecycle request semantics', async () => {
     const csrf = (await agent.get('/api/csrf-token').expect(200)).body.csrfToken;
+
+    await agent.put('/api/admin/users/3/team')
+      .set('X-CSRF-Token', csrf)
+      .send({ team: 'Missing Team' })
+      .expect(400, { error: 'Invalid team name' });
+    expect((await agent.get('/api/admin/users').expect(200)).body.find(user => user.id === 3).team).toBe('Current Blue');
 
     await agent.put('/api/admin/users/3/team')
       .set('X-CSRF-Token', csrf)
@@ -266,6 +313,15 @@ describe('normalized live teams preserve current and historical behavior', () =>
       .set('X-CSRF-Token', csrf)
       .send({ team: 'Temporary Renamed' })
       .expect(200);
+    await run(db, `CREATE TRIGGER block_test_team_delete BEFORE DELETE ON teams
+      WHEN OLD.id = ${Number(created.body.id)} BEGIN SELECT RAISE(ABORT, 'blocked test delete'); END`);
+    await agent.delete(`/api/admin/teams/${created.body.id}`)
+      .set('X-CSRF-Token', csrf)
+      .expect(500);
+    expect((await all(db, 'SELECT team_id FROM users WHERE id = 4'))[0].team_id).toBe(created.body.id);
+    expect(await all(db, 'SELECT id FROM teams WHERE id = ?', [created.body.id])).toHaveLength(1);
+
+    await run(db, 'DROP TRIGGER block_test_team_delete');
     await agent.delete(`/api/admin/teams/${created.body.id}`)
       .set('X-CSRF-Token', csrf)
       .expect(200, { message: 'Team deleted successfully' });
@@ -275,6 +331,13 @@ describe('normalized live teams preserve current and historical behavior', () =>
   test('migrates legacy names to stable team IDs without changing user IDs', async () => {
     const columns = await all(db, 'PRAGMA table_info(users)');
     expect(columns.map(column => column.name)).toContain('team_id');
+    const foreignKeys = await all(db, 'PRAGMA foreign_key_list(users)');
+    expect(foreignKeys).toEqual(expect.arrayContaining([
+      expect.objectContaining({ from: 'team_id', table: 'teams', to: 'id', on_delete: 'SET NULL' })
+    ]));
+    if (columns.some(column => column.name === 'team')) {
+      expect((await all(db, 'SELECT id FROM users WHERE team IS NOT NULL'))).toHaveLength(0);
+    }
     const rows = await all(db, `SELECT u.id, u.email, u.team_id, t.name AS team
       FROM users u LEFT JOIN teams t ON t.id = u.team_id ORDER BY u.id`);
     expect(rows).toEqual([
@@ -321,6 +384,19 @@ describe('normalized live teams preserve current and historical behavior', () =>
     expect(csv.text).toContain('Admin Walker,admin@example.com,Renamed Blue');
     expect(csv.text).toContain('Idle Walker,idle@example.com,Renamed Blue');
     expect(csv.text).not.toContain('STALE LEGACY VALUE');
+
+    const archived = await agent.post('/api/admin/challenges/2/archive')
+      .set('X-CSRF-Token', csrf.body.csrfToken)
+      .send({})
+      .expect(200);
+    const currentZip = await agent.get(`/api/admin/archives/${archived.body.archiveId}/download`)
+      .buffer(true)
+      .parse(binaryParser)
+      .expect(200);
+    const currentFiles = parseZip(currentZip.body);
+    expect(currentFiles.get('daily_steps.csv')).toContain('"Renamed Blue"');
+    expect(currentFiles.get('daily_steps.csv')).toContain('"Current Green"');
+    expect(currentFiles.get('participant_summary.csv')).toContain('"Renamed Blue"');
   });
 
   test('historical archive export remains isolated from live team renames', async () => {
@@ -338,5 +414,19 @@ describe('normalized live teams preserve current and historical behavior', () =>
     expect(files.get('team_roster.csv')).toContain('"Admin Walker","admin@example.com","Historic Blue"');
     expect(files.get('team_roster.csv')).toContain('"Green Walker","green@example.com","Historic Green"');
     for (const content of files.values()) expect(content).not.toContain('Renamed Blue');
+  });
+
+  test('all-time leaderboard and member APIs preserve their response semantics', async () => {
+    await run(db, 'UPDATE challenges SET is_active = 0');
+    const individual = await agent.get('/api/leaderboard').expect(200);
+    expect(individual.body.type).toBe('all_time');
+    expect(individual.body.data.find(row => row.id === 1).team).toBe('Renamed Blue');
+
+    const teams = await agent.get('/api/team-leaderboard').expect(200);
+    expect(teams.body.type).toBe('all_time');
+    expect(teams.body.data.map(row => row.team).sort()).toEqual(['Current Green', 'Renamed Blue']);
+
+    const members = await agent.get('/api/teams/Renamed%20Blue/members').expect(200);
+    expect(members.body.map(member => member.name)).toEqual(['Admin Walker', 'Idle Walker']);
   });
 });

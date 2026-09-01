@@ -93,18 +93,19 @@ describe('Database Integrity Regression Tests', () => {
         db.configure('busyTimeout', 30000);
 
         // Create all tables with exact schema from database.js
+        db.run(`CREATE TABLE IF NOT EXISTS teams (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
         db.run(`CREATE TABLE IF NOT EXISTS users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           email TEXT UNIQUE NOT NULL,
           name TEXT NOT NULL,
+          team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
           team TEXT,
           is_admin BOOLEAN DEFAULT 0,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        )`);
-
-        db.run(`CREATE TABLE IF NOT EXISTS teams (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
@@ -904,13 +905,23 @@ describe('Database Integrity Regression Tests', () => {
         });
       }
 
-      // Insert users
+      // Insert normalized teams and users
+      const teamIds = new Map();
+      for (const teamName of [...new Set(userData.map(user => user.team))]) {
+        const teamId = await new Promise((resolve, reject) => {
+          db.run('INSERT INTO teams (name) VALUES (?)', [teamName], function(err) {
+            if (err) return reject(err);
+            resolve(this.lastID);
+          });
+        });
+        teamIds.set(teamName, teamId);
+      }
       const userIds = [];
       for (const user of userData) {
         const userId = await new Promise((resolve, reject) => {
           db.run(
-            "INSERT INTO users (email, name, team) VALUES (?, ?, ?)",
-            [user.email, user.name, user.team],
+            "INSERT INTO users (email, name, team_id) VALUES (?, ?, ?)",
+            [user.email, user.name, teamIds.get(user.team)],
             function(err) {
               if (err) return reject(err);
               resolve(this.lastID);
@@ -942,11 +953,12 @@ describe('Database Integrity Regression Tests', () => {
       
       const results = await new Promise((resolve, reject) => {
         db.all(`
-          SELECT u.name, u.team, AVG(s.count) as avg_steps
+          SELECT u.name, t.name AS team, AVG(s.count) as avg_steps
           FROM users u
+          LEFT JOIN teams t ON t.id = u.team_id
           JOIN steps s ON u.id = s.user_id
           WHERE s.challenge_id = 2
-          GROUP BY u.id, u.name, u.team
+          GROUP BY u.id, u.name, t.name
           ORDER BY avg_steps DESC
           LIMIT 20
         `, (err, rows) => {

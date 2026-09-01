@@ -100,38 +100,86 @@ if (!shouldDelayInit) {
 
 // Database initialization promise for tracking when setup is complete
 let initializationResolve;
-const initializationPromise = new Promise((resolve) => {
+let initializationReject;
+const initializationPromise = new Promise((resolve, reject) => {
   initializationResolve = resolve;
+  initializationReject = reject;
 });
+
+async function normalizeUserTeams(database) {
+  const run = (sql, params = []) => new Promise((resolve, reject) => {
+    database.run(sql, params, function(error) {
+      if (error) return reject(error);
+      resolve({ changes: this.changes });
+    });
+  });
+  const get = (sql, params = []) => new Promise((resolve, reject) => {
+    database.get(sql, params, (error, row) => error ? reject(error) : resolve(row));
+  });
+  const all = sql => new Promise((resolve, reject) => {
+    database.all(sql, (error, rows) => error ? reject(error) : resolve(rows));
+  });
+
+  const columns = await all('PRAGMA table_info(users)');
+  const hasLegacyTeam = columns.some(column => column.name === 'team');
+  const hasTeamId = columns.some(column => column.name === 'team_id');
+
+  await run('BEGIN IMMEDIATE');
+  try {
+    if (!hasTeamId) {
+      await run('ALTER TABLE users ADD COLUMN team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL');
+    }
+    if (hasLegacyTeam) {
+      await run(`UPDATE users
+                 SET team_id = (SELECT id FROM teams WHERE teams.name = users.team)
+                 WHERE team IS NOT NULL AND trim(team) != ''`);
+      const unmatched = await get(`SELECT COUNT(*) AS count
+                                   FROM users u
+                                   LEFT JOIN teams t ON t.name = u.team
+                                   WHERE u.team IS NOT NULL AND trim(u.team) != '' AND t.id IS NULL`);
+      if (unmatched.count > 0) {
+        throw new Error(`${unmatched.count} legacy team assignments could not be normalized`);
+      }
+      await run('UPDATE users SET team = NULL WHERE team IS NOT NULL');
+    }
+    const orphaned = await get(`SELECT COUNT(*) AS count
+                                FROM users u LEFT JOIN teams t ON t.id = u.team_id
+                                WHERE u.team_id IS NOT NULL AND t.id IS NULL`);
+    if (orphaned.count > 0) throw new Error(`${orphaned.count} users reference missing teams`);
+    await run('CREATE INDEX IF NOT EXISTS idx_users_team_id ON users(team_id)');
+    await run('COMMIT');
+    console.log('✅ User team assignments normalized to team_id');
+  } catch (error) {
+    await run('ROLLBACK').catch(() => {});
+    throw error;
+  }
+}
 
 // Initialize database tables - only for real databases
 if (!shouldDelayInit) {
   db.serialize(() => {
-  // Users table
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    name TEXT NOT NULL,
-    team TEXT,
-    is_admin BOOLEAN DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`, (err) => {
-    if (err) {
-      console.error('❌ Failed to create users table:', err.message);
-      // Don't exit process in test environment - let tests handle errors
-      if (process.env.NODE_ENV !== 'test') {
-        process.exit(1);
-      }
-    }
-    console.log('✅ Users table ready');
-  });
-
-  // Teams table
+  // Teams are first-class live entities. Historical challenge snapshots keep
+  // copied names separately so later renames cannot rewrite history.
   db.run(`CREATE TABLE IF NOT EXISTS teams (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
+    is_admin BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) {
+      console.error('❌ Failed to create users table:', err.message);
+      if (process.env.NODE_ENV !== 'test') process.exit(1);
+    }
+    console.log('✅ Users table ready');
+  });
 
   // Steps table
   db.run(`CREATE TABLE IF NOT EXISTS steps (
@@ -472,12 +520,16 @@ if (!shouldDelayInit) {
     db.run(`UPDATE users SET is_admin = 1 WHERE email IN ('benny@sigfig.com', 'benazir.qureshi@sigfig.com', 'liz.ridge@sigfig.com', 'megan.crowley@sigfig.com', 'amit.srivastava@sigfig.com')`);
   }
 
-  // Serialized barrier: all schema creation and migrations above are complete.
-  db.run('SELECT 1', (err) => {
-    if (err) {
-      console.error('❌ Database initialization failed:', err.message);
+  // Serialized barrier: normalize only after every base table and index exists.
+  db.run('SELECT 1', async err => {
+    if (err) return initializationReject(err);
+    try {
+      await normalizeUserTeams(db);
+      initializationResolve();
+    } catch (error) {
+      console.error('❌ Database initialization failed:', error.message);
+      initializationReject(error);
     }
-    initializationResolve();
   });
 });
 } else {
