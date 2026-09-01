@@ -85,6 +85,18 @@ body {
     font-family: ui-rounded, "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* The data-dense dashboard uses the same neutral system sans-serif stack on
+   every platform. Rounded display faces are reserved for less dense pages. */
+body.dashboard-page {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body.dashboard-page .header,
+body.dashboard-page .card {
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+}
+
 body::before {
     content: "";
     position: fixed;
@@ -134,7 +146,7 @@ body.login-page button,
 }
 
 .step-bar {
-    background: var(--text-gradient) !important;
+    background: var(--primary-color) !important;
 }
 
 .team-disclosure,
@@ -144,8 +156,7 @@ body.login-page button,
 
 .user-data-list,
 .team-members-list {
-    background: color-mix(in srgb, var(--primary-color) 7%, transparent);
-    border-left-color: color-mix(in srgb, var(--primary-color) 34%, transparent);
+    background: color-mix(in srgb, var(--primary-color) 5%, white);
 }
 
 .header,
