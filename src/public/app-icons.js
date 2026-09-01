@@ -253,22 +253,16 @@ function isMobileViewport() {
     return window.innerWidth <= 768; // Standard mobile breakpoint
 }
 
-// Format reporting and member count with conditional emoji/text
-function formatReportingRate(rate, color = '#28a745') {
+// Compact metadata uses typography rather than decorative emoji/color so the
+// individual and team leaderboards share the same visual language.
+function formatReportingRate(rate) {
     const percentage = rate >= 1 ? Math.round(rate) : rate;
-    if (isMobileViewport()) {
-        return `<span style="color: ${color}; font-size: 0.7em; margin-left: 6px;">📋 ${percentage}%</span>`;
-    } else {
-        return `<span style="color: ${color}; font-size: 0.7em; margin-left: 6px;">📋 ${percentage}% reporting</span>`;
-    }
+    const label = isMobileViewport() ? `${percentage}%` : `${percentage}% reporting`;
+    return `<span class="reporting-meta">${label}</span>`;
 }
 
 function formatMemberCount(count) {
-    if (isMobileViewport()) {
-        return `<span style="color: #888; font-size: 0.75em; margin-left: 6px;">👥 ${count}</span>`;
-    } else {
-        return `<span style="color: #888; font-size: 0.75em; margin-left: 6px;">👥 ${count} member${count !== 1 ? 's' : ''}</span>`;
-    }
+    return `<span class="team-meta">${count} member${count !== 1 ? 's' : ''}</span>`;
 }
 
 // Initialize shadow mode toggle if already discovered

@@ -293,10 +293,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // Format date for display
         function formatDate(dateString) {
             const date = new Date(dateString + 'T00:00:00');
-            return date.toLocaleDateString('en-US', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        function formatCompactDate(dateString) {
+            const date = new Date(dateString + 'T00:00:00');
+            return date.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
             });
         }
         
@@ -439,7 +448,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else {
                     stepsList.innerHTML = steps.map(step => 
                         `<div class="step-item">
-                            <span>${step.date}</span>
+                            <span>${formatCompactDate(step.date)}</span>
                             <span><strong>${step.count.toLocaleString()} steps</strong></span>
                         </div>`
                     ).join('');
@@ -460,75 +469,75 @@ document.addEventListener('DOMContentLoaded', function() {
         // Refresh the existing dashboard after Step Chat commits entries.
         window.addEventListener('step-chat-saved', loadSteps);
         
-        // Render steps chart
+        // Render at most 14 elapsed dates. Future challenge dates made the old
+        // chart look empty and compressed useful data into narrow bars.
         function renderStepsChart(steps) {
             const chartContainer = document.getElementById('stepsChart');
-            
             if (steps.length === 0) {
-                chartContainer.innerHTML = '<p style="text-align: center; color: #666; margin: 40px 0;">No step data to display</p>';
+                chartContainer.innerHTML = '<p class="steps-chart-empty">No step data to display</p>';
                 return;
             }
-            
-            // Create a map of steps by date
-            const stepsByDate = {};
-            steps.forEach(step => {
-                stepsByDate[step.date] = step.count;
+
+            const parseDate = value => new Date(`${value}T00:00:00Z`);
+            const dateString = value => value.toISOString().slice(0, 10);
+            const shiftDate = (value, days) => {
+                const date = parseDate(value);
+                date.setUTCDate(date.getUTCDate() + days);
+                return dateString(date);
+            };
+            const formatShortDate = value => parseDate(value).toLocaleDateString(undefined, {
+                month: 'short', day: 'numeric', timeZone: 'UTC'
             });
-            
-            // Determine date range based on active challenge
-            const today = new Date();
-            let startDate, endDate, maxDays;
-            
-            if (currentUser && currentUser.current_challenge) {
-                // Use active challenge date range
+
+            const stepsByDate = new Map(steps.map(step => [step.date, Number(step.count) || 0]));
+            const latestSupportedDate = getLatestSupportedDate();
+            let endDate = latestSupportedDate;
+            let startDate = shiftDate(endDate, -13);
+
+            if (currentUser?.current_challenge) {
                 const challenge = currentUser.current_challenge;
-                startDate = new Date(challenge.start_date + 'T00:00:00');
-                endDate = new Date(challenge.end_date + 'T00:00:00');
-                maxDays = Math.floor((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-            } else {
-                // Show last 14 days when no active challenge
-                maxDays = 14;
-                endDate = new Date(today);
-                endDate.setHours(0, 0, 0, 0);
-                startDate = new Date(endDate);
-                startDate.setDate(startDate.getDate() - (maxDays - 1));
+                endDate = challenge.end_date < latestSupportedDate ? challenge.end_date : latestSupportedDate;
+                if (endDate < challenge.start_date) {
+                    chartContainer.innerHTML = '<p class="steps-chart-empty">The challenge has not started yet</p>';
+                    return;
+                }
+                startDate = shiftDate(endDate, -13);
+                if (startDate < challenge.start_date) startDate = challenge.start_date;
             }
-            
-            // Generate days for the determined range
+
             const days = [];
-            for (let i = 0; i < maxDays; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                const dateStr = date.toISOString().split('T')[0];
-                
-                days.push({
-                    date: dateStr,
-                    displayDate: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-                    steps: stepsByDate[dateStr] || 0,
-                    isFirst: i === 0,
-                    isLast: i === maxDays - 1
-                });
+            for (let date = startDate; date <= endDate; date = shiftDate(date, 1)) {
+                days.push({ date, steps: stepsByDate.get(date) || 0 });
             }
-            
-            // Find max steps for scaling
-            const maxSteps = Math.max(...days.map(d => d.steps), 1);
-            
-            // Create bars
+
+            const loggedDays = days.filter(day => day.steps > 0);
+            const total = loggedDays.reduce((sum, day) => sum + day.steps, 0);
+            const average = loggedDays.length ? Math.round(total / loggedDays.length) : 0;
+            const maxSteps = Math.max(...days.map(day => day.steps), 1);
             const bars = days.map(day => {
-                const heightPercent = day.steps > 0 ? (day.steps / maxSteps) * 90 : 5; // Min 5% height for empty days
-                const isToday = day.date === today.toISOString().split('T')[0];
                 const hasData = day.steps > 0;
-                const showLabel = day.isFirst || day.isLast;
-                
-                return `<div class="step-bar ${!hasData ? 'no-data' : ''} ${showLabel ? 'show-label' : ''}" 
-                             style="height: ${heightPercent}%${isToday ? '; border: 2px solid #667eea;' : ''}"
-                             data-date="${showLabel ? day.displayDate : ''}" 
-                             data-steps="${hasData ? day.steps.toLocaleString() + ' steps' : 'No data'}"
-                             title="${day.displayDate}: ${hasData ? day.steps.toLocaleString() + ' steps' : 'No data'}">
-                        </div>`;
+                const heightPercent = hasData ? Math.max(6, (day.steps / maxSteps) * 100) : 3;
+                const detail = hasData ? `${day.steps.toLocaleString()} steps` : 'No steps logged';
+                return `<div class="step-bar${hasData ? '' : ' no-data'}"
+                    style="height: ${heightPercent}%"
+                    data-day="${Number(day.date.slice(-2))}"
+                    data-steps="${detail}"
+                    role="img" title="${formatShortDate(day.date)}: ${detail}"
+                    aria-label="${formatShortDate(day.date)}: ${detail}"></div>`;
             }).join('');
-            
-            chartContainer.innerHTML = bars;
+
+            const dateRange = startDate === endDate
+                ? formatShortDate(startDate)
+                : `${formatShortDate(startDate)}–${formatShortDate(endDate)}`;
+            const activitySummary = loggedDays.length
+                ? `${loggedDays.length} logged · ${average.toLocaleString()} avg`
+                : 'No days logged';
+            chartContainer.innerHTML = `
+                <div class="steps-chart-summary">
+                    <span>${dateRange}</span>
+                    <span>${activitySummary}</span>
+                </div>
+                <div class="steps-chart" style="--bar-count: ${days.length}">${bars}</div>`;
         }
         
         // Load leaderboard
@@ -548,8 +557,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const response = await fetch('/api/leaderboard');
                 const data = await response.json();
                 
-                console.log('Leaderboard API response:', data);
-                
                 const leaderboardDiv = document.getElementById('leaderboard');
                 
                 
@@ -568,24 +575,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show ranked section
                 if (data.data.ranked && data.data.ranked.length > 0) {
-                    html += '<div class="ranked-section"><h4 style="color: #28a745; margin: 15px 0 10px 0;">Ranked Participants</h4>';
+                    html += '<div class="ranked-section"><h4 class="leaderboard-section-title">Ranked Participants</h4>';
                     html += data.data.ranked.map((user, index) => {
                         const isCurrentUser = currentUser && user.name === currentUser.name;
                         const highlightClass = isCurrentUser ? ' current-user' : '';
                         
                         return `<div class="leaderboard-item${highlightClass}">
-                            <div>
-                                <span class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}">▶</span>
+                            <div class="leaderboard-identity">
+                                <button type="button" class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" aria-expanded="false" aria-label="Show daily steps for ${escapeHtml(user.name)}"></button>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${escapeHtml(user.name)}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
-                                ${formatReportingRate(user.personal_reporting_rate, '#28a745')}
+                                <span class="leaderboard-name">${escapeHtml(user.name)}</span>
+                                ${user.team ? `<span class="leaderboard-meta">${escapeHtml(user.team)}</span>` : ''}
+                                ${formatReportingRate(user.personal_reporting_rate)}
                             </div>
-                            <div>
-                                <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                                <div style="font-size: 0.9em; color: #666;">
-                                    ${user.total_steps.toLocaleString()} total • ${user.days_logged} days
-                                </div>
+                            <div class="leaderboard-metrics">
+                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${user.days_logged} days</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -594,25 +599,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show unranked section
                 if (data.data.unranked && data.data.unranked.length > 0) {
-                    html += '<div class="unranked-section"><h4 style="color: #ffc107; margin: 15px 0 10px 0;">Unranked Participants</h4>';
-                    html += '<p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">Need more consistent reporting to be ranked</p>';
+                    html += '<div class="unranked-section"><h4 class="leaderboard-section-title">Unranked Participants</h4>';
+                    html += '<p class="leaderboard-section-note">Need more consistent reporting to be ranked</p>';
                     html += data.data.unranked.map((user) => {
                         const isCurrentUser = currentUser && user.name === currentUser.name;
                         const highlightClass = isCurrentUser ? ' current-user' : '';
                         
-                        return `<div class="leaderboard-item${highlightClass}" style="opacity: 0.8;">
-                            <div>
-                                <span class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}">▶</span>
-                                <span class="rank">-</span>
-                                <strong>${escapeHtml(user.name)}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
-                                ${formatReportingRate(user.personal_reporting_rate, '#ffc107')}
+                        return `<div class="leaderboard-item${highlightClass}">
+                            <div class="leaderboard-identity">
+                                <button type="button" class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" aria-expanded="false" aria-label="Show daily steps for ${escapeHtml(user.name)}"></button>
+                                <span class="rank" aria-hidden="true"></span>
+                                <span class="leaderboard-name">${escapeHtml(user.name)}</span>
+                                ${user.team ? `<span class="leaderboard-meta">${escapeHtml(user.team)}</span>` : ''}
+                                ${formatReportingRate(user.personal_reporting_rate)}
                             </div>
-                            <div>
-                                <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                                <div style="font-size: 0.9em; color: #666;">
-                                    ${user.total_steps.toLocaleString()} total • ${user.days_logged} days
-                                </div>
+                            <div class="leaderboard-metrics">
+                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${user.days_logged} days</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -626,17 +629,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         const highlightClass = isCurrentUser ? ' current-user' : '';
                         
                         return `<div class="leaderboard-item${highlightClass}">
-                            <div>
-                                <span class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}">▶</span>
+                            <div class="leaderboard-identity">
+                                <button type="button" class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" aria-expanded="false" aria-label="Show daily steps for ${escapeHtml(user.name)}"></button>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${escapeHtml(user.name)}</strong>
-                                ${user.team ? `<span style="color: #888; font-size: 0.75em; margin-left: 4px;">${escapeHtml(user.team)}</span>` : ''}
+                                <span class="leaderboard-name">${escapeHtml(user.name)}</span>
+                                ${user.team ? `<span class="leaderboard-meta">${escapeHtml(user.team)}</span>` : ''}
                             </div>
-                            <div>
-                                <div><strong>${Math.round(user.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                                <div style="font-size: 0.9em; color: #666;">
-                                    ${user.total_steps.toLocaleString()} total • ${user.days_logged} days
-                                </div>
+                            <div class="leaderboard-metrics">
+                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${user.days_logged} days</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -645,9 +646,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Add explanatory footer if there's actual leaderboard content (Individual only shows reporting rate)
                 const hasContent = (data.data.ranked && data.data.ranked.length > 0) || (data.data.unranked && data.data.unranked.length > 0) || Array.isArray(data);
                 if (hasContent) {
-                    html += `<div class="leaderboard-footer" style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.8em; color: #666; text-align: center;">
-                        📋&nbsp;Reporting rate
-                    </div>`;
+                    html += '<div class="leaderboard-footer">Reporting rate reflects elapsed challenge days.</div>';
                 }
                 
                 leaderboardDiv.innerHTML = html;
@@ -808,24 +807,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show ranked teams section
                 if (data.data.ranked && data.data.ranked.length > 0) {
-                    html += '<div class="ranked-section"><h4 style="color: #28a745; margin: 15px 0 10px 0;">Ranked Teams</h4>';
+                    html += '<div class="ranked-section"><h4 class="leaderboard-section-title">Ranked Teams</h4>';
                     html += data.data.ranked.map((team, index) => {
                         const isCurrentTeam = currentUser && currentUser.team === team.team;
                         const highlightClass = isCurrentTeam ? ' current-team' : '';
                         
                         return `<div class="leaderboard-item${highlightClass}">
-                            <div>
-                                <span class="team-disclosure" data-team="${team.team}">▶</span>
+                            <div class="leaderboard-identity">
+                                <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                 <span class="rank">#${index + 1}</span>
-                                <strong>${escapeHtml(team.team)}</strong>
+                                <span class="leaderboard-name">${escapeHtml(team.team)}</span>
                                 ${formatMemberCount(team.member_count)}
-                                ${formatReportingRate(team.team_reporting_rate, '#28a745')}
+                                ${formatReportingRate(team.team_reporting_rate)}
                             </div>
-                            <div>
-                                <div><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                                <div style="font-size: 0.9em; color: #666;">
-                                    ${team.total_steps.toLocaleString()} total steps
-                                </div>
+                            <div class="leaderboard-metrics">
+                                <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
+                                <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total steps</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -834,25 +831,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Show unranked teams section
                 if (data.data.unranked && data.data.unranked.length > 0) {
-                    html += '<div class="unranked-section"><h4 style="color: #ffc107; margin: 15px 0 10px 0;">Unranked Teams</h4>';
-                    html += '<p style="font-size: 0.85em; color: #666; margin-bottom: 10px;">Need more consistent team reporting to be ranked</p>';
+                    html += '<div class="unranked-section"><h4 class="leaderboard-section-title">Unranked Teams</h4>';
+                    html += '<p class="leaderboard-section-note">Need more consistent team reporting to be ranked</p>';
                     html += data.data.unranked.map((team) => {
                         const isCurrentTeam = currentUser && currentUser.team === team.team;
                         const highlightClass = isCurrentTeam ? ' current-team' : '';
                         
-                        return `<div class="leaderboard-item${highlightClass}" style="opacity: 0.8;">
-                            <div>
-                                <span class="team-disclosure" data-team="${team.team}">▶</span>
-                                <span class="rank">-</span>
-                                <strong>${escapeHtml(team.team)}</strong>
+                        return `<div class="leaderboard-item${highlightClass}">
+                            <div class="leaderboard-identity">
+                                <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
+                                <span class="rank" aria-hidden="true"></span>
+                                <span class="leaderboard-name">${escapeHtml(team.team)}</span>
                                 ${formatMemberCount(team.member_count)}
-                                ${formatReportingRate(team.team_reporting_rate, '#ffc107')}
+                                ${formatReportingRate(team.team_reporting_rate)}
                             </div>
-                            <div>
-                                <div><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                                <div style="font-size: 0.9em; color: #666;">
-                                    ${team.total_steps.toLocaleString()} total steps
-                                </div>
+                            <div class="leaderboard-metrics">
+                                <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
+                                <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total steps</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -869,17 +864,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             const highlightClass = isCurrentTeam ? ' current-team' : '';
                             
                             return `<div class="leaderboard-item${highlightClass}">
-                                <div>
-                                    <span class="team-disclosure" data-team="${team.team}">▶</span>
+                                <div class="leaderboard-identity">
+                                    <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                     <span class="rank">#${index + 1}</span>
-                                    <strong>${escapeHtml(team.team)}</strong>
+                                    <span class="leaderboard-name">${escapeHtml(team.team)}</span>
                                     ${formatMemberCount(team.member_count)}
                                 </div>
-                                <div>
-                                    <div><strong>${Math.round(team.team_steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                                    <div style="font-size: 0.9em; color: #666;">
-                                        ${team.total_steps.toLocaleString()} total steps
-                                    </div>
+                                <div class="leaderboard-metrics">
+                                    <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
+                                    <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total steps</div>
                                 </div>
                             </div>`;
                         }).join('');
@@ -889,9 +882,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Add explanatory footer if there's actual leaderboard content (Teams show both member count and reporting rate)
                 const hasTeamContent = (data.data && ((data.data.ranked && data.data.ranked.length > 0) || (data.data.unranked && data.data.unranked.length > 0))) || (Array.isArray(data) && data.length > 0);
                 if (hasTeamContent) {
-                    html += `<div class="leaderboard-footer" style="margin-top: 20px; padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px; font-size: 0.8em; color: #666; text-align: center;">
-                        👥&nbsp;Member count • 📋&nbsp;Reporting rate
-                    </div>`;
+                    html += '<div class="leaderboard-footer">Member count · reporting rate</div>';
                 }
                 
                 teamLeaderboard.innerHTML = html;
@@ -924,7 +915,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Team member disclosure functionality
         async function toggleTeamDisclosure(teamName, disclosureElement) {
-            console.log('toggleTeamDisclosure called with:', teamName, disclosureElement);
             const isExpanded = expandedTeams.has(teamName);
             
             if (isExpanded) {
@@ -942,6 +932,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 disclosureElement.classList.remove('expanded');
+                disclosureElement.setAttribute('aria-expanded', 'false');
+                disclosureElement.setAttribute('aria-label', `Show members of ${teamName}`);
                 expandedTeams.delete(teamName);
             } else {
                 // Expand
@@ -966,6 +958,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                         
                         disclosureElement.classList.add('expanded');
+                        disclosureElement.setAttribute('aria-expanded', 'true');
+                        disclosureElement.setAttribute('aria-label', `Hide members of ${teamName}`);
                         expandedTeams.add(teamName);
                     } else {
                         console.error('Error loading team members:', members.error);
@@ -992,9 +986,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="member-stats">
                         <div><strong>${Math.round(member.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                        <div style="font-size: 0.8em; color: #666;">
-                            ${member.total_steps.toLocaleString()} total • ${member.days_logged} days
-                        </div>
+                        <div class="leaderboard-detail">${member.total_steps.toLocaleString()} total · ${member.days_logged} days</div>
                     </div>
                 </div>
             `).join('');
@@ -1006,7 +998,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Toggle user daily data disclosure
         async function toggleUserDisclosure(userId, userName, disclosureElement) {
-            console.log('toggleUserDisclosure called with:', userId, userName, disclosureElement);
             const isExpanded = expandedUsers.has(userId);
             
             if (isExpanded) {
@@ -1024,6 +1015,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 disclosureElement.classList.remove('expanded');
+                disclosureElement.setAttribute('aria-expanded', 'false');
+                disclosureElement.setAttribute('aria-label', `Show daily steps for ${userName}`);
                 expandedUsers.delete(userId);
             } else {
                 // Expand - show loading state
@@ -1054,6 +1047,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                         
                         disclosureElement.classList.add('expanded');
+                        disclosureElement.setAttribute('aria-expanded', 'true');
+                        disclosureElement.setAttribute('aria-label', `Hide daily steps for ${userName}`);
                         expandedUsers.add(userId);
                     } else {
                         console.error('Error loading user daily data:', userData.error);
@@ -1093,8 +1088,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const errorDiv = document.createElement('div');
             errorDiv.id = `user-data-error-${userId}`;
             errorDiv.className = 'user-data-list';
-            errorDiv.style.background = 'rgba(220, 53, 69, 0.1)';
-            errorDiv.style.borderLeft = '3px solid #dc3545';
+            errorDiv.style.background = 'rgba(220, 53, 69, 0.08)';
             
             errorDiv.innerHTML = `
                 <div class="user-data-item" style="padding: 12px 16px; text-align: center; color: #dc3545; font-size: 0.9em;">
@@ -1141,14 +1135,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     periodDescription = '14 days';
                 }
                 
-                const dailyDataHtml = filteredSteps.map((day, index) => `
-                    <div class="user-data-item" style="display: flex; justify-content: space-between; align-items: center; padding: 6px 16px; background: rgba(255, 255, 255, 0.4); border-bottom: 1px solid rgba(255, 255, 255, 0.2); font-size: 0.9em;">
-                        <div>
-                            <span style="font-weight: 500;">${day.formatted_date}</span>
-                        </div>
-                        <div style="font-weight: 600; color: #333;">
-                            ${day.steps.toLocaleString()} steps
-                        </div>
+                const dailyDataHtml = filteredSteps.map(day => `
+                    <div class="user-data-item">
+                        <span>${formatCompactDate(day.date)}</span>
+                        <strong>${day.steps.toLocaleString()} steps</strong>
                     </div>
                 `).join('');
                 
@@ -1160,12 +1150,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 userDataList.innerHTML = `
-                    <div style="background: rgba(102, 126, 234, 0.05); border-left: 3px solid rgba(102, 126, 234, 0.3); border-radius: 0 8px 8px 0; overflow: hidden;">
-                        <div style="padding: 8px 16px; background: rgba(102, 126, 234, 0.1); font-size: 0.85em; color: #666; font-weight: 500;">
-                            ${userName}'s Daily Steps${showingText}
-                        </div>
-                        ${dailyDataHtml}
-                    </div>
+                    <div class="disclosure-heading">${userName}'s daily steps${showingText}</div>
+                    ${dailyDataHtml}
                 `;
             }
             
