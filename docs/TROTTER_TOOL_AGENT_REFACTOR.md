@@ -56,14 +56,16 @@ Limits:
 - `get_team_leaderboard()`
 - `calculate_target_average(target_average, days?, as_of_date?)`
 - `calculate_overtake(target_name, days?, as_of_date?)`
+- `calculate_overtake_leader(days?, as_of_date?)`
 - `get_challenge_outlook(leaderboard, as_of_date?)`
 - `get_encouragement_context()`
 
-### Write-adjacent tool
+### Write-adjacent tools
 
 - `preview_step_entries(entries)`
+- `preview_my_team_rename(new_name)`
 
-This tool creates only the existing structured preview and short-lived plan. It cannot commit.
+These tools create only structured, short-lived review plans. They cannot commit. The rename tool derives the team exclusively from the authenticated session and accepts no target team or user identifier.
 
 ### Deliberately absent tools
 
@@ -93,6 +95,8 @@ Image extraction remains a separate endpoint and feeds reviewed rows into `previ
 11. Conversation tone changes prose only.
 12. Missing dates are clarified, never silently assumed.
 13. Invalid counts never produce a success claim.
+14. Natural-language intent is interpreted once by the model; authorization is encoded in the tool surface and service, not duplicated with wording-sensitive regular expressions.
+15. Team rename reviews can target only the session user's current team and still require explicit UI confirmation.
 
 ## Structured response contract
 

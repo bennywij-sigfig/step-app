@@ -142,6 +142,8 @@ describe('chat provider prompt boundary', () => {
     const composePrompt = buildComposePrompt('encouraging');
     expect(toolPrompt).toContain('Counts such as 9,999 are valid');
     expect(toolPrompt).toContain('deterministic tool must decide challenge-date eligibility');
+    expect(toolPrompt).toContain("plainly explain that you can only rename the authenticated user's own current team");
+    expect(toolPrompt).toContain('A null challenge means there is no active challenge');
 
     for (const prompt of [toolPrompt, composePrompt]) {
       expect(prompt).toContain("unless they explicitly ask what Trotter can do");

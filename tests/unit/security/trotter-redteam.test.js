@@ -77,21 +77,25 @@ describe('Trotter deterministic red-team regression', () => {
     })) };
     await expect(runTrotterAgent({
       model, registry, message: 'rename their team', history: [], tone: 'neutral', context
-    })).rejects.toMatchObject({ code: 'CHAT_AGENT_PROTOCOL_ERROR' });
+    })).rejects.toMatchObject({ code: 'CHAT_TOOL_ERROR' });
     expect(service.previewTeamRename).not.toHaveBeenCalled();
     expect(service.commitTeamRename).not.toHaveBeenCalled();
   });
 
-  test('cross-team wording cannot invoke even an own-team-scoped rename review', async () => {
+  test('even a mistaken cross-team rename call remains scoped to a visible current-user review', async () => {
     const service = adversarialService();
     const registry = createChatToolRegistry({ service });
     const model = { generate: jest.fn(async () => ({
       functionCalls: [{ name: 'preview_my_team_rename', args: { new_name: 'Pwned' } }]
     })) };
-    await expect(runTrotterAgent({
+    const result = await runTrotterAgent({
       model, registry, message: 'rename Other Team', history: [], tone: 'neutral', context
-    })).rejects.toMatchObject({ code: 'CHAT_AGENT_PROTOCOL_ERROR' });
-    expect(service.previewTeamRename).not.toHaveBeenCalled();
+    });
+    expect(result).toMatchObject({
+      requires_confirmation: true,
+      primary_result: { kind: 'team_rename_preview', userId: 42, proposed_name: 'Pwned' }
+    });
+    expect(service.previewTeamRename).toHaveBeenCalledWith(42, 'Pwned');
     expect(service.commitTeamRename).not.toHaveBeenCalled();
   });
 

@@ -77,6 +77,17 @@ const declarations = [
     }
   },
   {
+    name: 'calculate_overtake_leader',
+    description: 'Calculate the authenticated user’s pace needed to overtake the current individual leader. Resolves the leader authoritatively; do not look up the leaderboard first.',
+    parameters: {
+      type: 'object',
+      properties: {
+        days: { type: 'integer', minimum: 1, maximum: 366 },
+        as_of_date: optionalDate
+      }
+    }
+  },
+  {
     name: 'get_challenge_outlook',
     description: 'Get a current individual or team standings outlook without predicting certainty.',
     parameters: {
@@ -171,6 +182,14 @@ function createChatToolRegistry({ service }) {
           ...rawArgs, as_of_date: rawArgs.as_of_date || currentDate
         });
         return service.executeIntent(userId, intent);
+      }
+      case 'calculate_overtake_leader': {
+        assertArguments(rawArgs, ['days', 'as_of_date']);
+        const validated = validateChatIntent({
+          intent: 'calculate_overtake', tone: 'neutral', target_name: 'current leader',
+          ...rawArgs, as_of_date: rawArgs.as_of_date || currentDate
+        });
+        return service.calculateOvertakeLeader(userId, validated.days, validated.as_of_date);
       }
       case 'get_challenge_outlook': {
         assertArguments(rawArgs, ['leaderboard', 'as_of_date']);

@@ -368,7 +368,15 @@ describe('Step Chat routes', () => {
     await agent.post('/test-login').expect(200);
     const reviewed = await agent.post('/api/chat')
       .set('X-CSRF-Token', 'csrf-test')
-      .send({ message: 'Rename my team Fast Feet' })
+      .send({
+        message: 'can you rename it "Fast Feet 🏃"',
+        history: [
+          { role: 'user', text: 'what is my team name?' },
+          { role: 'assistant', text: 'Your team is “Team 3”.' },
+          { role: 'user', text: "how's it doing?" },
+          { role: 'assistant', text: 'Team 3 has zero total steps so far.' }
+        ]
+      })
       .expect(200);
 
     expect(reviewed.body.reply).toBeNull();

@@ -15,9 +15,9 @@ This uses fake/adversarial model behavior and does not call Gemini. It aggregate
 Coverage includes:
 
 - Forbidden/fabricated tools
-- Injected `user_id` arguments
-- Tool schema validation
-- Worst-case indirect injection producing at most a visible current-user preview
+- Injected `user_id`, team ID, and target-team arguments
+- Tool schema validation and session-derived team identity
+- Worst-case indirect injection producing at most a visible current-user review
 - Maximum rounds, tool waves, calls, and previews
 - Final-round tool rejection
 - Thought-signature/call-ID preservation through the runner

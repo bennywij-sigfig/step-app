@@ -493,7 +493,7 @@
         }
     }
 
-    function renderResult(payload, sourceMessage = '') {
+    function renderResult(payload) {
         const { result, tone = 'neutral', reply = null } = payload;
         if (result.kind === 'step_preview') return renderStepPreview(result, tone);
         if (result.kind === 'team_rename_preview') return renderTeamRenamePreview(result);
@@ -591,18 +591,15 @@
             }
             const remaining = result.remaining_days ? ` ${result.remaining_days} challenge day${result.remaining_days === 1 ? '' : 's'} remain.` : '';
             const message = createMessage('assistant', reply || `${toneLead(tone, 'outlook')} ${snapshot}${remaining}`);
-            const asksForNumbers = /\b(rank|place|gap|behind|ahead|average|how many|number|position)\b/i.test(sourceMessage);
-            if (!reply || asksForNumbers) {
-                const rankSummary = result.rank
-                    ? `Verified: #${result.rank} of ${result.ranked_count}`
-                    : `Verified: ${result.ranked ? 'ranked' : 'not ranked'}`;
-                appendVerifiedFacts(message, [
-                    `Ranked: ${result.ranked ? 'yes' : 'no'}`,
-                    ...(result.rank ? [`Rank: ${result.rank} of ${result.ranked_count}`] : []),
-                    `Current average: ${formatNumber(Math.round(result.average || 0))} steps/day`,
-                    `Challenge days remaining: ${result.remaining_days}`
-                ], { collapsed: Boolean(reply), summary: rankSummary });
-            }
+            const rankSummary = result.rank
+                ? `Verified: #${result.rank} of ${result.ranked_count}`
+                : `Verified: ${result.ranked ? 'ranked' : 'not ranked'}`;
+            appendVerifiedFacts(message, [
+                `Ranked: ${result.ranked ? 'yes' : 'no'}`,
+                ...(result.rank ? [`Rank: ${result.rank} of ${result.ranked_count}`] : []),
+                `Current average: ${formatNumber(Math.round(result.average || 0))} steps/day`,
+                `Challenge days remaining: ${result.remaining_days}`
+            ], { collapsed: Boolean(reply), summary: rankSummary });
             return;
         }
         if (result.kind === 'encouragement') {
@@ -925,7 +922,7 @@
                     tone: toneSelect.value,
                     ...getClientDateContext()
                 });
-                renderResult(payload, message);
+                renderResult(payload);
             } catch (error) {
                 createMessage('error', error.message);
             } finally {

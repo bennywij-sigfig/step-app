@@ -542,22 +542,9 @@ function createStepChatService({
     };
   }
 
-  async function calculateOvertake(userId, targetName, requestedDays, asOfDate = null) {
-    const leaderboard = await individualLeaderboard();
-    const everyone = [...leaderboard.ranked, ...leaderboard.unranked];
-    const query = targetName.toLocaleLowerCase();
-    const exact = everyone.filter(row => String(row.name || '').toLocaleLowerCase() === query);
-    const matches = exact.length ? exact : everyone.filter(row => String(row.name || '').toLocaleLowerCase().includes(query));
-    if (matches.length !== 1) {
-      return {
-        kind: 'clarification',
-        message: matches.length ? 'More than one participant matched that name.' : 'No participant matched that name.',
-        candidates: matches.slice(0, 5).map(row => row.name)
-      };
-    }
-
-    const target = matches[0];
+  async function calculateOvertakeFromLeaderboard(userId, target, leaderboard, requestedDays, asOfDate) {
     if (Number(target.id) === Number(userId)) throw userError('Choose someone other than yourself to overtake');
+    const everyone = [...leaderboard.ranked, ...leaderboard.unranked];
     const me = everyone.find(row => Number(row.id) === Number(userId)) || { total_steps: 0, days_logged: 0, steps_per_day_reported: 0 };
     const days = await getProjectionDays(leaderboard.challenge, requestedDays, userId, asOfDate);
     const targetAverage = Number(target.steps_per_day_reported) || 0;
@@ -576,6 +563,34 @@ function createStepChatService({
       feasible_under_daily_limit: Math.ceil(requiredAdditional / days) <= 70000,
       assumption: `${target.name}'s current reported-day average does not change.`
     };
+  }
+
+  async function calculateOvertake(userId, targetName, requestedDays, asOfDate = null) {
+    const leaderboard = await individualLeaderboard();
+    const everyone = [...leaderboard.ranked, ...leaderboard.unranked];
+    const query = targetName.toLocaleLowerCase();
+    const exact = everyone.filter(row => String(row.name || '').toLocaleLowerCase() === query);
+    const matches = exact.length ? exact : everyone.filter(row => String(row.name || '').toLocaleLowerCase().includes(query));
+    if (matches.length !== 1) {
+      return {
+        kind: 'clarification',
+        message: matches.length ? 'More than one participant matched that name.' : 'No participant matched that name.',
+        candidates: matches.slice(0, 5).map(row => row.name)
+      };
+    }
+    return calculateOvertakeFromLeaderboard(userId, matches[0], leaderboard, requestedDays, asOfDate);
+  }
+
+  async function calculateOvertakeLeader(userId, requestedDays, asOfDate = null) {
+    const leaderboard = await individualLeaderboard();
+    const leader = leaderboard.ranked[0];
+    if (!leader) {
+      return { kind: 'clarification', message: 'There is no ranked individual leader to overtake yet.', candidates: [] };
+    }
+    if (Number(leader.id) === Number(userId)) {
+      return { kind: 'clarification', message: 'You are already the current individual leader.', candidates: [] };
+    }
+    return calculateOvertakeFromLeaderboard(userId, leader, leaderboard, requestedDays, asOfDate);
   }
 
   function helpResponse(reason = 'general') {
@@ -609,6 +624,7 @@ function createStepChatService({
 
   return {
     MAX_BATCH_SIZE,
+    calculateOvertakeLeader,
     commitPlan,
     commitTeamRename,
     executeIntent,
