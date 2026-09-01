@@ -45,6 +45,10 @@
         html {
             min-height: 100%;
             scroll-behavior: smooth;
+            /* Prevent iOS Safari from inflating small leaderboard annotations
+               when the device rotates from portrait to landscape. */
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
             /* Safari paints overscroll bounce with the root background color,
                not its background image, so both must be explicitly defined. */
             background-color: var(--page-edge-color);

@@ -64,6 +64,14 @@ describe('dashboard design contract', () => {
     expect(dashboard).toContain('Number(user.id) === Number(currentUser.id)');
   });
 
+  test('prevents iOS landscape text inflation without hiding leaderboard annotations', () => {
+    const rootRule = html.match(/html\s*\{[\s\S]*?\}/)?.[0] || '';
+    expect(rootRule).toContain('-webkit-text-size-adjust: 100%');
+    expect(rootRule).toContain('text-size-adjust: 100%');
+    expect(html).toMatch(/\.leaderboard-section-note\s*\{[\s\S]*?font-size: 12px/);
+    expect(html).toMatch(/\.leaderboard-footer\s*\{[\s\S]*?font-size: 12px/);
+  });
+
   test('leaderboard metadata does not rely on decorative emoji or inline colors', () => {
     const reportingFormatter = icons.match(/function formatReportingRate[\s\S]*?\n\}/)?.[0] || '';
     const memberFormatter = icons.match(/function formatMemberCount[\s\S]*?\n\}/)?.[0] || '';
