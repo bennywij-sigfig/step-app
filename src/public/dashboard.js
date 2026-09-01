@@ -342,10 +342,20 @@ document.addEventListener('DOMContentLoaded', function() {
         function loadForNavigation(key, loader) {
             const existing = navigationLoads.get(key);
             if (existing?.promise) return existing.promise;
-            if (existing?.loadedAt && Date.now() - existing.loadedAt < 30000) return Promise.resolve();
+            if (existing?.loadedAt && Date.now() - existing.loadedAt < 10000) return Promise.resolve(true);
 
-            const promise = loader().finally(() => {
-                navigationLoads.set(key, { promise: null, loadedAt: Date.now() });
+            const promise = loader().then(succeeded => {
+                if (succeeded) {
+                    navigationLoads.set(key, { promise: null, loadedAt: Date.now() });
+                } else {
+                    // A failed idle preload must never suppress a retry when the
+                    // user opens the tab.
+                    navigationLoads.delete(key);
+                }
+                return succeeded;
+            }, error => {
+                navigationLoads.delete(key);
+                throw error;
             });
             navigationLoads.set(key, { promise, loadedAt: existing?.loadedAt || 0 });
             return promise;
@@ -677,9 +687,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Attach disclosure listeners for individual leaderboard
                 attachDisclosureListeners();
+                return true;
             } catch (error) {
                 console.error('Leaderboard error:', error);
                 document.getElementById('leaderboard').innerHTML = '<p>Error loading leaderboard</p>';
+                return false;
             }
         }
         
@@ -821,7 +833,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             (${data.meta.reporting_percentage >= 1 ? Math.round(data.meta.reporting_percentage) : data.meta.reporting_percentage}% team participation)
                         </p>
                     </div>`;
-                    return;
+                    return true;
                 }
                 
                 // Handle legacy all-time format or new challenge format
@@ -913,9 +925,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (hasTeamRows) html += '<div class="leaderboard-footer">members · reporting</div>';
                 teamLeaderboard.innerHTML = html;
                 attachDisclosureListeners();
+                return true;
             } catch (error) {
                 console.error('Team leaderboard error:', error);
                 document.getElementById('teamLeaderboard').innerHTML = '<p>Error loading team leaderboard</p>';
+                return false;
             }
         }
 
