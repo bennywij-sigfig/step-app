@@ -98,6 +98,18 @@ const chatImageLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit(
   })
 });
 
+const teamRenameLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: parseInt(process.env.TEAM_RENAME_LIMIT_MAX, 10) || 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => `team_rename_user_${req.session.userId}`,
+  handler: (req, res) => res.status(429).json({
+    error: 'Team rename limit reached. Try again later.',
+    retryAfter: 3600
+  })
+});
+
 const chatImageGlobalLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   windowMs: 60 * 60 * 1000,
   max: parseInt(process.env.CHAT_IMAGE_GLOBAL_LIMIT_MAX, 10) || 100,
@@ -200,6 +212,7 @@ module.exports = {
   chatGlobalDailyLimiter,
   chatImageLimiter,
   chatImageGlobalLimiter,
+  teamRenameLimiter,
   adminApiLimiter,
   mcpApiLimiter,
   mcpBurstLimiter,

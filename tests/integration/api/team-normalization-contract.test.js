@@ -192,6 +192,29 @@ test('legacy migration aborts atomically when an assignment has no team', async 
   }
 });
 
+test('team key migration rejects pre-existing normalized name collisions atomically', async () => {
+  const dbPath = path.join(__dirname, '../../test-databases', `team-key-collision-${crypto.randomBytes(8).toString('hex')}.db`);
+  await createLegacyDatabase(dbPath);
+  const collisionDb = new sqlite3.Database(dbPath);
+  await run(collisionDb, `INSERT INTO teams (name) VALUES ('Team ７'), ('team 7')`);
+  await close(collisionDb);
+  const child = spawnSync(process.execPath, ['-e', `
+    const db = require('./src/database');
+    db.ready.then(() => process.exit(0)).catch(() => process.exit(2));
+  `], {
+    cwd: path.join(__dirname, '../../..'),
+    env: { ...process.env, DB_PATH: dbPath, NODE_ENV: 'test', TEST_DB_INIT: 'true' },
+    encoding: 'utf8', timeout: 15000
+  });
+  expect(child.status).toBe(2);
+  const checkDb = new sqlite3.Database(dbPath);
+  expect((await all(checkDb, 'PRAGMA table_info(teams)')).map(column => column.name)).not.toContain('name_key');
+  await close(checkDb);
+  for (const suffix of ['', '-wal', '-shm']) {
+    try { fs.unlinkSync(`${dbPath}${suffix}`); } catch (_) {}
+  }
+});
+
 describe('normalized live teams preserve current and historical behavior', () => {
   let app;
   let agent;
@@ -301,6 +324,18 @@ describe('normalized live teams preserve current and historical behavior', () =>
       .expect(200);
     expect((await agent.get('/api/admin/users').expect(200)).body.find(user => user.id === 3).team).toBe('Current Blue');
 
+    const unicodeTeam = await agent.post('/api/admin/teams')
+      .set('X-CSRF-Token', csrf)
+      .send({ name: 'Team ７' })
+      .expect(200);
+    await agent.post('/api/admin/teams')
+      .set('X-CSRF-Token', csrf)
+      .send({ name: 'team 7' })
+      .expect(400, { error: 'Team name already exists' });
+    await agent.delete(`/api/admin/teams/${unicodeTeam.body.id}`)
+      .set('X-CSRF-Token', csrf)
+      .expect(200);
+
     const created = await agent.post('/api/admin/teams')
       .set('X-CSRF-Token', csrf)
       .send({ name: 'Temporary Team' })
@@ -331,6 +366,11 @@ describe('normalized live teams preserve current and historical behavior', () =>
   test('migrates legacy names to stable team IDs without changing user IDs', async () => {
     const columns = await all(db, 'PRAGMA table_info(users)');
     expect(columns.map(column => column.name)).toContain('team_id');
+    const normalizedTeams = await all(db, 'SELECT id, name, name_key FROM teams ORDER BY id');
+    expect(normalizedTeams).toEqual([
+      { id: 10, name: 'Current Blue', name_key: 'current blue' },
+      { id: 20, name: 'Current Green', name_key: 'current green' }
+    ]);
     const foreignKeys = await all(db, 'PRAGMA foreign_key_list(users)');
     expect(foreignKeys).toEqual(expect.arrayContaining([
       expect.objectContaining({ from: 'team_id', table: 'teams', to: 'id', on_delete: 'SET NULL' })
@@ -362,7 +402,7 @@ describe('normalized live teams preserve current and historical behavior', () =>
     const teams = await agent.get('/api/team-leaderboard').expect(200);
     const teamRows = [...teams.body.data.ranked, ...teams.body.data.unranked];
     expect(teamRows.map(row => row.team).sort()).toEqual(['Current Blue', 'Current Green']);
-    expect(teamRows.find(row => row.team === 'Current Blue').member_count).toBe(2);
+    expect(teamRows.find(row => row.team === 'Current Blue')).toMatchObject({ team_id: 10, member_count: 2 });
     expect(teamRows.find(row => row.team === 'Current Green').member_count).toBe(1);
   });
 

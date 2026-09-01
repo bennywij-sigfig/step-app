@@ -262,7 +262,12 @@ function formatReportingRate(rate) {
 }
 
 function formatMemberCount(count) {
-    return `<span class="team-meta">${count} member${count !== 1 ? 's' : ''}</span>`;
+    return `<span class="team-meta">m: ${count}</span>`;
+}
+
+function formatTeamSummary(count, rate) {
+    const percentage = rate >= 1 ? Math.round(rate) : rate;
+    return `<span class="team-summary">m: ${count} · r: ${percentage}%</span>`;
 }
 
 // Initialize shadow mode toggle if already discovered

@@ -88,6 +88,17 @@ const declarations = [
     parameters: { type: 'object', properties: {} }
   },
   {
+    name: 'preview_my_team_rename',
+    description: 'Prepare a review to rename only the authenticated user’s current team. Never renames another team and never commits without UI confirmation.',
+    parameters: {
+      type: 'object',
+      properties: {
+        new_name: { type: 'string', minLength: 1, maxLength: 128 }
+      },
+      required: ['new_name']
+    }
+  },
+  {
     name: 'preview_step_entries',
     description: 'Help the authenticated user track steps for one date or many dates. Prepare a review of the entries; never save or overwrite without UI confirmation.',
     parameters: {
@@ -168,6 +179,11 @@ function createChatToolRegistry({ service }) {
       case 'get_encouragement_context':
         assertArguments(rawArgs, []);
         return service.executeIntent(userId, { intent: 'encouragement', tone: 'neutral' });
+      case 'preview_my_team_rename': {
+        assertArguments(rawArgs, ['new_name']);
+        if (typeof rawArgs.new_name !== 'string') throw new ChatToolError('new_name must be text');
+        return service.previewTeamRename(userId, rawArgs.new_name);
+      }
       case 'preview_step_entries': {
         assertArguments(rawArgs, ['entries']);
         const intent = validateChatIntent({ intent: 'record_steps', tone: 'neutral', entries: rawArgs.entries });

@@ -113,8 +113,11 @@
         }
         
         .app-icon {
+            color: initial;
+            background: none;
             font-size: 24px;
-            transition: all 0.3s ease;
+            -webkit-text-fill-color: initial;
+            transition: transform 0.2s ease, opacity 0.2s ease;
         }
         
         @media (max-width: 768px) {
@@ -379,8 +382,15 @@
         }
 
         .reporting-meta,
-        .team-meta {
+        .team-meta,
+        .team-summary {
             white-space: nowrap;
+        }
+
+        .team-summary {
+            color: var(--muted-ink, #526174);
+            font-size: 12px;
+            font-weight: 500;
         }
 
         .leaderboard-metrics {
@@ -789,6 +799,13 @@
             letter-spacing: -0.15px;
         }
         
+
+        /* Team color is derived from the immutable team ID, so playful renames
+           never change its subtle visual identity. Text remains primary. */
+        .leaderboard-item.team-identified,
+        .team-members-list.team-identified {
+            background-color: color-mix(in srgb, var(--team-accent) 5%, #f8fafc);
+        }
 
         /* Individual and team disclosures share one quiet visual treatment. */
         .user-data-list,

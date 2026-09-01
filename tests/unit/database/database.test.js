@@ -157,6 +157,7 @@ describe('Database Module', () => {
         db.run(`CREATE TABLE IF NOT EXISTS teams (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT UNIQUE NOT NULL,
+          name_key TEXT UNIQUE NOT NULL,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`, (err) => {
           if (err) return reject(err);
@@ -164,10 +165,11 @@ describe('Database Module', () => {
           db.all("PRAGMA table_info(teams)", (err, columns) => {
             if (err) return reject(err);
             
-            expect(columns).toHaveLength(3);
+            expect(columns).toHaveLength(4);
             expect(columns[0].name).toBe('id');
             expect(columns[1].name).toBe('name');
-            expect(columns[2].name).toBe('created_at');
+            expect(columns[2].name).toBe('name_key');
+            expect(columns[3].name).toBe('created_at');
             resolve();
           });
         });
