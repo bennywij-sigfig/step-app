@@ -261,7 +261,7 @@ function createChatRouter({
 
     try {
       const history = validateHistory(req.body?.history);
-      const serverContext = await service.getContext();
+      const serverContext = await service.getContext(req.session.userId);
       const context = applyClientDateContext(serverContext, req.body);
 
       if (agentMode === 'tools') {
@@ -275,7 +275,11 @@ function createChatRouter({
           message: message.trim(),
           history,
           tone,
-          context: { userId: req.session.userId, currentDate: context.currentDate }
+          context: {
+            userId: req.session.userId,
+            currentDate: context.currentDate,
+            currentTeamName: context.currentTeamName
+          }
         });
         const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
         const result = agentResult.primary_result || (falseWriteClaim
@@ -285,7 +289,7 @@ function createChatRouter({
         if (result.kind === 'team_rename_preview') attachTeamRenamePlan(req, result);
         // Challenge timing is rendered from the tool result so model prose
         // cannot contradict the inclusive Singapore-open/Pacific-close window.
-        const reply = falseWriteClaim || ['challenge_info', 'team_rename_preview'].includes(result.kind)
+        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview'].includes(result.kind)
           ? null
           : agentResult.text;
         return res.json({
@@ -363,7 +367,7 @@ function createChatRouter({
         return res.status(503).json({ error: 'Image extraction is not configured.' });
       }
       try {
-        const serverContext = await service.getContext();
+        const serverContext = await service.getContext(req.session.userId);
         const context = applyClientDateContext(serverContext, {
           client_date: req.get('X-Client-Date'),
           client_timezone: req.get('X-Client-Timezone')

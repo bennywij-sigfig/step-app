@@ -890,7 +890,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const hasTeamRows = Array.isArray(data)
                     ? data.length > 0
                     : Boolean(data.data?.ranked?.length || data.data?.unranked?.length);
-                if (hasTeamRows) html += '<div class="leaderboard-footer">m: members · r: reporting</div>';
+                if (hasTeamRows) html += '<div class="leaderboard-footer">members · reporting</div>';
                 teamLeaderboard.innerHTML = html;
                 attachDisclosureListeners();
             } catch (error) {

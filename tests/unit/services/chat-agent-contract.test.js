@@ -10,6 +10,7 @@ function fakeService() {
       summary: { new: entries.length, unchanged: 0, conflicts: 0 },
       userId
     })),
+    getMyTeam: jest.fn(async userId => ({ kind: 'my_team', has_team: true, name: 'Team 3', userId })),
     previewTeamRename: jest.fn(async (userId, newName) => ({
       kind: 'team_rename_preview', team_id: 3,
       current_name: 'Team 3', proposed_name: newName, userId
@@ -23,6 +24,7 @@ describe('Trotter tool registry contract', () => {
     const names = registry.declarations.map(tool => tool.name);
     expect(names).toEqual(expect.arrayContaining([
       'get_challenge_info',
+      'get_my_team',
       'get_my_steps',
       'get_individual_leaderboard',
       'get_team_leaderboard',
@@ -104,6 +106,14 @@ describe('Trotter tool registry contract', () => {
     )).rejects.toThrow('individual or team');
   });
 
+  test('gets only the session user’s own team without leaderboard fallback', async () => {
+    const service = fakeService();
+    const registry = createChatToolRegistry({ service });
+    const result = await registry.execute('get_my_team', {}, { userId: 42, currentDate: '2026-09-01' });
+    expect(service.getMyTeam).toHaveBeenCalledWith(42);
+    expect(result).toMatchObject({ kind: 'my_team', name: 'Team 3' });
+  });
+
   test('supplies authoritative current date to date-aware tools', async () => {
     const service = fakeService();
     const registry = createChatToolRegistry({ service });
@@ -117,9 +127,11 @@ describe('Trotter tool registry contract', () => {
 describe('bounded Trotter tool-agent contract', () => {
   test('requires explicit own-team wording before a rename review', () => {
     expect(isExplicitOwnTeamRename('Rename my team to Fast Feet')).toBe(true);
-    expect(isExplicitOwnTeamRename('Could our team be Fast Feet?')).toBe(true);
+    expect(isExplicitOwnTeamRename('Call our team Fast Feet')).toBe(true);
     expect(isExplicitOwnTeamRename("Rename the team I'm on to Fast Feet")).toBe(true);
-    expect(isExplicitOwnTeamRename('Rename Team 7 to Fast Feet')).toBe(false);
+    expect(isExplicitOwnTeamRename('Rename Team Alpha to Team Bravo', 'Team Alpha')).toBe(true);
+    expect(isExplicitOwnTeamRename('Rename Team 7 to Fast Feet', 'Team Alpha')).toBe(false);
+    expect(isExplicitOwnTeamRename('Team Alpha is my team', 'Team Alpha')).toBe(false);
     expect(isExplicitOwnTeamRename('Rename their team')).toBe(false);
   });
   test('answers harmless conversation in one model round without tools', async () => {

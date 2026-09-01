@@ -267,7 +267,7 @@ function formatMemberCount(count) {
 
 function formatTeamSummary(count, rate) {
     const percentage = rate >= 1 ? Math.round(rate) : rate;
-    return `<span class="team-summary">m: ${count} · r: ${percentage}%</span>`;
+    return `<span class="team-summary">${count} · ${percentage}%</span>`;
 }
 
 // Initialize shadow mode toggle if already discovered

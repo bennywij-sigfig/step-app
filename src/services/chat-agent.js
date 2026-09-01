@@ -1,3 +1,5 @@
+const { teamNameKey } = require('../utils/team-name');
+
 const MAX_TOOL_CALLS = 4;
 const MAX_MODEL_ROUNDS = 3;
 const MAX_TOOL_WAVES = 2;
@@ -33,10 +35,19 @@ function parseDirectStepRequest(message, currentDate) {
   return { date, count };
 }
 
-function isExplicitOwnTeamRename(message) {
+function isExplicitOwnTeamRename(message, currentTeamName = null) {
   const text = String(message || '');
-  return /\b(?:my|our)\s+team\b/i.test(text)
-    || /\bteam\s+(?:i(?:'m| am)|we(?:'re| are))\s+(?:on|in)\b/i.test(text);
+  if (!/\b(?:rename|change|call)\b/i.test(text)) return false;
+  if (/\b(?:my|our)\s+team\b/i.test(text)
+    || /\bteam\s+(?:i(?:'m| am)|we(?:'re| are))\s+(?:on|in)\b/i.test(text)) return true;
+
+  const namedTarget = text.match(/^\s*(?:rename|change)\s+(.+?)\s+to\b/i)?.[1]?.trim();
+  if (!namedTarget || !currentTeamName) return false;
+  try {
+    return teamNameKey(namedTarget) === teamNameKey(currentTeamName);
+  } catch (_) {
+    return false;
+  }
 }
 
 function normalizeCalls(response) {
@@ -122,7 +133,7 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
 
     const waveResults = [];
     for (const call of calls) {
-      if (call.name === 'preview_my_team_rename' && !isExplicitOwnTeamRename(message)) {
+      if (call.name === 'preview_my_team_rename' && !isExplicitOwnTeamRename(message, context?.currentTeamName)) {
         throw new ChatAgentProtocolError('Team rename requires an explicit request about the user’s own team', {
           requestedTool: call.name
         });
