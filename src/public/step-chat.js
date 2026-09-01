@@ -410,6 +410,31 @@
         message.appendChild(actions);
     }
 
+    function renderTeamRenamePreview(result) {
+        const message = createMessage('assistant', `Rename “${result.current_name}” to “${result.proposed_name}”? Nothing changes until you confirm.`);
+        if (!result.plan_id) return;
+        const actions = document.createElement('div');
+        actions.className = 'chat-actions';
+        const confirm = actionButton('Rename team', '', async () => {
+            for (const button of actions.querySelectorAll('button')) button.disabled = true;
+            try {
+                const data = await postJson('/api/chat/team-rename/confirm', { plan_id: result.plan_id });
+                createMessage('assistant', `Your team is now “${data.result.name}”.`);
+                actions.remove();
+                window.dispatchEvent(new CustomEvent('team-renamed'));
+            } catch (error) {
+                createMessage('error', error.message);
+                for (const button of actions.querySelectorAll('button')) button.disabled = false;
+            }
+        });
+        actions.appendChild(confirm);
+        actions.appendChild(actionButton('Cancel', 'secondary', () => {
+            actions.remove();
+            createMessage('assistant', 'Team name left unchanged.');
+        }));
+        message.appendChild(actions);
+    }
+
     function appendVerifiedFacts(message, lines, options = {}) {
         const { collapsed = false, summary = 'Verified' } = options;
         if (collapsed) {
@@ -471,6 +496,7 @@
     function renderResult(payload, sourceMessage = '') {
         const { result, tone = 'neutral', reply = null } = payload;
         if (result.kind === 'step_preview') return renderStepPreview(result, tone);
+        if (result.kind === 'team_rename_preview') return renderTeamRenamePreview(result);
         if (result.kind === 'leaderboard') return renderLeaderboard(result, tone, reply);
         if (result.kind === 'steps') return renderSteps(result, tone, reply);
         if (result.kind === 'clarification') {

@@ -1,5 +1,5 @@
 const { createChatToolRegistry } = require('../../../src/services/chat-tools');
-const { runTrotterAgent } = require('../../../src/services/chat-agent');
+const { runTrotterAgent, isExplicitOwnTeamRename } = require('../../../src/services/chat-agent');
 
 function fakeService() {
   return {
@@ -9,6 +9,10 @@ function fakeService() {
       entries: entries.map(entry => ({ ...entry, existing_count: null, status: 'new' })),
       summary: { new: entries.length, unchanged: 0, conflicts: 0 },
       userId
+    })),
+    previewTeamRename: jest.fn(async (userId, newName) => ({
+      kind: 'team_rename_preview', team_id: 3,
+      current_name: 'Team 3', proposed_name: newName, userId
     }))
   };
 }
@@ -26,6 +30,7 @@ describe('Trotter tool registry contract', () => {
       'calculate_overtake',
       'get_challenge_outlook',
       'get_encouragement_context',
+      'preview_my_team_rename',
       'preview_step_entries'
     ]));
     expect(names.some(name => /commit|overwrite|sql|admin/i.test(name))).toBe(false);
@@ -53,6 +58,25 @@ describe('Trotter tool registry contract', () => {
       { userId: 42, currentDate: '2026-09-02' }
     );
     expect(service.previewEntries).toHaveBeenCalledWith(42, [{ date: '2026-09-01', count: 8000 }]);
+  });
+
+  test('binds team rename review to the session user and rejects targeting arguments', async () => {
+    const service = fakeService();
+    const registry = createChatToolRegistry({ service });
+    await expect(registry.execute(
+      'preview_my_team_rename',
+      { new_name: 'Fast Feet', team_id: 999 },
+      { userId: 42, currentDate: '2026-09-01' }
+    )).rejects.toThrow('Unsupported tool argument');
+    expect(service.previewTeamRename).not.toHaveBeenCalled();
+
+    const result = await registry.execute(
+      'preview_my_team_rename',
+      { new_name: 'Fast Feet 🏃' },
+      { userId: 42, currentDate: '2026-09-01' }
+    );
+    expect(service.previewTeamRename).toHaveBeenCalledWith(42, 'Fast Feet 🏃');
+    expect(result).toMatchObject({ current_name: 'Team 3', proposed_name: 'Fast Feet 🏃' });
   });
 
   test('validates preview counts and required dates before calling the service', async () => {
@@ -91,6 +115,13 @@ describe('Trotter tool registry contract', () => {
 });
 
 describe('bounded Trotter tool-agent contract', () => {
+  test('requires explicit own-team wording before a rename review', () => {
+    expect(isExplicitOwnTeamRename('Rename my team to Fast Feet')).toBe(true);
+    expect(isExplicitOwnTeamRename('Could our team be Fast Feet?')).toBe(true);
+    expect(isExplicitOwnTeamRename("Rename the team I'm on to Fast Feet")).toBe(true);
+    expect(isExplicitOwnTeamRename('Rename Team 7 to Fast Feet')).toBe(false);
+    expect(isExplicitOwnTeamRename('Rename their team')).toBe(false);
+  });
   test('answers harmless conversation in one model round without tools', async () => {
     const model = { generate: jest.fn(async () => ({ text: 'Oink and hello.', functionCalls: [] })) };
     const registry = createChatToolRegistry({ service: fakeService() });
@@ -142,6 +173,23 @@ describe('bounded Trotter tool-agent contract', () => {
     expect(result).toMatchObject({ requires_confirmation: true, rounds: 0, primary_result: { kind: 'step_preview' } });
   });
 
+  test('team rename reviews stop before the model can claim a write', async () => {
+    const model = { generate: jest.fn(async () => ({
+      text: 'I renamed it.',
+      functionCalls: [{ name: 'preview_my_team_rename', args: { new_name: 'Fast Feet' } }]
+    })) };
+    const registry = createChatToolRegistry({ service: fakeService() });
+    const result = await runTrotterAgent({
+      model, registry, message: 'Rename my team Fast Feet', history: [], tone: 'neutral',
+      context: { userId: 42, currentDate: '2026-09-01' }
+    });
+    expect(model.generate).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({
+      text: null, requires_confirmation: true,
+      primary_result: { kind: 'team_rename_preview', proposed_name: 'Fast Feet' }
+    });
+  });
+
   test('returns deterministic previews immediately and never asks the model to claim a write', async () => {
     const model = {
       generate: jest.fn(async () => ({
@@ -177,7 +225,7 @@ describe('bounded Trotter tool-agent contract', () => {
     await expect(runTrotterAgent({
       model, registry, message: 'make two previews', history: [], tone: 'neutral',
       context: { userId: 42, currentDate: '2026-09-01' }
-    })).rejects.toThrow('Only one step preview');
+    })).rejects.toThrow('Only one change review');
   });
 
   test('allows a second-round preview when a read observation was needed first', async () => {

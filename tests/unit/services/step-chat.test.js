@@ -19,7 +19,7 @@ describe('Step Chat deterministic write service', () => {
   beforeEach(async () => {
     db = new sqlite3.Database(':memory:');
     await run(db, `CREATE TABLE teams (
-      id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL
+      id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL, name_key TEXT UNIQUE
     )`);
     await run(db, `CREATE TABLE users (
       id INTEGER PRIMARY KEY, name TEXT, team_id INTEGER REFERENCES teams(id), archived_at DATETIME
@@ -33,7 +33,7 @@ describe('Step Chat deterministic write service', () => {
       count INTEGER NOT NULL, challenge_id INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, date)
     )`);
-    await run(db, `INSERT INTO teams (id, name) VALUES (1, 'Team A')`);
+    await run(db, `INSERT INTO teams (id, name, name_key) VALUES (1, 'Team A', 'team a')`);
     await run(db, 'INSERT INTO users (id, name, team_id) VALUES (1, ?, 1), (2, ?, NULL)', ['Tester', 'Target']);
     await run(db, `INSERT INTO challenges
       (id, name, start_date, end_date, is_active, reporting_threshold, timezone)
@@ -49,6 +49,38 @@ describe('Step Chat deterministic write service', () => {
   });
 
   afterEach(() => new Promise(resolve => db.close(resolve)));
+
+  test('previews and commits only the authenticated user’s current team rename', async () => {
+    await expect(service.previewTeamRename(1, 'Team A')).rejects.toThrow('already your team name');
+    await expect(service.previewTeamRename(1, 'team a')).resolves.toMatchObject({ proposed_name: 'team a' });
+    const preview = await service.previewTeamRename(1, '  Hot Steppers 🔥  ');
+    expect(preview).toEqual({
+      kind: 'team_rename_preview', team_id: 1,
+      current_name: 'Team A', proposed_name: 'Hot Steppers 🔥'
+    });
+    expect((await get(db, 'SELECT name FROM teams WHERE id = 1')).name).toBe('Team A');
+
+    const committed = await service.commitTeamRename(1, {
+      teamId: preview.team_id, currentName: preview.current_name, proposedName: preview.proposed_name
+    });
+    expect(committed).toEqual({ previous_name: 'Team A', name: 'Hot Steppers 🔥' });
+    expect(await get(db, 'SELECT name, name_key FROM teams WHERE id = 1'))
+      .toEqual({ name: 'Hot Steppers 🔥', name_key: 'hot steppers 🔥' });
+    expect((await get(db, 'SELECT team_id FROM users WHERE id = 1')).team_id).toBe(1);
+  });
+
+  test('rejects no-team users, normalized collisions, and stale rename plans', async () => {
+    await expect(service.previewTeamRename(2, 'Anything')).rejects.toThrow('not assigned');
+    await run(db, `INSERT INTO teams (id, name, name_key) VALUES (2, 'Team ７', 'team 7')`);
+    await expect(service.previewTeamRename(1, 'team 7')).rejects.toThrow('already in use');
+
+    const preview = await service.previewTeamRename(1, 'First Choice');
+    await run(db, `UPDATE teams SET name = 'Someone Else', name_key = 'someone else' WHERE id = 1`);
+    await expect(service.commitTeamRename(1, {
+      teamId: preview.team_id, currentName: preview.current_name, proposedName: preview.proposed_name
+    })).rejects.toThrow('changed after the review');
+    expect((await get(db, 'SELECT name FROM teams WHERE id = 1')).name).toBe('Someone Else');
+  });
 
   test('classifies new, unchanged, and conflicting entries', async () => {
     const preview = await service.previewEntries(1, [
@@ -204,7 +236,7 @@ describe('Step Chat deterministic write service', () => {
     let unrelatedWrite;
 
     try {
-      await mainRun('CREATE TABLE teams(id INTEGER PRIMARY KEY, name TEXT UNIQUE)');
+      await mainRun('CREATE TABLE teams(id INTEGER PRIMARY KEY, name TEXT UNIQUE, name_key TEXT UNIQUE)');
       await mainRun('CREATE TABLE users(id INTEGER PRIMARY KEY, name TEXT, team_id INTEGER, archived_at TEXT)');
       await mainRun('CREATE TABLE challenges(id INTEGER PRIMARY KEY, name TEXT, start_date TEXT, end_date TEXT, is_active INTEGER, reporting_threshold INTEGER, timezone TEXT)');
       await mainRun('CREATE TABLE steps(id INTEGER PRIMARY KEY, user_id INTEGER, date TEXT, count INTEGER, challenge_id INTEGER, updated_at TEXT, UNIQUE(user_id,date))');

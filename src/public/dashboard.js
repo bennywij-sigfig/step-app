@@ -468,6 +468,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Refresh the existing dashboard after Step Chat commits entries.
         window.addEventListener('step-chat-saved', loadSteps);
+        window.addEventListener('team-renamed', async () => {
+            await loadCurrentUser();
+            await Promise.all([loadLeaderboard(), loadTeamLeaderboard()]);
+        });
         
         // Render at most 14 elapsed dates. Future challenge dates made the old
         // chart look empty and compressed useful data into narrow bars.
@@ -762,6 +766,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
+        function teamAccentStyle(teamId) {
+            const numericId = Number(teamId) || 0;
+            const hue = Math.round((numericId * 137.508) % 360);
+            return `--team-accent: hsl(${hue} 48% 46%)`;
+        }
+
         // Load team leaderboard
         async function loadTeamLeaderboard() {
             // Clear expanded state when reloading
@@ -812,13 +822,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         const isCurrentTeam = currentUser && currentUser.team === team.team;
                         const highlightClass = isCurrentTeam ? ' current-team' : '';
                         
-                        return `<div class="leaderboard-item${highlightClass}">
+                        return `<div class="leaderboard-item team-identified${highlightClass}" style="${teamAccentStyle(team.team_id)}">
                             <div class="leaderboard-identity">
-                                <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
+                                <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" data-team-id="${Number(team.team_id)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                 <span class="rank">#${index + 1}</span>
                                 <span class="leaderboard-name">${escapeHtml(team.team)}</span>
-                                ${formatMemberCount(team.member_count)}
-                                ${formatReportingRate(team.team_reporting_rate)}
+                                ${formatTeamSummary(team.member_count, team.team_reporting_rate)}
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
@@ -837,13 +846,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         const isCurrentTeam = currentUser && currentUser.team === team.team;
                         const highlightClass = isCurrentTeam ? ' current-team' : '';
                         
-                        return `<div class="leaderboard-item${highlightClass}">
+                        return `<div class="leaderboard-item team-identified${highlightClass}" style="${teamAccentStyle(team.team_id)}">
                             <div class="leaderboard-identity">
-                                <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
+                                <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" data-team-id="${Number(team.team_id)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                 <span class="rank" aria-hidden="true"></span>
                                 <span class="leaderboard-name">${escapeHtml(team.team)}</span>
-                                ${formatMemberCount(team.member_count)}
-                                ${formatReportingRate(team.team_reporting_rate)}
+                                ${formatTeamSummary(team.member_count, team.team_reporting_rate)}
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
@@ -863,9 +871,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             const isCurrentTeam = currentUser && currentUser.team === team.team;
                             const highlightClass = isCurrentTeam ? ' current-team' : '';
                             
-                            return `<div class="leaderboard-item${highlightClass}">
+                            return `<div class="leaderboard-item team-identified${highlightClass}" style="${teamAccentStyle(team.team_id)}">
                                 <div class="leaderboard-identity">
-                                    <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
+                                    <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" data-team-id="${Number(team.team_id)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                     <span class="rank">#${index + 1}</span>
                                     <span class="leaderboard-name">${escapeHtml(team.team)}</span>
                                     ${formatMemberCount(team.member_count)}
@@ -879,6 +887,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
                 
+                const hasTeamRows = Array.isArray(data)
+                    ? data.length > 0
+                    : Boolean(data.data?.ranked?.length || data.data?.unranked?.length);
+                if (hasTeamRows) html += '<div class="leaderboard-footer">m: members · r: reporting</div>';
                 teamLeaderboard.innerHTML = html;
                 attachDisclosureListeners();
             } catch (error) {
@@ -893,12 +905,13 @@ document.addEventListener('DOMContentLoaded', function() {
             disclosureTriangles.forEach(triangle => {
                 triangle.addEventListener('click', function() {
                     const teamName = this.getAttribute('data-team');
+                    const teamId = this.getAttribute('data-team-id');
                     const userId = this.getAttribute('data-user-id');
                     const userName = this.getAttribute('data-user-name');
                     
                     if (teamName) {
                         // This is a team disclosure
-                        toggleTeamDisclosure(teamName, this);
+                        toggleTeamDisclosure(teamName, teamId, this);
                     } else if (userId && userName) {
                         // This is a user disclosure
                         toggleUserDisclosure(userId, userName, this);
@@ -908,7 +921,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Team member disclosure functionality
-        async function toggleTeamDisclosure(teamName, disclosureElement) {
+        async function toggleTeamDisclosure(teamName, teamId, disclosureElement) {
             if (disclosureElement.getAttribute('aria-busy') === 'true') return;
             const isExpanded = expandedTeams.has(teamName);
 
@@ -927,7 +940,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const response = await fetch(`/api/teams/${encodeURIComponent(teamName)}/members`);
                 const members = await response.json();
                 if (response.ok) {
-                    const membersList = createMembersList(teamName, members);
+                    const membersList = createMembersList(teamName, members, teamId);
                     disclosureElement.closest('.leaderboard-item').insertAdjacentElement('afterend', membersList);
                     disclosureElement.classList.add('expanded');
                     disclosureElement.setAttribute('aria-expanded', 'true');
@@ -943,11 +956,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        function createMembersList(teamName, members) {
+        function createMembersList(teamName, members, teamId) {
             const membersList = document.createElement('div');
             membersList.id = `members-${teamName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-            membersList.className = 'team-members-list';
-            
+            membersList.className = 'team-members-list team-identified';
+            membersList.setAttribute('style', teamAccentStyle(teamId));
+
             const membersHtml = members.map(member => `
                 <div class="member-item">
                     <div class="member-info">

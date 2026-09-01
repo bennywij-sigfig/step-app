@@ -47,6 +47,10 @@ function buildApp({
       summary: { new: 1, unchanged: 0, conflicts: 0 }
     })),
     commitPlan: jest.fn(async () => ({ saved: 1, skipped: 0, entries: [] })),
+    commitTeamRename: jest.fn(async () => ({ previous_name: 'Team 3', name: 'Fast Feet' })),
+    previewTeamRename: jest.fn(async () => ({
+      kind: 'team_rename_preview', team_id: 3, current_name: 'Team 3', proposed_name: 'Fast Feet'
+    })),
     ...serviceOverrides
   };
   app.use('/api/chat', createChatRouter({
@@ -341,6 +345,77 @@ describe('Step Chat routes', () => {
     expect(response.body.error).toBe(challengeError.message);
   });
 
+  test('team rename review is server-side, scoped, single-use, and explicitly confirmed', async () => {
+    const preview = {
+      kind: 'team_rename_preview', team_id: 3,
+      current_name: 'Team 3', proposed_name: 'Fast Feet 🏃'
+    };
+    const model = { generate: jest.fn(async () => ({
+      text: 'I renamed your team.',
+      functionCalls: [{ name: 'preview_my_team_rename', args: { new_name: 'Fast Feet 🏃' } }]
+    })) };
+    const registry = {
+      declarations: [{ name: 'preview_my_team_rename', parameters: { type: 'object', properties: {} } }],
+      execute: jest.fn(async () => preview)
+    };
+    const commitTeamRename = jest.fn(async () => ({ previous_name: 'Team 3', name: 'Fast Feet 🏃' }));
+    const { app } = buildApp({
+      agentMode: 'tools', toolRegistry: registry,
+      providerOverrides: { createToolModel: jest.fn(() => model) },
+      serviceOverrides: { commitTeamRename }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const reviewed = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Rename my team Fast Feet' })
+      .expect(200);
+
+    expect(reviewed.body.reply).toBeNull();
+    expect(reviewed.body.result).toEqual(expect.objectContaining({
+      kind: 'team_rename_preview', current_name: 'Team 3', proposed_name: 'Fast Feet 🏃',
+      plan_id: expect.any(String)
+    }));
+    expect(reviewed.body.result.team_id).toBeUndefined();
+    expect(commitTeamRename).not.toHaveBeenCalled();
+
+    const confirmed = await agent.post('/api/chat/team-rename/confirm')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ plan_id: reviewed.body.result.plan_id })
+      .expect(200);
+    expect(confirmed.body.result).toEqual({
+      kind: 'team_rename_commit', previous_name: 'Team 3', name: 'Fast Feet 🏃'
+    });
+    expect(commitTeamRename).toHaveBeenCalledWith(42, expect.objectContaining({
+      type: 'team_rename', teamId: 3, currentName: 'Team 3', proposedName: 'Fast Feet 🏃'
+    }));
+
+    await agent.post('/api/chat/team-rename/confirm')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ plan_id: reviewed.body.result.plan_id })
+      .expect(409);
+  });
+
+  test('team rename plans cannot be confirmed from another session', async () => {
+    const preview = { kind: 'team_rename_preview', team_id: 3, current_name: 'Team 3', proposed_name: 'Fast Feet' };
+    const model = { generate: jest.fn(async () => ({
+      functionCalls: [{ name: 'preview_my_team_rename', args: { new_name: 'Fast Feet' } }]
+    })) };
+    const { app } = buildApp({
+      agentMode: 'tools',
+      toolRegistry: { declarations: [], execute: jest.fn(async () => preview) },
+      providerOverrides: { createToolModel: jest.fn(() => model) }
+    });
+    const owner = request.agent(app);
+    const other = request.agent(app);
+    await owner.post('/test-login').expect(200);
+    await other.post('/test-login').expect(200);
+    const reviewed = await owner.post('/api/chat').set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Rename my team' }).expect(200);
+    await other.post('/api/chat/team-rename/confirm').set('X-CSRF-Token', 'csrf-test')
+      .send({ plan_id: reviewed.body.result.plan_id }).expect(409);
+  });
+
   test('tool-agent previews still receive the existing confirmation plan', async () => {
     const model = { generate: jest.fn(async () => ({
       text: 'I saved it.',
@@ -384,7 +459,7 @@ describe('Step Chat routes', () => {
       .expect(200);
     expect(response.body.reply).toBeNull();
     expect(response.body.result).toEqual({
-      kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.'
+      kind: 'help', message: 'I did not change anything. Changes require review and your confirmation.'
     });
   });
 

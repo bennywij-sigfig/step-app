@@ -1,6 +1,7 @@
 const MAX_TOOL_CALLS = 4;
 const MAX_MODEL_ROUNDS = 3;
 const MAX_TOOL_WAVES = 2;
+const PREVIEW_TOOLS = new Set(['preview_step_entries', 'preview_my_team_rename']);
 
 class ChatAgentProtocolError extends Error {
   constructor(message, details = {}) {
@@ -30,6 +31,12 @@ function parseDirectStepRequest(message, currentDate) {
     date = priorDate.toISOString().slice(0, 10);
   }
   return { date, count };
+}
+
+function isExplicitOwnTeamRename(message) {
+  const text = String(message || '');
+  return /\b(?:my|our)\s+team\b/i.test(text)
+    || /\bteam\s+(?:i(?:'m| am)|we(?:'re| are))\s+(?:on|in)\b/i.test(text);
 }
 
 function normalizeCalls(response) {
@@ -104,10 +111,10 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
       });
     }
 
-    const priorPreviewCount = toolResults.filter(item => item.name === 'preview_step_entries').length;
-    const previewCalls = calls.filter(call => call.name === 'preview_step_entries');
+    const priorPreviewCount = toolResults.filter(item => PREVIEW_TOOLS.has(item.name)).length;
+    const previewCalls = calls.filter(call => PREVIEW_TOOLS.has(call.name));
     if (priorPreviewCount + previewCalls.length > 1) {
-      throw new ChatAgentProtocolError('Only one step preview may be requested at a time', {
+      throw new ChatAgentProtocolError('Only one change review may be requested at a time', {
         round,
         requestedTools: calls.map(call => call.name)
       });
@@ -115,6 +122,11 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
 
     const waveResults = [];
     for (const call of calls) {
+      if (call.name === 'preview_my_team_rename' && !isExplicitOwnTeamRename(message)) {
+        throw new ChatAgentProtocolError('Team rename requires an explicit request about the user’s own team', {
+          requestedTool: call.name
+        });
+      }
       const result = await registry.execute(call.name, call.args, context);
       const observation = {
         name: call.name,
@@ -129,7 +141,7 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
     totalToolCalls += calls.length;
     toolWaves += 1;
 
-    const preview = waveResults.find(item => item.name === 'preview_step_entries');
+    const preview = waveResults.find(item => PREVIEW_TOOLS.has(item.name));
     if (preview) {
       return {
         text: null,
@@ -154,5 +166,6 @@ module.exports = {
   MAX_TOOL_CALLS,
   MAX_TOOL_WAVES,
   parseDirectStepRequest,
+  isExplicitOwnTeamRename,
   runTrotterAgent
 };

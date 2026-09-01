@@ -73,8 +73,8 @@ INSERT INTO roster (expected_name, expected_email, team_name) VALUES
 
 -- Preserve all seven requested team entries even when a team currently has no
 -- registered members.
-INSERT OR IGNORE INTO teams (name)
-SELECT DISTINCT team_name FROM roster;
+INSERT OR IGNORE INTO teams (name, name_key)
+SELECT DISTINCT team_name, lower(team_name) FROM roster;
 
 -- Email is unique in users and is the authoritative match. This permits
 -- pre-existing accounts with legacy short display names to be assigned.

@@ -1,4 +1,5 @@
 const { isValidDate } = require('../utils/validation');
+const { normalizeTeamName, teamNameKey, TeamNameValidationError } = require('../utils/team-name');
 const {
   getCurrentChallengeDay,
   getTotalChallengeDays,
@@ -82,6 +83,78 @@ function createStepChatService({
       }
       return { date: entry.date, count: entry.count };
     });
+  }
+
+  async function getRenameableTeam(userId, connection = db) {
+    const user = await getFrom(connection, `SELECT u.id, u.archived_at, u.team_id, t.name AS team_name
+      FROM users u LEFT JOIN teams t ON t.id = u.team_id WHERE u.id = ?`, [userId]);
+    if (!user) throw userError('User not found');
+    if (user.archived_at) throw userError('Archived users cannot rename teams');
+    if (!user.team_id || !user.team_name) throw userError('You are not assigned to a team');
+    return user;
+  }
+
+  function validateProposedTeamName(value) {
+    try {
+      return normalizeTeamName(value);
+    } catch (error) {
+      if (error instanceof TeamNameValidationError) throw userError(error.message);
+      throw error;
+    }
+  }
+
+  async function assertTeamNameAvailable(proposedName, teamId, connection = db) {
+    const teams = await allFrom(connection, 'SELECT id, name FROM teams WHERE id != ?', [teamId]);
+    const proposedKey = teamNameKey(proposedName);
+    if (teams.some(team => teamNameKey(team.name) === proposedKey)) {
+      throw userError('That team name is already in use');
+    }
+  }
+
+  async function previewTeamRename(userId, rawName) {
+    const proposedName = validateProposedTeamName(rawName);
+    const user = await getRenameableTeam(userId);
+    if (user.team_name === proposedName) {
+      throw userError('That is already your team name');
+    }
+    await assertTeamNameAvailable(proposedName, user.team_id);
+    return {
+      kind: 'team_rename_preview',
+      team_id: user.team_id,
+      current_name: user.team_name,
+      proposed_name: proposedName
+    };
+  }
+
+  async function commitTeamRename(userId, plan) {
+    if (!plan || !Number.isInteger(plan.teamId) || typeof plan.currentName !== 'string' || typeof plan.proposedName !== 'string') {
+      throw userError('Invalid team rename plan');
+    }
+    const proposedName = validateProposedTeamName(plan.proposedName);
+    const transactionDb = createTransactionConnection ? await createTransactionConnection() : db;
+    const shouldClose = transactionDb !== db;
+    try {
+      await runOn(transactionDb, 'BEGIN IMMEDIATE TRANSACTION');
+      try {
+        const user = await getRenameableTeam(userId, transactionDb);
+        if (user.team_id !== plan.teamId || user.team_name !== plan.currentName) {
+          throw userError('Your team changed after the review; ask Trotter to review the rename again');
+        }
+        await assertTeamNameAvailable(proposedName, user.team_id, transactionDb);
+        const update = await runOn(transactionDb,
+          'UPDATE teams SET name = ?, name_key = ? WHERE id = ? AND name = ?',
+          [proposedName, teamNameKey(proposedName), user.team_id, plan.currentName]
+        );
+        if (update.changes !== 1) throw userError('The team name changed; ask Trotter to review the rename again');
+        await runOn(transactionDb, 'COMMIT');
+      } catch (error) {
+        await runOn(transactionDb, 'ROLLBACK').catch(() => {});
+        throw error;
+      }
+    } finally {
+      if (shouldClose) await new Promise(resolve => transactionDb.close(() => resolve()));
+    }
+    return { previous_name: plan.currentName, name: proposedName };
   }
 
   async function previewEntries(userId, entries) {
@@ -525,9 +598,11 @@ function createStepChatService({
   return {
     MAX_BATCH_SIZE,
     commitPlan,
+    commitTeamRename,
     executeIntent,
     getContext,
-    previewEntries
+    previewEntries,
+    previewTeamRename
   };
 }
 

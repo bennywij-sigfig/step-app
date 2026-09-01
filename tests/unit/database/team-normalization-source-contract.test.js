@@ -26,6 +26,8 @@ describe('normalized live team source contract', () => {
   });
 
   test('migration is transactional, validates mappings, and clears duplicate names', () => {
+    expect(database).toContain('CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_name_key');
+    expect(database).toContain('Duplicate normalized team name');
     expect(database).toContain("await run('BEGIN IMMEDIATE')");
     expect(database).toContain('legacy team assignments could not be normalized');
     expect(database).toContain("await run('UPDATE users SET team = NULL WHERE team IS NOT NULL')");

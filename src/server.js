@@ -26,6 +26,7 @@ const {
   chatGlobalDailyLimiter,
   chatImageLimiter,
   chatImageGlobalLimiter,
+  teamRenameLimiter,
   adminApiLimiter,
   mcpApiLimiter,
   mcpBurstLimiter
@@ -37,6 +38,7 @@ const { createChatToolRegistry } = require('./services/chat-tools');
 const { createChatRouter } = require('./routes/chat');
 const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
 const { hashToken, generateSecureToken } = require('./utils/token');
+const { normalizeTeamName, teamNameKey, TeamNameValidationError } = require('./utils/team-name');
 const {
   getCurrentChallengeDay,
   getTotalChallengeDays,
@@ -337,6 +339,7 @@ async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold, d
   return new Promise((resolve, reject) => {
     const query = `
       SELECT
+        t.id AS team_id,
         t.name AS team,
         COUNT(DISTINCT u.id) as member_count,
         COALESCE(SUM(s.count), 0) as total_steps,
@@ -512,6 +515,7 @@ app.use('/api/chat', createChatRouter({
   chatGlobalDailyLimiter,
   chatImageLimiter,
   chatImageGlobalLimiter,
+  teamRenameLimiter,
   provider: chatProvider,
   service: stepChatService,
   toolRegistry: chatToolRegistry,
@@ -1714,16 +1718,18 @@ app.get('/api/teams', apiLimiter, requireApiAuth, (req, res) => {
 });
 
 // Create new team
-app.post('/api/admin/teams', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
-  const { name } = req.body;
-  
-  if (!name || name.trim() === '') {
-    return res.status(400).json({ error: 'Team name is required' });
+app.post('/api/admin/teams', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
+  let name;
+  try {
+    name = normalizeTeamName(req.body.name);
+  } catch (error) {
+    if (error instanceof TeamNameValidationError) return res.status(400).json({ error: error.message });
+    throw error;
   }
-  
+
   db.run(
-    `INSERT INTO teams (name) VALUES (?)`,
-    [name.trim()],
+    `INSERT INTO teams (name, name_key) VALUES (?, ?)`,
+    [name, teamNameKey(name)],
     function(err) {
       if (err) {
         if (err.code === 'SQLITE_CONSTRAINT') {
@@ -1732,18 +1738,20 @@ app.post('/api/admin/teams', adminApiLimiter, requireApiAdmin, validateCSRFToken
         console.error('Error creating team:', err);
         return res.status(500).json({ error: 'Database error' });
       }
-      res.json({ id: this.lastID, name: name.trim(), message: 'Team created successfully' });
+      res.json({ id: this.lastID, name, message: 'Team created successfully' });
     }
   );
 });
 
 // Update team name
-app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
+app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
   const { teamId } = req.params;
-  const { name } = req.body;
-  
-  if (!name || name.trim() === '') {
-    return res.status(400).json({ error: 'Team name is required' });
+  let name;
+  try {
+    name = normalizeTeamName(req.body.name);
+  } catch (error) {
+    if (error instanceof TeamNameValidationError) return res.status(400).json({ error: error.message });
+    throw error;
   }
   
   // First, get the old team name before updating
@@ -1762,8 +1770,8 @@ app.put('/api/admin/teams/:teamId', adminApiLimiter, requireApiAdmin, validateCS
       
       // Update the team name
       db.run(
-        `UPDATE teams SET name = ? WHERE id = ?`,
-        [name.trim(), teamId],
+        `UPDATE teams SET name = ?, name_key = ? WHERE id = ?`,
+        [name, teamNameKey(name), teamId],
         function(err) {
           if (err) {
             if (err.code === 'SQLITE_CONSTRAINT') {
@@ -2328,6 +2336,7 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
     if (!activeChallenge) {
       activeDb.all(`
         SELECT
+          t.id AS team_id,
           t.name AS team,
           COUNT(DISTINCT u.id) as member_count,
           COALESCE(SUM(s.count), 0) as total_steps,

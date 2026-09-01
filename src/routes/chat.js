@@ -19,6 +19,7 @@ function createChatRouter({
   chatGlobalDailyLimiter = (req, res, next) => next(),
   chatImageLimiter = (req, res, next) => next(),
   chatImageGlobalLimiter = (req, res, next) => next(),
+  teamRenameLimiter = (req, res, next) => next(),
   provider,
   service,
   toolRegistry = null,
@@ -128,14 +129,14 @@ function createChatRouter({
         recent_entries: result.entries.slice(0, 7)
       };
     }
-    if (result.kind === 'step_preview' || result.kind === 'help') return null;
+    if (['step_preview', 'team_rename_preview', 'help'].includes(result.kind)) return null;
     return result;
   }
 
   function voiceReplyClaimsWrite(reply) {
     if (typeof reply !== 'string') return true;
-    return /\b(?:i|we|trotter)\b[\s\S]{0,70}\b(?:recorded|logged|saved|added|updated|overwrote|submitted)\b/i.test(reply)
-      || /\b(?:successfully|has been)\s+(?:recorded|logged|saved|added|updated|overwritten|submitted)\b/i.test(reply);
+    return /\b(?:i|we|trotter)\b[\s\S]{0,70}\b(?:recorded|logged|saved|added|updated|overwrote|submitted|renamed)\b/i.test(reply)
+      || /\b(?:successfully|has been)\s+(?:recorded|logged|saved|added|updated|overwritten|submitted|renamed)\b/i.test(reply);
   }
 
   function applyClientDateContext(context, body) {
@@ -164,6 +165,7 @@ function createChatRouter({
       const planId = crypto.randomUUID();
       const createdAt = now();
       plans[planId] = {
+        type: 'steps',
         challengeId: result.challengeId,
         entries: result.entries,
         createdAt,
@@ -172,6 +174,24 @@ function createChatRouter({
       result.plan_id = planId;
       result.expires_in_seconds = PLAN_TTL_MS / 1000;
     }
+    return result;
+  }
+
+  function attachTeamRenamePlan(req, result) {
+    const plans = prunePlans(req);
+    const planId = crypto.randomUUID();
+    const createdAt = now();
+    plans[planId] = {
+      type: 'team_rename',
+      teamId: result.team_id,
+      currentName: result.current_name,
+      proposedName: result.proposed_name,
+      createdAt,
+      expiresAt: createdAt + PLAN_TTL_MS
+    };
+    delete result.team_id;
+    result.plan_id = planId;
+    result.expires_in_seconds = PLAN_TTL_MS / 1000;
     return result;
   }
 
@@ -195,6 +215,7 @@ function createChatRouter({
     }
     const result = await service.executeIntent(req.session.userId, intent);
     if (result.kind === 'step_preview') attachPlan(req, result);
+    if (result.kind === 'team_rename_preview') attachTeamRenamePlan(req, result);
 
     let reply = null;
     const facts = narrationFacts(result);
@@ -258,12 +279,15 @@ function createChatRouter({
         });
         const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
         const result = agentResult.primary_result || (falseWriteClaim
-          ? { kind: 'help', message: 'I did not record anything. Step changes require a preview and your confirmation.' }
+          ? { kind: 'help', message: 'I did not change anything. Changes require review and your confirmation.' }
           : { kind: 'chitchat' });
         if (result.kind === 'step_preview') attachPlan(req, result);
+        if (result.kind === 'team_rename_preview') attachTeamRenamePlan(req, result);
         // Challenge timing is rendered from the tool result so model prose
         // cannot contradict the inclusive Singapore-open/Pacific-close window.
-        const reply = falseWriteClaim || result.kind === 'challenge_info' ? null : agentResult.text;
+        const reply = falseWriteClaim || ['challenge_info', 'team_rename_preview'].includes(result.kind)
+          ? null
+          : agentResult.text;
         return res.json({
           intent: 'tool_agent',
           tone,
@@ -384,6 +408,26 @@ function createChatRouter({
       if (error.code === 'STEP_CHAT_USER_ERROR') return res.status(400).json({ error: error.message });
       console.error('Reviewed image entries preview failed:', error.message);
       res.status(500).json({ error: 'Trotter could not preview those entries right now.' });
+    }
+  });
+
+  router.post('/team-rename/confirm', requireApiAuth, validateCSRFToken, teamRenameLimiter, async (req, res) => {
+    const planId = req.body?.plan_id;
+    if (typeof planId !== 'string') return res.status(400).json({ error: 'Invalid confirmation request' });
+    const plans = prunePlans(req);
+    const plan = plans[planId];
+    if (!plan || plan.type !== 'team_rename') {
+      return res.status(409).json({ error: 'This rename review expired or was already used. Ask Trotter to review it again.' });
+    }
+    // Consume before execution so retries cannot repeat a rename.
+    delete plans[planId];
+    try {
+      const result = await service.commitTeamRename(req.session.userId, plan);
+      res.json({ result: { kind: 'team_rename_commit', ...result } });
+    } catch (error) {
+      console.error('Team rename confirmation failed:', error.message);
+      if (error.code === 'STEP_CHAT_USER_ERROR') return res.status(409).json({ error: error.message });
+      res.status(500).json({ error: 'Unable to rename the team right now. Ask Trotter to review it again.' });
     }
   });
 

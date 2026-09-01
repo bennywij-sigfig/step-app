@@ -2,6 +2,7 @@ const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 const fs = require('fs');
 const { assertExistingDatabaseWritable } = require('./utils/database-safety');
+const { teamNameKey } = require('./utils/team-name');
 
 // Use persistent volume in production, local file in development, or test database path if specified
 const dbPath = process.env.DB_PATH || 
@@ -106,6 +107,38 @@ const initializationPromise = new Promise((resolve, reject) => {
   initializationReject = reject;
 });
 
+async function normalizeTeams(database) {
+  const run = (sql, params = []) => new Promise((resolve, reject) => {
+    database.run(sql, params, function(error) {
+      if (error) return reject(error);
+      resolve({ changes: this.changes });
+    });
+  });
+  const all = sql => new Promise((resolve, reject) => {
+    database.all(sql, (error, rows) => error ? reject(error) : resolve(rows));
+  });
+  const columns = await all('PRAGMA table_info(teams)');
+  const hasNameKey = columns.some(column => column.name === 'name_key');
+  await run('BEGIN IMMEDIATE');
+  try {
+    if (!hasNameKey) await run('ALTER TABLE teams ADD COLUMN name_key TEXT');
+    const teams = await all('SELECT id, name FROM teams ORDER BY id');
+    const seenKeys = new Set();
+    for (const team of teams) {
+      const displayName = team.name;
+      const key = teamNameKey(displayName);
+      if (seenKeys.has(key)) throw new Error(`Duplicate normalized team name: ${displayName}`);
+      seenKeys.add(key);
+      await run('UPDATE teams SET name = ?, name_key = ? WHERE id = ?', [displayName, key, team.id]);
+    }
+    await run('CREATE UNIQUE INDEX IF NOT EXISTS idx_teams_name_key ON teams(name_key)');
+    await run('COMMIT');
+  } catch (error) {
+    await run('ROLLBACK').catch(() => {});
+    throw error;
+  }
+}
+
 async function normalizeUserTeams(database) {
   const run = (sql, params = []) => new Promise((resolve, reject) => {
     database.run(sql, params, function(error) {
@@ -163,6 +196,7 @@ if (!shouldDelayInit) {
   db.run(`CREATE TABLE IF NOT EXISTS teams (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
+    name_key TEXT UNIQUE NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
@@ -524,6 +558,7 @@ if (!shouldDelayInit) {
   db.run('SELECT 1', async err => {
     if (err) return initializationReject(err);
     try {
+      await normalizeTeams(db);
       await normalizeUserTeams(db);
       initializationResolve();
     } catch (error) {
