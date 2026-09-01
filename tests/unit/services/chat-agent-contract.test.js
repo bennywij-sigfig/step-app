@@ -1,5 +1,5 @@
 const { createChatToolRegistry } = require('../../../src/services/chat-tools');
-const { runTrotterAgent, isExplicitOwnTeamRename } = require('../../../src/services/chat-agent');
+const { runTrotterAgent } = require('../../../src/services/chat-agent');
 
 function fakeService() {
   return {
@@ -11,6 +11,9 @@ function fakeService() {
       userId
     })),
     getMyTeam: jest.fn(async userId => ({ kind: 'my_team', has_team: true, name: 'Team 3', userId })),
+    calculateOvertakeLeader: jest.fn(async (userId, days, asOfDate) => ({
+      kind: 'overtake', target: { name: 'Leader' }, userId, days, asOfDate
+    })),
     previewTeamRename: jest.fn(async (userId, newName) => ({
       kind: 'team_rename_preview', team_id: 3,
       current_name: 'Team 3', proposed_name: newName, userId
@@ -30,6 +33,7 @@ describe('Trotter tool registry contract', () => {
       'get_team_leaderboard',
       'calculate_target_average',
       'calculate_overtake',
+      'calculate_overtake_leader',
       'get_challenge_outlook',
       'get_encouragement_context',
       'preview_my_team_rename',
@@ -106,6 +110,16 @@ describe('Trotter tool registry contract', () => {
     )).rejects.toThrow('individual or team');
   });
 
+  test('resolves the current leader inside one compound calculation tool', async () => {
+    const service = fakeService();
+    const registry = createChatToolRegistry({ service });
+    const result = await registry.execute(
+      'calculate_overtake_leader', {}, { userId: 42, currentDate: '2026-09-02' }
+    );
+    expect(service.calculateOvertakeLeader).toHaveBeenCalledWith(42, null, '2026-09-02');
+    expect(result).toMatchObject({ kind: 'overtake', target: { name: 'Leader' } });
+  });
+
   test('gets only the session user’s own team without leaderboard fallback', async () => {
     const service = fakeService();
     const registry = createChatToolRegistry({ service });
@@ -125,15 +139,18 @@ describe('Trotter tool registry contract', () => {
 });
 
 describe('bounded Trotter tool-agent contract', () => {
-  test('requires explicit own-team wording before a rename review', () => {
-    expect(isExplicitOwnTeamRename('Rename my team to Fast Feet')).toBe(true);
-    expect(isExplicitOwnTeamRename('Call our team Fast Feet')).toBe(true);
-    expect(isExplicitOwnTeamRename("Rename the team I'm on to Fast Feet")).toBe(true);
-    expect(isExplicitOwnTeamRename('Rename Team Alpha to Team Bravo', 'Team Alpha')).toBe(true);
-    expect(isExplicitOwnTeamRename('Rename Team 7 to Fast Feet', 'Team Alpha')).toBe(false);
-    expect(isExplicitOwnTeamRename('Team Alpha is my team', 'Team Alpha')).toBe(false);
-    expect(isExplicitOwnTeamRename('Rename their team')).toBe(false);
+  test('rejects an empty model response instead of silently showing unrelated fallback text', async () => {
+    const model = { generate: jest.fn(async () => ({ text: null, functionCalls: [] })) };
+    const registry = createChatToolRegistry({ service: fakeService() });
+    await expect(runTrotterAgent({
+      model, registry, message: 'hi', history: [], tone: 'neutral',
+      context: { userId: 42, currentDate: '2026-08-26' }
+    })).rejects.toMatchObject({
+      code: 'CHAT_AGENT_PROTOCOL_ERROR',
+      message: 'Model returned neither text nor a tool call'
+    });
   });
+
   test('answers harmless conversation in one model round without tools', async () => {
     const model = { generate: jest.fn(async () => ({ text: 'Oink and hello.', functionCalls: [] })) };
     const registry = createChatToolRegistry({ service: fakeService() });
@@ -185,14 +202,14 @@ describe('bounded Trotter tool-agent contract', () => {
     expect(result).toMatchObject({ requires_confirmation: true, rounds: 0, primary_result: { kind: 'step_preview' } });
   });
 
-  test('team rename reviews stop before the model can claim a write', async () => {
+  test('team rename reviews trust the scoped tool instead of reparsing natural language', async () => {
     const model = { generate: jest.fn(async () => ({
       text: 'I renamed it.',
       functionCalls: [{ name: 'preview_my_team_rename', args: { new_name: 'Fast Feet' } }]
     })) };
     const registry = createChatToolRegistry({ service: fakeService() });
     const result = await runTrotterAgent({
-      model, registry, message: 'Rename my team Fast Feet', history: [], tone: 'neutral',
+      model, registry, message: 'Could you call it Fast Feet?', history: [], tone: 'neutral',
       context: { userId: 42, currentDate: '2026-09-01' }
     });
     expect(model.generate).toHaveBeenCalledTimes(1);

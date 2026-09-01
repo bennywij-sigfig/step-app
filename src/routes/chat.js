@@ -277,8 +277,7 @@ function createChatRouter({
           tone,
           context: {
             userId: req.session.userId,
-            currentDate: context.currentDate,
-            currentTeamName: context.currentTeamName
+            currentDate: context.currentDate
           }
         });
         const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);

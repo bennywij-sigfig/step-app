@@ -29,6 +29,11 @@ describe('team rename and identity UI contract', () => {
     expect(dashboard).toContain('members · reporting');
   });
 
+  test('always renders verified outlook facts without reparsing the user’s wording', () => {
+    expect(chat).not.toContain('asksForNumbers');
+    expect(chat).toContain('`Current average: ${formatNumber(Math.round(result.average || 0))} steps/day`');
+  });
+
   test('keeps the emoji app icon paint independent from transparent heading text', () => {
     const iconRule = html.match(/\.app-icon\s*\{[\s\S]*?\}/)?.[0] || '';
     expect(iconRule).toContain('-webkit-text-fill-color: initial');

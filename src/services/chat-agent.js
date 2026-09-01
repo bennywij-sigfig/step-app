@@ -1,5 +1,3 @@
-const { teamNameKey } = require('../utils/team-name');
-
 const MAX_TOOL_CALLS = 4;
 const MAX_MODEL_ROUNDS = 3;
 const MAX_TOOL_WAVES = 2;
@@ -33,21 +31,6 @@ function parseDirectStepRequest(message, currentDate) {
     date = priorDate.toISOString().slice(0, 10);
   }
   return { date, count };
-}
-
-function isExplicitOwnTeamRename(message, currentTeamName = null) {
-  const text = String(message || '');
-  if (!/\b(?:rename|change|call)\b/i.test(text)) return false;
-  if (/\b(?:my|our)\s+team\b/i.test(text)
-    || /\bteam\s+(?:i(?:'m| am)|we(?:'re| are))\s+(?:on|in)\b/i.test(text)) return true;
-
-  const namedTarget = text.match(/^\s*(?:rename|change)\s+(.+?)\s+to\b/i)?.[1]?.trim();
-  if (!namedTarget || !currentTeamName) return false;
-  try {
-    return teamNameKey(namedTarget) === teamNameKey(currentTeamName);
-  } catch (_) {
-    return false;
-  }
 }
 
 function normalizeCalls(response) {
@@ -100,8 +83,12 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
     const calls = normalizeCalls(response);
 
     if (calls.length === 0) {
+      const text = typeof response.text === 'string' ? response.text.trim() : '';
+      if (!text) {
+        throw new ChatAgentProtocolError('Model returned neither text nor a tool call', { round });
+      }
       return {
-        text: typeof response.text === 'string' ? response.text : null,
+        text,
         tool_results: toolResults,
         primary_result: toolResults.at(-1)?.result || null,
         requires_confirmation: false,
@@ -133,11 +120,6 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
 
     const waveResults = [];
     for (const call of calls) {
-      if (call.name === 'preview_my_team_rename' && !isExplicitOwnTeamRename(message, context?.currentTeamName)) {
-        throw new ChatAgentProtocolError('Team rename requires an explicit request about the user’s own team', {
-          requestedTool: call.name
-        });
-      }
       const result = await registry.execute(call.name, call.args, context);
       const observation = {
         name: call.name,
@@ -177,6 +159,5 @@ module.exports = {
   MAX_TOOL_CALLS,
   MAX_TOOL_WAVES,
   parseDirectStepRequest,
-  isExplicitOwnTeamRename,
   runTrotterAgent
 };
