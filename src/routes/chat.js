@@ -372,7 +372,11 @@ function createChatRouter({
           client_timezone: req.get('X-Client-Timezone')
         });
         const extraction = await provider.extractImage(req.body, mimeType, context);
-        res.json({ extraction });
+        const activeChallenge = context.challenge ? {
+          start_date: context.challenge.start_date,
+          end_date: context.challenge.end_date
+        } : null;
+        res.json({ extraction, active_challenge: activeChallenge });
       } catch (error) {
         const reference = req.imageRequestReference;
         if (error.response || error.code === 'ECONNABORTED') {

@@ -256,10 +256,10 @@
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Trotter could not inspect that image.');
-        return data.extraction;
+        return data;
     }
 
-    function renderImageExtraction(extraction, blob) {
+    function renderImageExtraction(extraction, blob, activeChallenge = null) {
         if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
         state.imageObjectUrl = URL.createObjectURL(blob);
         if (!extraction.recognized || !extraction.entries.length) {
@@ -283,7 +283,13 @@
             row.className = 'chat-image-entry';
             const include = document.createElement('input');
             include.type = 'checkbox';
-            include.checked = Boolean(entry.date && Number.isInteger(entry.count));
+            const hasUsableEntry = Boolean(entry.date && Number.isInteger(entry.count));
+            const isInActiveChallenge = !activeChallenge || Boolean(
+                entry.date
+                && entry.date >= activeChallenge.start_date
+                && entry.date <= activeChallenge.end_date
+            );
+            include.checked = hasUsableEntry && isInActiveChallenge;
             include.setAttribute('aria-label', `Include extracted entry ${index + 1}`);
             const date = document.createElement('input');
             date.type = 'date';
@@ -300,7 +306,7 @@
             const detail = document.createElement('div');
             detail.className = 'chat-image-confidence';
             detail.style.gridColumn = '2 / -1';
-            detail.textContent = `${entry.confidence} confidence${entry.raw_date ? ` · read as “${entry.raw_date}”` : ''}${entry.note ? ` · ${entry.note}` : ''}`;
+            detail.textContent = `${entry.confidence} confidence${entry.raw_date ? ` · read as “${entry.raw_date}”` : ''}${entry.note ? ` · ${entry.note}` : ''}${hasUsableEntry && !isInActiveChallenge ? ' · outside active challenge — not selected' : ''}`;
             row.appendChild(detail);
             message.appendChild(row);
             rows.push({ include, date, count });
@@ -662,9 +668,9 @@
         const loading = createMessage('assistant', 'Trotter is squinting at the screenshot…', false);
         try {
             const blob = await prepareImage(file);
-            const extraction = await extractImage(blob);
+            const imageResult = await extractImage(blob);
             loading.remove();
-            renderImageExtraction(extraction, blob);
+            renderImageExtraction(imageResult.extraction, blob, imageResult.active_challenge);
         } catch (error) {
             loading.remove();
             createMessage('error', error.message, false);

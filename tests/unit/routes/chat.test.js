@@ -580,7 +580,18 @@ describe('Step Chat routes', () => {
       entries: [{ raw_date: 'Aug 20', date: '2026-08-20', count: 8000, confidence: 'high', note: '' }],
       warnings: []
     }));
-    const { app } = buildApp({ providerOverrides: { extractImage } });
+    const challenge = {
+      id: 9,
+      name: 'Test Challenge',
+      start_date: '2026-08-15',
+      end_date: '2026-08-31'
+    };
+    const { app } = buildApp({
+      providerOverrides: { extractImage },
+      serviceOverrides: {
+        getContext: jest.fn(async () => ({ currentDate: '2026-08-25', challenge }))
+      }
+    });
     const agent = request.agent(app);
     await agent.post('/test-login').expect(200);
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -592,11 +603,15 @@ describe('Step Chat routes', () => {
       .send(png)
       .expect(200);
     expect(extracted.body.extraction.recognized).toBe(true);
+    expect(extracted.body.active_challenge).toEqual({
+      start_date: '2026-08-15',
+      end_date: '2026-08-31'
+    });
     expect(extractImage).toHaveBeenCalledWith(expect.any(Buffer), 'image/png', {
       currentDate: '2026-08-25',
       clientDate: '2026-08-25',
       clientTimezone: 'America/Los_Angeles',
-      challenge: null
+      challenge
     });
 
     await agent.post('/api/chat/image/extract')

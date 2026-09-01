@@ -30,4 +30,13 @@ describe('Trotter image paste contract', () => {
     expect(js).toContain('if (state.imageBusy) {');
     expect(js).toContain('Trotter is already inspecting an image.');
   });
+
+  test('preselects extracted rows only when they are inside an active challenge', () => {
+    expect(js).toContain('renderImageExtraction(imageResult.extraction, blob, imageResult.active_challenge)');
+    expect(js).toContain('const isInActiveChallenge = !activeChallenge || Boolean(');
+    expect(js).toContain('entry.date >= activeChallenge.start_date');
+    expect(js).toContain('entry.date <= activeChallenge.end_date');
+    expect(js).toContain('include.checked = hasUsableEntry && isInActiveChallenge;');
+    expect(js).toContain('outside active challenge — not selected');
+  });
 });
