@@ -256,6 +256,73 @@ section:not(.hero) { margin: 0 0 110px; }
 .individual-podium-card p { margin: 5px 0; color: var(--muted); font-size: 13px; }
 .individual-podium-card .big-score { color: var(--ivory); font-size: 18px; font-weight: 800; }
 
+.club-200k {
+    position: relative;
+    padding: clamp(28px, 6vw, 68px);
+    border: 1px solid rgba(247, 200, 93, .48);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 12% 12%, rgba(247, 200, 93, .19), transparent 28%),
+        radial-gradient(circle at 90% 100%, rgba(124, 87, 196, .16), transparent 35%),
+        linear-gradient(145deg, #1d140b, #0e0b17 56%, #120d1d);
+    box-shadow: inset 0 0 0 5px rgba(247, 200, 93, .025), 0 35px 90px rgba(0, 0, 0, .3);
+    overflow: hidden;
+}
+.club-200k::before {
+    content: "MEMBERS ONLY  ·  200,000+  ·  PERFECT REPORTING  ·  MEMBERS ONLY  ·  200,000+  ·  PERFECT REPORTING";
+    position: absolute;
+    top: 17px;
+    right: 0;
+    left: 0;
+    color: rgba(247, 200, 93, .38);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: .24em;
+    text-align: center;
+    white-space: nowrap;
+}
+.club-200k-header { display: grid; grid-template-columns: minmax(180px, .45fr) minmax(0, 1.55fr); align-items: center; gap: clamp(25px, 5vw, 65px); margin-bottom: 45px; }
+.club-200k-mark {
+    display: grid;
+    place-content: center;
+    width: min(220px, 100%);
+    aspect-ratio: 1;
+    color: var(--gold);
+    border: 1px solid rgba(247, 200, 93, .48);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(247, 200, 93, .12), transparent 65%);
+    box-shadow: inset 0 0 35px rgba(247, 200, 93, .1), 0 0 50px rgba(247, 200, 93, .08);
+    text-align: center;
+}
+.club-200k-mark span { font-size: 10px; font-weight: 900; letter-spacing: .34em; }
+.club-200k-mark strong { display: block; margin: 4px 0; font: 500 clamp(46px, 7vw, 76px)/1 Georgia, serif; letter-spacing: -.06em; }
+.club-200k-mark i { font-size: 8px; font-style: normal; font-weight: 800; letter-spacing: .2em; }
+.club-200k-copy h2 { margin: 0 0 14px; font: 500 clamp(42px, 7vw, 76px)/.95 Georgia, serif; letter-spacing: -.05em; }
+.club-200k-copy > p:not(.eyebrow) { max-width: 720px; color: var(--muted); line-height: 1.55; }
+.club-200k-decree { color: var(--gold) !important; font-weight: 750; }
+.club-200k-members { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+.club-200k-member {
+    position: relative;
+    min-width: 0;
+    min-height: 155px;
+    padding: 20px;
+    border: 1px solid rgba(247, 200, 93, .14);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .035);
+}
+.club-200k-member::after {
+    content: attr(data-member-number);
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    color: rgba(247, 200, 93, .3);
+    font: 500 24px/1 Georgia, serif;
+}
+.club-200k-member h3 { max-width: calc(100% - 34px); margin: 25px 0 7px; font: 500 20px/1.1 Georgia, serif; overflow-wrap: anywhere; }
+.club-200k-member p { margin: 4px 0; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.club-200k-member .club-total { color: var(--ivory); font-size: 14px; font-weight: 850; }
+.club-200k-seal { color: var(--gold); font-size: 9px; font-weight: 900; letter-spacing: .13em; }
+
 .steps-reveal {
     padding: clamp(45px, 10vw, 100px) 20px;
     border-block: 1px solid var(--line);
@@ -306,6 +373,7 @@ td strong, tr.podium-row td { color: var(--ivory); }
     .hero { grid-template-columns: 1fr; min-height: 0; padding-top: 65px; }
     .wireframe-stage { width: min(520px, 100%); margin-inline: auto; }
     .members-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .club-200k-members { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .stat-plaque-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .team-podium-card > summary { grid-template-columns: 42px minmax(130px, 1fr) repeat(2, minmax(90px, auto)); }
     .team-podium-card > summary .metric:last-child { display: none; }
@@ -319,6 +387,10 @@ td strong, tr.podium-row td { color: var(--ivory); }
     .champion-grid, .individual-podium { grid-template-columns: 1fr; }
     .champion-card { min-height: 330px; }
     .individual-podium-card { min-height: 0; }
+    .club-200k { padding: 45px 17px 24px; }
+    .club-200k-header { grid-template-columns: 1fr; gap: 26px; margin-bottom: 28px; }
+    .club-200k-mark { width: 165px; }
+    .club-200k-members { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     section:not(.hero) { margin-bottom: 80px; }
     .team-podium-card > summary { grid-template-columns: 38px minmax(0, 1fr) minmax(85px, auto); gap: 10px; padding: 15px; }
     .team-podium-card > summary .metric:nth-last-child(-n+2) { display: none; }
@@ -336,7 +408,7 @@ td strong, tr.podium-row td { color: var(--ivory); }
 }
 
 @media (max-width: 360px) {
-    .stat-plaque-grid { grid-template-columns: 1fr; }
+    .club-200k-members, .stat-plaque-grid { grid-template-columns: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {

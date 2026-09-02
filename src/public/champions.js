@@ -64,6 +64,30 @@
         }).join('');
     }
 
+    function renderClub200K(data) {
+        const club = data.clubs?.two_hundred_k || {
+            threshold_steps: 200000,
+            required_reporting_rate: 100,
+            members: data.participant_standings.filter(person =>
+                person.days_reported === data.challenge.days && person.total_steps >= 200000
+            )
+        };
+        const clubTotal = club.total_steps ?? club.members.reduce((sum, person) => sum + person.total_steps, 0);
+        const share = club.share_of_challenge_steps ?? (
+            data.totals.steps > 0 ? (clubTotal * 100 / data.totals.steps) : 0
+        );
+        byId('club200KDecree').textContent = `${club.members.length} founding members combined for ${number(clubTotal)} steps—${number(share)}% of the entire challenge.`;
+        byId('club200KMembers').innerHTML = club.members.map((person, index) => `
+            <article class="club-200k-member" data-member-number="${String(index + 1).padStart(2, '0')}">
+                <span class="club-200k-seal">200K · 100% VERIFIED</span>
+                <h3>${escapeHtml(displayName(person.name))}</h3>
+                <p>${escapeHtml(person.team || 'Independent walker')}</p>
+                <p class="club-total">${number(person.total_steps)} steps</p>
+                <p>${number(person.average_steps)} / day · ${person.days_reported}/${data.challenge.days} reports</p>
+            </article>
+        `).join('');
+    }
+
     function renderChampionCards(data) {
         const team = data.podiums.teams[0];
         const person = data.podiums.individuals[0];
@@ -132,6 +156,7 @@
         renderChampionCards(data);
         renderTeamPodium(data.podiums.teams);
         renderIndividualPodium(data.podiums.individuals);
+        renderClub200K(data);
         renderSupportingStats(data);
         renderStandings(data);
 

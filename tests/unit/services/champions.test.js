@@ -34,9 +34,9 @@ describe('featured champions archive service', () => {
     const addComplete = (id, name, team, dailySteps) => {
       for (let day = 1; day <= 15; day += 1) rows.push(archiveRow(id, name, team, day, dailySteps));
     };
-    addComplete(1, 'alice.walker', 'Scrambled Legs', 100);
-    addComplete(2, 'sam.strider', 'Scrambled Legs', 80);
-    addComplete(3, 'indy.champion', 'Walkaholics', 120);
+    addComplete(1, 'alice.walker', 'Scrambled Legs', 15000);
+    addComplete(2, 'sam.strider', 'Scrambled Legs', 14000);
+    addComplete(3, 'indy.champion', 'Walkaholics', 20000);
     addComplete(4, 'walker.two', 'Walkaholics', 40);
     addComplete(5, 'third.place', 'Game of Soles', 70);
     rows.push(archiveRow(6, 'incomplete.walker', 'Game of Soles', 1, 1000));
@@ -54,6 +54,13 @@ describe('featured champions archive service', () => {
       ranked: false,
       rank: null
     });
+    expect(result.clubs.two_hundred_k).toMatchObject({
+      threshold_steps: 200000,
+      required_reporting_rate: 100
+    });
+    expect(result.clubs.two_hundred_k.members.map(row => row.name)).toEqual([
+      'indy.champion', 'alice.walker', 'sam.strider'
+    ]);
     expect(result.participant_standings.at(-1)).toMatchObject({
       name: 'incomplete.walker',
       ranked: false,
@@ -70,6 +77,24 @@ describe('featured champions archive service', () => {
       archive_id: 2,
       excluded_test_records: 1,
       roster_source: 'archive_step_team_snapshot'
+    });
+  });
+
+  test('Club 200K requires both 200,000 steps and every daily report', async () => {
+    const rows = [];
+    for (let day = 1; day <= 15; day += 1) {
+      rows.push(archiveRow(1, 'exact.member', 'A', day, day === 15 ? 13338 : 13333));
+      rows.push(archiveRow(2, 'under.member', 'A', day, 13333));
+      if (day < 15) rows.push(archiveRow(3, 'incomplete.member', 'B', day, 15000));
+    }
+
+    const result = await getFeaturedChampions(fakeDatabase(rows));
+
+    expect(result.clubs.two_hundred_k.members.map(row => row.name)).toEqual(['exact.member']);
+    expect(result.clubs.two_hundred_k.members[0]).toMatchObject({
+      total_steps: 200000,
+      days_reported: 15,
+      reporting_rate: 100
     });
   });
 
