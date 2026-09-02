@@ -762,25 +762,65 @@
         }
     }
 
+    function usesTouchKeyboard() {
+        return navigator.maxTouchPoints > 0
+            || Boolean(window.matchMedia?.('(hover: none), (pointer: coarse)').matches);
+    }
+
+    function isChatEditorFocused(overlay) {
+        const active = document.activeElement;
+        if (!active || !overlay.contains(active)) return false;
+        return active.matches('textarea, input:not([type="button"]):not([type="checkbox"]):not([type="file"]), select, [contenteditable="true"]');
+    }
+
     function syncVisualViewport() {
         const overlay = document.getElementById('stepChatOverlay');
         if (!overlay) return;
+
+        // visualViewport is needed while the iOS keyboard is open. After a
+        // blur, Safari can retain its keyboard-sized height and offsetTop
+        // without emitting the final resize event. Stop trusting those stale
+        // values as soon as no chat editor has focus and let 100dvh take over.
         const viewport = window.visualViewport;
-        overlay.style.setProperty('--chat-visual-height', `${Math.round(viewport?.height || window.innerHeight)}px`);
-        overlay.style.setProperty('--chat-visual-top', `${Math.round(viewport?.offsetTop || 0)}px`);
+        if (!viewport || !isChatEditorFocused(overlay)) {
+            overlay.style.removeProperty('--chat-visual-height');
+            overlay.style.removeProperty('--chat-visual-top');
+            return;
+        }
+        overlay.style.setProperty('--chat-visual-height', `${Math.round(viewport.height || window.innerHeight)}px`);
+        overlay.style.setProperty('--chat-visual-top', `${Math.round(viewport.offsetTop || 0)}px`);
+    }
+
+    let viewportSyncFrame = null;
+    let viewportSyncTimers = [];
+
+    function scheduleVisualViewportSync() {
+        syncVisualViewport();
+        if (viewportSyncFrame !== null) window.cancelAnimationFrame(viewportSyncFrame);
+        viewportSyncTimers.forEach(timer => window.clearTimeout(timer));
+        viewportSyncFrame = window.requestAnimationFrame(() => {
+            viewportSyncFrame = null;
+            syncVisualViewport();
+        });
+        // iOS keyboard and browser chrome transitions do not have a reliable
+        // completion event. Recheck across the animation's settling window.
+        viewportSyncTimers = [80, 250, 500].map(delay => window.setTimeout(syncVisualViewport, delay));
     }
 
     function openChat() {
         const overlay = document.getElementById('stepChatOverlay');
-        syncVisualViewport();
         document.body.classList.add('trotter-open');
         overlay.hidden = false;
         document.body.style.overflow = 'hidden';
         document.getElementById('chatInput').focus();
+        scheduleVisualViewportSync();
     }
 
     function closeChat() {
-        document.getElementById('stepChatOverlay').hidden = true;
+        const overlay = document.getElementById('stepChatOverlay');
+        overlay.hidden = true;
+        overlay.style.removeProperty('--chat-visual-height');
+        overlay.style.removeProperty('--chat-visual-top');
         document.body.classList.remove('trotter-open');
         document.body.style.overflow = '';
         document.getElementById('chatOpenBtn').focus();
@@ -815,7 +855,10 @@
         syncVisualViewport();
         window.visualViewport?.addEventListener('resize', syncVisualViewport);
         window.visualViewport?.addEventListener('scroll', syncVisualViewport);
-        window.addEventListener('orientationchange', syncVisualViewport);
+        window.addEventListener('resize', scheduleVisualViewportSync);
+        window.addEventListener('orientationchange', scheduleVisualViewportSync);
+        document.addEventListener('focusin', scheduleVisualViewportSync);
+        document.addEventListener('focusout', scheduleVisualViewportSync);
         window.addEventListener('beforeunload', () => {
             if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
         });
@@ -835,6 +878,7 @@
             processImageFile(file);
         });
         input.addEventListener('focus', () => {
+            scheduleVisualViewportSync();
             setTimeout(() => {
                 syncVisualViewport();
                 transcript.scrollTop = transcript.scrollHeight;
@@ -919,6 +963,14 @@
             createMessage('user', message);
             input.value = '';
             resizeComposerInput();
+            // A delayed focus() after the request is no longer backed by a
+            // user gesture on iOS. Safari may scroll to the textarea without
+            // reopening the keyboard, stranding visualViewport at its old
+            // keyboard dimensions. Make mobile keyboard dismissal explicit.
+            if (usesTouchKeyboard()) {
+                input.blur();
+                scheduleVisualViewportSync();
+            }
             sendButton.disabled = true;
             sendButton.textContent = 'Thinking…';
             try {
@@ -934,7 +986,8 @@
             } finally {
                 sendButton.disabled = false;
                 sendButton.textContent = 'Send';
-                input.focus();
+                if (!usesTouchKeyboard()) input.focus();
+                scheduleVisualViewportSync();
             }
         });
     });
