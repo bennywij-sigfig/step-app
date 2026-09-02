@@ -9,6 +9,7 @@ const FEATURED_CHALLENGE = Object.freeze({
 const STEPS_PER_MILE = 2000;
 const KM_PER_MILE = 1.609344;
 const MARATHON_KM = 42.195;
+const CLUB_200K_MIN_STEPS = 200000;
 const ROUTE = Object.freeze({
   delhiToSingaporeKm: 4142.4938597351265,
   singaporeToSanFranciscoKm: 13582.096535722669
@@ -184,6 +185,10 @@ async function getFeaturedChampions(database) {
   const averageCollectiveDay = totalDays > 0 ? totalSteps / totalDays : 0;
   const perfectReporters = participants.filter(row => row.days_reported === totalDays).length;
   const expectedReports = participants.length * totalDays;
+  const club200KMembers = participants.filter(participant =>
+    participant.days_reported === totalDays && participant.total_steps >= CLUB_200K_MIN_STEPS
+  );
+  const club200KTotalSteps = club200KMembers.reduce((sum, participant) => sum + participant.total_steps, 0);
 
   return {
     season: FEATURED_CHALLENGE.season,
@@ -197,6 +202,15 @@ async function getFeaturedChampions(database) {
     podiums: {
       individuals: participants.filter(row => row.ranked && row.rank <= 3),
       teams: teams.filter(row => row.ranked && row.rank <= 3)
+    },
+    clubs: {
+      two_hundred_k: {
+        threshold_steps: CLUB_200K_MIN_STEPS,
+        required_reporting_rate: 100,
+        members: club200KMembers,
+        total_steps: club200KTotalSteps,
+        share_of_challenge_steps: totalSteps > 0 ? (club200KTotalSteps * 100) / totalSteps : 0
+      }
     },
     totals: {
       steps: totalSteps,
@@ -242,5 +256,6 @@ module.exports = {
   challengeDays,
   buildParticipants,
   buildTeams,
-  FEATURED_CHALLENGE
+  FEATURED_CHALLENGE,
+  CLUB_200K_MIN_STEPS
 };

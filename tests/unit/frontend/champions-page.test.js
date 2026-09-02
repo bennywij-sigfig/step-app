@@ -22,6 +22,7 @@ describe('Champions Pantheon frontend', () => {
   test('provides podiums, aggregate story, and complete standings', () => {
     for (const id of [
       'teamChampion', 'individualChampion', 'teamPodium', 'individualPodium',
+      'club200KTitle', 'club200KDecree', 'club200KMembers',
       'totalSteps', 'routeGraphic', 'supportingStats', 'teamStandings',
       'participantStandings'
     ]) {
@@ -30,7 +31,10 @@ describe('Champions Pantheon frontend', () => {
     expect(page).toContain('Most Improved');
     expect(page).toContain('Most Consistent');
     expect(page).toContain('2026 vs. 2025');
+    expect(page).toContain('200K Club · Class of 2026');
+    expect(page).toContain('reach 200,000 steps with 100% reporting');
     expect(script).toContain("fetch('/api/champions'");
+    expect(script).toContain('function renderClub200K(data)');
     expect(script).toContain('team.members');
     expect(script).toContain('--podium-height');
     expect(styles).toContain('min-height: var(--podium-height, 190px)');

@@ -163,6 +163,31 @@ Suggested copy:
 
 This works as a secondary tile. The route visualization is more distinctive and should get priority.
 
+### 6. Club 200K
+
+**16 participants recorded at least 200,000 steps and reported all 15 days.** Together they contributed 4,843,448 steps, or 53.6% of the cleaned challenge total.
+
+Verified founding class, ordered by total steps:
+
+1. akshay.sharma — 594,176
+2. hardik.agarwal — 536,846
+3. vaibhav.sharma — 392,763
+4. ajay.srikumar — 311,464
+5. olivia.jiang — 304,169
+6. nikhil.shrivastava — 303,743
+7. anurag.shrivastava — 303,483
+8. Benny — 279,310
+9. william.matsuno — 273,475
+10. Benazir — 227,479
+11. vaibhav.shinghal — 224,522
+12. sachin.goyal — 224,261
+13. sanketh.sampara — 223,358
+14. shashi.pandit — 222,849
+15. sai.krishnaattaluri — 221,495
+16. alfiya.memon — 200,055
+
+The qualification is independent of podium rank: `total_steps >= 200,000` **and** `days_reported = 15`. Promote the same clearly stated qualification before and during the 2026 challenge.
+
 ## Recommended public data set
 
 ### Hero awards
@@ -181,8 +206,9 @@ This works as a secondary tile. The route visualization is more distinctive and 
 - Estimated distance: about 7,300 km.
 - Route position: Delhi → Singapore complete, 23% toward San Francisco.
 - Approximately 172 marathons.
+- 16 founding Club 200K members contributing 4,843,448 steps.
 
-Avoid putting all of these above the fold. The strongest sequence is: champions, nine-million-step reveal, route, then a small stats grid.
+Avoid putting all of these above the fold. The strongest sequence is: champions, Club 200K, nine-million-step reveal, route, then a small stats grid.
 
 ## Trophy Case UI plan
 
