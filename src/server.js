@@ -10,6 +10,7 @@ const { createSessionLifetimeMiddleware } = require('./middleware/sessionLifetim
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 let db = require('./database');
+let champions2025Cache = null;
 const { isDevelopment, devLog } = require('./utils/dev');
 const {
   requireAuth,
@@ -34,6 +35,7 @@ const { sendEmail } = require('./services/email');
 const { createGeminiChatProvider } = require('./services/chat-provider');
 const { createStepChatService } = require('./services/step-chat');
 const { createChatToolRegistry } = require('./services/chat-tools');
+const { getFeaturedChampions } = require('./services/champions');
 const { createChatRouter } = require('./routes/chat');
 const { createRestApiRouter } = require('./routes/rest-api');
 const { createApiTokenAdminRouter } = require('./routes/api-token-admin');
@@ -1077,6 +1079,27 @@ app.get('/dashboard', requireAuth, (req, res) => {
 // Redirect dashboard.html to protected route
 app.get('/dashboard.html', requireAuth, (req, res) => {
   res.redirect('/dashboard');
+});
+
+// Past champions (protected)
+app.get('/champions', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'champions.html'));
+});
+
+app.get('/api/champions', apiLimiter, requireApiAuth, async (req, res) => {
+  try {
+    if (!champions2025Cache) {
+      champions2025Cache = await getFeaturedChampions(db);
+    }
+    res.set('Cache-Control', 'private, max-age=3600');
+    res.json(champions2025Cache);
+  } catch (error) {
+    if (error.code === 'CHAMPIONS_ARCHIVE_NOT_FOUND') {
+      return res.status(404).json({ error: error.message });
+    }
+    console.error('Error loading the 2025 champions archive:', error);
+    res.status(500).json({ error: 'Failed to load champions' });
+  }
 });
 
 // API to get current user info

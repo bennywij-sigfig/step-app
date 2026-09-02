@@ -227,6 +227,17 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     border-color: var(--line) !important;
 }
 
+#championsCta:hover,
+#championsCta:focus-visible {
+    transform: translateY(-2px);
+    box-shadow: 0 7px 18px rgba(120, 53, 15, 0.42) !important;
+}
+
+#championsCta:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+}
+
 #usersTable,
 #manageTeamsTable,
 #challengesTable,

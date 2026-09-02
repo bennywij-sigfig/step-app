@@ -98,4 +98,11 @@ describe('dashboard design contract', () => {
     expect(reportingFormatter).not.toMatch(/📋|style=/);
     expect(memberFormatter).not.toMatch(/👥|style=/);
   });
+
+  test('formats reported day counts with singular and plural grammar', () => {
+    const dayFormatter = dashboard.match(/function formatDayCount[\s\S]*?\n\}/)?.[0] || '';
+    expect(dayFormatter).toContain("count === 1 ? '' : 's'");
+    expect(dashboard).not.toMatch(/days_logged\} days/);
+    expect(dashboard.match(/formatDayCount\([^)]*\.days_logged\)/g)).toHaveLength(4);
+  });
 });

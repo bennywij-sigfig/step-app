@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#090714">
+    <title>The Pantheon — Step Challenge Champions</title>
+    <link rel="stylesheet" href="/champions.css">
+</head>
+<body>
+    <a class="skip-link" href="#championsContent">Skip to champions</a>
+    <div class="cosmos" aria-hidden="true"></div>
+
+    <header class="pantheon-header">
+        <a href="/dashboard" class="back-link" aria-label="Back to dashboard">← Dashboard</a>
+        <div class="season-pill">EST. MMXXV</div>
+    </header>
+
+    <main id="championsContent">
+        <section class="hero" aria-labelledby="pantheonTitle">
+            <div class="hero-copy">
+                <p class="eyebrow">THE IMMORTALS WALK AMONG US</p>
+                <h1 id="pantheonTitle">The Pantheon</h1>
+                <p class="hero-decree">A hall of glory for heroic calves, unreasonable daily averages, and those who reported every last step.</p>
+                <div class="year-switcher" aria-label="Championship year">
+                    <button type="button" class="year active" aria-current="true">2025</button>
+                    <span class="year future" aria-disabled="true">2026 · awaiting destiny</span>
+                </div>
+            </div>
+            <div class="wireframe-stage" id="wireframeStage">
+                <canvas id="trophyShoeCanvas" aria-hidden="true"></canvas>
+                <svg class="wireframe-fallback" viewBox="0 0 320 220" aria-hidden="true">
+                    <path d="M57 164h207l-9 24H65zM91 158c-7-30-5-68 7-105h43c9 38 2 68 13 82 13 16 46 4 69 8 18 3 29 14 27 24H77c-10 0-15-2-20-3Z"/>
+                    <ellipse cx="248" cy="143" rx="13" ry="11"/><ellipse cx="260" cy="125" rx="11" ry="10"/>
+                    <ellipse cx="258" cy="108" rx="9" ry="8"/><ellipse cx="250" cy="94" rx="8" ry="7"/><ellipse cx="238" cy="84" rx="6" ry="6"/>
+                    <path d="M103 53h28m-35 35h41m-43 34c42 7 66 30 118 31M110 45l-9-19m19 18V19m10 27 13-18"/>
+                </svg>
+                <div class="stage-plaque">THE TROPHY FOOT</div>
+            </div>
+        </section>
+
+        <div id="championsLoading" class="loading-oracle" role="status">
+            <span class="laurel">☙</span> Consulting the sacred archive… <span class="laurel">❧</span>
+        </div>
+        <div id="championsError" class="error-state" hidden>
+            <h2>The archive doors are stuck.</h2>
+            <p>Return from the underworld shortly and try again.</p>
+            <button type="button" id="retryChampions">Try again</button>
+        </div>
+
+        <div id="championsExperience" hidden>
+            <section class="awards-section" aria-labelledby="awardsTitle">
+                <div class="section-heading">
+                    <p class="eyebrow">CROWNED IN 2025</p>
+                    <h2 id="awardsTitle">The highest step of the podium</h2>
+                </div>
+                <div class="champion-grid">
+                    <article class="champion-card team-champion" id="teamChampion"></article>
+                    <article class="champion-card individual-champion" id="individualChampion"></article>
+                </div>
+            </section>
+
+            <section class="podium-section" aria-labelledby="teamPodiumTitle">
+                <div class="section-heading">
+                    <p class="eyebrow">LEGIONS OF LEGEND</p>
+                    <h2 id="teamPodiumTitle">Team podium</h2>
+                    <p>Champion first, then the two nearest claimants to the throne. Open a team to meet the full party.</p>
+                </div>
+                <div id="teamPodium" class="podium-list"></div>
+            </section>
+
+            <section class="podium-section" aria-labelledby="individualPodiumTitle">
+                <div class="section-heading">
+                    <p class="eyebrow">MORTALS, ALLEGEDLY</p>
+                    <h2 id="individualPodiumTitle">Individual podium</h2>
+                </div>
+                <div id="individualPodium" class="individual-podium"></div>
+            </section>
+
+            <section class="steps-reveal" aria-labelledby="totalStepsTitle">
+                <p class="eyebrow">THE GRAND TOTAL</p>
+                <h2 id="totalStepsTitle"><span id="totalSteps">—</span> steps</h2>
+                <p id="totalStepsSummary"></p>
+            </section>
+
+            <section class="journey-section" aria-labelledby="journeyTitle">
+                <div class="section-heading">
+                    <p class="eyebrow">ONE VERY LONG WALK</p>
+                    <h2 id="journeyTitle">Delhi → Singapore → San Francisco</h2>
+                    <p id="journeySummary"></p>
+                </div>
+                <div class="route" role="img" id="routeGraphic" aria-label="Estimated collective route progress">
+                    <div class="route-city city-delhi"><span class="city-dot complete"></span><strong>Delhi</strong></div>
+                    <div class="route-leg complete"><span></span></div>
+                    <div class="route-city city-singapore"><span class="city-dot complete"></span><strong>Singapore</strong></div>
+                    <div class="route-leg onward"><span id="routeProgress"></span><i id="routeMarker" aria-hidden="true">👟</i></div>
+                    <div class="route-city city-sf"><span class="city-dot"></span><strong>San Francisco</strong></div>
+                </div>
+                <details class="method-note">
+                    <summary>How far is that, approximately?</summary>
+                    <p id="distanceMethod"></p>
+                </details>
+            </section>
+
+            <section class="stat-plaque-grid" id="supportingStats" aria-label="Notable championship statistics"></section>
+
+            <section class="standings-section" aria-labelledby="finalStandingsTitle">
+                <div class="section-heading">
+                    <p class="eyebrow">THE FINAL TABLETS</p>
+                    <h2 id="finalStandingsTitle">Final results</h2>
+                </div>
+
+                <details class="standings-disclosure" open>
+                    <summary>All team totals and averages <span id="teamCount"></span></summary>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>Place</th><th>Team</th><th>Members</th><th>Total</th><th>Avg / member-day</th><th>Reporting</th></tr></thead>
+                            <tbody id="teamStandings"></tbody>
+                        </table>
+                    </div>
+                </details>
+
+                <details class="standings-disclosure">
+                    <summary>All participant totals and averages <span id="participantCount"></span></summary>
+                    <div class="table-scroll">
+                        <table>
+                            <thead><tr><th>Place</th><th>Participant</th><th>Team</th><th>Total</th><th>Avg / day</th><th>Days</th></tr></thead>
+                            <tbody id="participantStandings"></tbody>
+                        </table>
+                    </div>
+                </details>
+            </section>
+
+            <section class="next-year" aria-labelledby="nextYearTitle">
+                <p class="eyebrow">THE ORACLE FORETELLS</p>
+                <h2 id="nextYearTitle">More honors await in 2026</h2>
+                <div class="future-awards">
+                    <span>⚡ Most Improved</span>
+                    <span>⚖ Most Consistent</span>
+                    <span>↗ 2026 vs. 2025</span>
+                </div>
+                <p>These tablets awaken after the 2026 challenge closes.</p>
+            </section>
+        </div>
+    </main>
+
+    <footer class="pantheon-footer">
+        <span>SigFig Step Challenge 2025 · August 1–15</span>
+        <span>Final results from the verified challenge archive</span>
+    </footer>
+
+    <script src="/champions-wireframe.js"></script>
+    <script src="/champions.js"></script>
+</body>
+</html>
