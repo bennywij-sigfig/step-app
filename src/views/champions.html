@@ -106,12 +106,71 @@
                     <h2 id="journeyTitle">Delhi → Singapore → San Francisco</h2>
                     <p id="journeySummary"></p>
                 </div>
-                <div class="route" role="img" id="routeGraphic" aria-label="Estimated collective route progress">
-                    <div class="route-city city-delhi"><span class="city-dot complete"></span><strong>Delhi</strong></div>
+                <div class="route-globe" role="img" id="routeGraphic" tabindex="0" aria-label="Estimated collective route progress. Drag the globe or use the left and right arrow keys to rotate it.">
+                    <canvas id="journeyGlobeCanvas" aria-hidden="true"></canvas>
+                    <svg class="route-globe-fallback" viewBox="0 0 900 480" aria-hidden="true" focusable="false">
+                        <defs>
+                            <radialGradient id="globeOcean" cx="38%" cy="28%" r="72%">
+                                <stop offset="0" stop-color="#312651"/>
+                                <stop offset=".58" stop-color="#15132c"/>
+                                <stop offset="1" stop-color="#090815"/>
+                            </radialGradient>
+                            <clipPath id="globeClip"><circle cx="450" cy="238" r="205"/></clipPath>
+                            <filter id="routeGlow" x="-30%" y="-30%" width="160%" height="160%">
+                                <feGaussianBlur stdDeviation="3" result="blur"/>
+                                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                        </defs>
+                        <circle class="globe-orbit" cx="450" cy="238" r="220"/>
+                        <circle class="globe-ocean" cx="450" cy="238" r="205"/>
+                        <g class="globe-grid" clip-path="url(#globeClip)">
+                            <ellipse cx="450" cy="238" rx="205" ry="70"/>
+                            <ellipse cx="450" cy="238" rx="205" ry="138"/>
+                            <ellipse cx="450" cy="238" rx="82" ry="205"/>
+                            <ellipse cx="450" cy="238" rx="154" ry="205"/>
+                            <path d="M245 238H655"/>
+                        </g>
+                        <g clip-path="url(#globeClip)">
+                            <g id="globeSurface">
+                                <g class="globe-land">
+                                    <!-- Eurasia, articulated enough for India and Southeast Asia to read clearly. -->
+                                    <path d="M151 112 L178 88 L211 82 L236 63 L270 68 L299 56 L330 66 L358 58 L389 72 L421 67 L449 79 L480 76 L510 91 L541 96 L566 119 L553 139 L529 148 L514 166 L493 170 L474 190 L453 187 L432 205 L412 197 L398 180 L374 174 L352 160 L326 167 L301 157 L277 168 L251 151 L224 158 L198 145 L169 147 Z"/>
+                                    <!-- Indian subcontinent and its recognizable taper. -->
+                                    <path class="subcontinent" d="M326 167 L351 172 L375 185 L391 205 L386 229 L374 249 L364 273 L351 257 L342 232 L328 215 L317 196 Z"/>
+                                    <path class="coast-detail" d="M351 172 L346 193 L354 211 L350 232 M374 185 L365 205 L368 226"/>
+                                    <path class="island" d="M364 282 l7 8 -5 13 -8 -11z"/>
+                                    <!-- Indochina, the Malay peninsula, and island chain to Singapore. -->
+                                    <path d="M394 197 L417 205 L437 220 L448 239 L444 260 L451 278 L446 301 L454 310 L443 318 L434 298 L435 274 L424 249 L405 231 L388 219 Z"/>
+                                    <path class="island" d="M467 280 l20 8 13 13 -28 2z M501 307 l31 7 17 17 -39 -6z"/>
+                                    <!-- Africa and Australia remain secondary but less block-like. -->
+                                    <path d="M205 204 L237 192 L274 201 L306 225 L322 260 L315 303 L294 349 L269 390 L246 365 L230 324 L211 294 L192 252 Z"/>
+                                    <path d="M466 307 L492 291 L526 294 L555 313 L572 343 L559 374 L531 394 L493 390 L467 369 L451 340 Z"/>
+                                    <!-- North America waits beyond the Pacific-facing rim. -->
+                                    <path d="M675 105 L706 79 L744 68 L781 78 L817 94 L848 121 L840 153 L812 174 L786 169 L770 196 L744 205 L719 188 L701 160 L679 146 Z"/>
+                                    <path d="M755 205 L772 218 L780 244 L769 269 L753 248 L746 223 Z"/>
+                                </g>
+                            <path class="journey-track" d="M350 180 C365 225 390 260 450 310 C510 360 585 76 700 170"/>
+                            <path class="journey-progress" id="routeDelhiSingapore" d="M350 180 C365 225 390 260 450 310"/>
+                            <path class="journey-progress" id="routeOnward" d="M450 310 C510 360 585 76 700 170"/>
+                            <g class="globe-city city-delhi" transform="translate(350 180)"><circle r="7"/><text x="14" y="-16">DELHI</text></g>
+                            <g class="globe-city city-singapore" transform="translate(450 310)"><circle r="7"/><text x="16" y="22">SINGAPORE</text></g>
+                            <g class="globe-city city-sf" transform="translate(700 170)"><circle r="7"/><text x="-15" y="-16" text-anchor="end">SAN FRANCISCO</text></g>
+                            <g class="route-shoe" id="routeMarker" transform="translate(350 180)">
+                                <circle r="20"/>
+                                <text text-anchor="middle" dominant-baseline="central">👟</text>
+                            </g>
+                            </g>
+                        </g>
+                    </svg>
+                    <p class="route-caption">THE FELLOWSHIP'S RECORDED PASSAGE</p>
+                </div>
+                <div class="route" id="routeLinear" aria-hidden="true">
+                    <div class="route-city"><span class="city-dot complete"></span><strong>Delhi</strong></div>
                     <div class="route-leg complete"><span></span></div>
-                    <div class="route-city city-singapore"><span class="city-dot complete"></span><strong>Singapore</strong></div>
-                    <div class="route-leg onward"><span id="routeProgress"></span><i id="routeMarker" aria-hidden="true">👟</i></div>
-                    <div class="route-city city-sf"><span class="city-dot"></span><strong>San Francisco</strong></div>
+                    <div class="route-city"><span class="city-dot complete"></span><strong>Singapore</strong></div>
+                    <div class="route-leg onward"><span id="routeProgress"></span></div>
+                    <div class="route-city"><span class="city-dot"></span><strong>San Francisco</strong></div>
+                    <i class="route-linear-shoe" id="routeLinearMarker">👟</i>
                 </div>
                 <details class="method-note">
                     <summary>How far is that, approximately?</summary>
@@ -182,6 +241,8 @@
     </footer>
 
     <script src="/champions-wireframe.js"></script>
+    <script src="/world-land-110m.js"></script>
+    <script src="/champions-globe.js"></script>
     <script src="/champions.js"></script>
 </body>
 </html>

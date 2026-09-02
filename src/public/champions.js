@@ -60,6 +60,110 @@
         }, 1000);
     }
 
+    function prepareJourneyAnimation(routePercent) {
+        const globe = byId('routeGraphic');
+        const canvas = byId('journeyGlobeCanvas');
+        const linearRoute = byId('routeLinear');
+        const linearMarker = byId('routeLinearMarker');
+        const onwardFraction = routePercent / 100;
+        let firstLegShare = 0.5;
+        let linearWaypoints = null;
+        let lastProgress = 0;
+        let started = false;
+
+        function measureLinearWaypoints() {
+            const routeRect = linearRoute.getBoundingClientRect();
+            linearWaypoints = [...linearRoute.querySelectorAll('.city-dot')].map(dot => {
+                const rect = dot.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2 - routeRect.left,
+                    y: rect.top + rect.height / 2 - routeRect.top
+                };
+            });
+        }
+
+        function paintLinearRoute(progress, measuredFirstLegShare = firstLegShare) {
+            firstLegShare = measuredFirstLegShare;
+            lastProgress = progress;
+            if (!linearWaypoints || linearWaypoints.length !== 3) measureLinearWaypoints();
+            const [delhi, singapore, sanFrancisco] = linearWaypoints;
+            const finalPoint = {
+                x: singapore.x + (sanFrancisco.x - singapore.x) * onwardFraction,
+                y: singapore.y + (sanFrancisco.y - singapore.y) * onwardFraction
+            };
+            const onFirstLeg = progress <= firstLegShare;
+            const start = onFirstLeg ? delhi : singapore;
+            const end = onFirstLeg ? singapore : finalPoint;
+            const segmentProgress = onFirstLeg
+                ? progress / firstLegShare
+                : (progress - firstLegShare) / (1 - firstLegShare);
+            linearMarker.style.left = `${start.x + (end.x - start.x) * segmentProgress}px`;
+            linearMarker.style.top = `${start.y + (end.y - start.y) * segmentProgress}px`;
+            const onwardProgress = onFirstLeg ? 0 : segmentProgress * routePercent;
+            linearRoute.style.setProperty('--route-progress', `${onwardProgress}%`);
+        }
+
+        const renderer = window.PantheonGlobe?.create({
+            container: globe,
+            canvas,
+            landRings: window.PANTHEON_LAND_RINGS,
+            onwardFraction,
+            onProgress: paintLinearRoute
+        });
+        if (renderer) firstLegShare = renderer.firstLegShare;
+
+        function paint(progress) {
+            if (renderer) {
+                renderer.setProgress(progress);
+            } else {
+                paintLinearRoute(progress);
+            }
+        }
+
+        function play() {
+            if (started) return;
+            started = true;
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                paint(1);
+                return;
+            }
+            const startedAt = performance.now() + 700;
+            const duration = 4200;
+            let lastPaintAt = 0;
+            const frame = now => {
+                if (now < startedAt) {
+                    requestAnimationFrame(frame);
+                    return;
+                }
+                const progress = Math.min(1, (now - startedAt) / duration);
+                // Thirty frames per second is ample for this small globe and
+                // avoids repeatedly projecting 5,000+ coastline points on mobile.
+                if (progress === 1 || now - lastPaintAt >= 32) {
+                    lastPaintAt = now;
+                    paint(progress);
+                }
+                if (progress < 1) requestAnimationFrame(frame);
+            };
+            requestAnimationFrame(frame);
+        }
+
+        paint(0);
+        window.addEventListener('resize', () => {
+            linearWaypoints = null;
+            paintLinearRoute(lastProgress);
+        }, { passive: true });
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver(entries => {
+                if (!entries.some(entry => entry.isIntersecting)) return;
+                observer.disconnect();
+                play();
+            }, { threshold: 0.28 });
+            observer.observe(globe);
+        } else {
+            play();
+        }
+    }
+
     function memberTiles(members) {
         return members.map(member => `
             <div class="member-tile">
@@ -201,15 +305,14 @@
         byId('totalStepsSummary').textContent = `${data.totals.participants} people. ${data.totals.teams} teams. ${data.challenge.days} days. One magnificently overworked step counter.`;
 
         const routePercent = Math.max(0, Math.min(100, data.journey.second_leg_progress_percent));
-        byId('routeGraphic').style.setProperty('--route-progress', '0%');
-        byId('routeGraphic').setAttribute('aria-label', `About ${number(data.journey.estimated_km)} kilometers: Delhi to Singapore, then ${number(routePercent)} percent of the way toward San Francisco.`);
+        byId('routeGraphic').setAttribute('aria-label', `About ${number(data.journey.estimated_km)} kilometers: Delhi to Singapore, then ${number(routePercent)} percent of the way toward San Francisco. Drag the globe or use the left and right arrow keys to rotate it.`);
         byId('journeySummary').textContent = `About ${number(data.journey.estimated_km)} km together—Delhi to Singapore, then nearly a quarter of the way to San Francisco.`;
         byId('distanceMethod').textContent = `This playful estimate uses ${number(data.journey.steps_per_mile_assumption)} steps per mile and fixed great-circle distances between the three cities. It is an illustration, not a claim that everyone shares the same stride.`;
 
         byId('championsLoading').hidden = true;
         byId('championsError').hidden = true;
         byId('championsExperience').hidden = false;
-        requestAnimationFrame(() => byId('routeGraphic').style.setProperty('--route-progress', `${routePercent}%`));
+        prepareJourneyAnimation(routePercent);
     }
 
     async function loadChampions() {

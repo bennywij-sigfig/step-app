@@ -9,6 +9,8 @@ describe('Champions Pantheon frontend', () => {
   const page = read('src/views/champions.html');
   const script = read('src/public/champions.js');
   const wireframe = read('src/public/champions-wireframe.js');
+  const globe = read('src/public/champions-globe.js');
+  const land = read('src/public/world-land-110m.js');
   const styles = read('src/public/champions.css');
 
   test('puts the Pantheon first and the Trotter game last in Tidbits', () => {
@@ -38,6 +40,34 @@ describe('Champions Pantheon frontend', () => {
     expect(script).toContain('team.members');
     expect(script).toContain('--podium-height');
     expect(styles).toContain('min-height: var(--podium-height, 190px)');
+  });
+
+  test('animates the journey at constant speed across a draggable projected globe', () => {
+    for (const id of ['routeGraphic', 'journeyGlobeCanvas', 'routeLinear', 'routeLinearMarker']) {
+      expect(page).toContain(`id="${id}"`);
+    }
+    expect(page).toContain('class="route-globe-fallback"');
+    expect(page).toContain('src="/world-land-110m.js"');
+    expect(page).toContain('src="/champions-globe.js"');
+    expect(page).toContain('tabindex="0"');
+    expect(script).toContain('function prepareJourneyAnimation(routePercent)');
+    expect(script).toContain('window.PantheonGlobe?.create');
+    expect(script).toContain("linearRoute.querySelectorAll('.city-dot')");
+    expect(script).toContain('(now - startedAt) / duration');
+    expect(script).not.toContain('Math.pow(1 - linearProgress');
+    expect(script).toContain('observer.observe(globe)');
+    expect(globe).toContain('const greatCirclePoint =');
+    expect(globe).toContain('function project([longitude, latitude])');
+    expect(globe).toContain('const firstLegShare = totalDistance ? firstDistance / totalDistance : 1');
+    expect(globe).toContain("container.addEventListener('pointerdown'");
+    expect(globe).toContain("container.addEventListener('pointermove'");
+    expect(globe).toContain("container.addEventListener('keydown'");
+    expect(land).toContain('Natural Earth 1:110m land polygons (public domain)');
+    expect(land.length).toBeGreaterThan(50000);
+    expect(styles).toContain('#journeyGlobeCanvas');
+    expect(styles).toContain('.route-globe.no-canvas .route-globe-fallback');
+    expect(styles).toContain('.route-globe.is-dragging');
+    expect(styles).toMatch(/\.route\s*\{[\s\S]*?grid-template-columns/);
   });
 
   test('ends with an ornate Pacific-time countdown to the 2026 challenge close', () => {
