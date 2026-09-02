@@ -949,7 +949,9 @@
             // Safari own all viewport panning and restoration.
             if (usesTouchKeyboard()) input.blur();
             sendButton.disabled = true;
-            sendButton.textContent = 'Thinking…';
+            sendButton.textContent = '…';
+            sendButton.setAttribute('aria-label', 'Trotter is thinking');
+            sendButton.setAttribute('aria-busy', 'true');
             try {
                 const payload = await postJson('/api/chat', {
                     message,
@@ -963,6 +965,8 @@
             } finally {
                 sendButton.disabled = false;
                 sendButton.textContent = 'Send';
+                sendButton.removeAttribute('aria-label');
+                sendButton.removeAttribute('aria-busy');
                 if (!usesTouchKeyboard()) input.focus();
             }
         });

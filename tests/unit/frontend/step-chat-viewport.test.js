@@ -48,9 +48,17 @@ describe('Trotter standalone mobile layout contract', () => {
     expect(js).not.toContain("sendButton.textContent = 'Send';\n                input.focus();");
   });
 
+  test('uses a compact accessible send-progress label that cannot clip', () => {
+    expect(js).toContain("sendButton.textContent = '…'");
+    expect(js).not.toContain("sendButton.textContent = 'Thinking…'");
+    expect(js).toContain("sendButton.setAttribute('aria-label', 'Trotter is thinking')");
+    expect(js).toContain("sendButton.setAttribute('aria-busy', 'true')");
+    expect(js).toContain("sendButton.removeAttribute('aria-busy')");
+  });
+
   test('uses versioned chat assets and responsive desktop/mobile shells', () => {
     expect(page).toContain('/step-chat.css?v=20260902-standalone-v3');
-    expect(page).toContain('/step-chat.js?v=20260902-standalone-v2');
+    expect(page).toContain('/step-chat.js?v=20260902-standalone-v3');
     expect(css).toContain('width: min(920px, 100%);');
     expect(css).toContain('height: min(780px, calc(var(--chat-visible-height, 100dvh) - clamp(24px, 6vw, 56px)));');
     expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?height: var\(--chat-visible-height, 100dvh\)/);
