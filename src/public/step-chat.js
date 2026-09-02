@@ -765,6 +765,39 @@
             || Boolean(window.matchMedia?.('(hover: none), (pointer: coarse)').matches);
     }
 
+    function initializeTouchViewport(shell, input) {
+        const viewport = window.visualViewport;
+        if (!viewport || !usesTouchKeyboard()) return;
+
+        document.body.classList.add('chat-touch-viewport');
+        let pendingFrame = null;
+        const sync = () => {
+            pendingFrame = null;
+            shell.style.setProperty('--chat-visible-height', `${Math.round(viewport.height)}px`);
+            // Once the flex shell fits above the keyboard, Safari no longer
+            // needs its layout-viewport pan. Clear any pan it retained after
+            // keyboard dismissal or rotation.
+            if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+        };
+        const schedule = () => {
+            if (pendingFrame === null) pendingFrame = window.requestAnimationFrame(sync);
+        };
+        const settle = () => {
+            schedule();
+            window.setTimeout(schedule, 120);
+        };
+
+        viewport.addEventListener('resize', schedule);
+        viewport.addEventListener('scroll', schedule);
+        window.addEventListener('orientationchange', () => {
+            schedule();
+            window.setTimeout(schedule, 300);
+        });
+        input.addEventListener('focus', settle);
+        input.addEventListener('blur', settle);
+        schedule();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const shell = document.getElementById('stepChatOverlay');
         const transcript = document.getElementById('chatTranscript');
@@ -784,10 +817,11 @@
             aboutButton.setAttribute('aria-expanded', 'false');
         };
         const resizeComposerInput = () => {
-            input.style.height = '48px';
+            input.style.height = '50px';
             input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
         };
 
+        initializeTouchViewport(shell, input);
         window.addEventListener('beforeunload', () => {
             if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
         });

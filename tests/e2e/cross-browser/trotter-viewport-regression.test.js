@@ -19,6 +19,31 @@ async function authenticate(page) {
   await expect(page.locator('#chatOpenBtn')).toBeVisible();
 }
 
+async function installVisualViewportMock(page) {
+  await page.evaluate(() => {
+    const viewport = window.visualViewport;
+    const state = { height: viewport.height };
+    Object.defineProperty(viewport, 'height', { configurable: true, get: () => state.height });
+    window.__setChatViewportHeight = height => {
+      state.height = height;
+      viewport.dispatchEvent(new Event('resize'));
+    };
+  });
+}
+
+async function setViewportHeight(page, height) {
+  await page.evaluate(value => window.__setChatViewportHeight(value), height);
+}
+
+async function assertComposerInsideShell(page, visibleHeight = null) {
+  const [shell, composer] = await Promise.all([
+    page.locator('.chat-page-shell').boundingBox(),
+    page.locator('.chat-composer').boundingBox()
+  ]);
+  expect(composer.y + composer.height).toBeLessThanOrEqual(shell.y + shell.height + 1);
+  if (visibleHeight !== null) expect(shell.y + shell.height).toBeLessThanOrEqual(visibleHeight + 1);
+}
+
 async function assertControlHitTargets(page) {
   for (const selector of ['#chatClearBtn', '#chatCloseBtn', '#chatInput', '#chatSendBtn']) {
     const target = page.locator(selector);
@@ -48,6 +73,9 @@ async function assertSingleDocumentScroller(page) {
 
 test.describe('Trotter standalone responsive page', () => {
   test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'maxTouchPoints', { configurable: true, value: 5 });
+    });
     await page.route('**/api/chat/config', route => route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -79,15 +107,26 @@ test.describe('Trotter standalone responsive page', () => {
         await expect(page.locator('#chatOpenBtn')).toBeVisible();
         await page.click('#chatOpenBtn');
         await expect(page.locator('#chatSendBtn')).toBeEnabled();
+        await installVisualViewportMock(page);
+        const closedShellHeight = (await page.locator('.chat-page-shell').boundingBox()).height;
+        const keyboardHeight = Math.max(220, Math.floor(scenario.height * 0.55));
+        await setViewportHeight(page, keyboardHeight);
+        await expect.poll(async () => (await page.locator('.chat-page-shell').boundingBox()).height).toBeLessThan(closedShellHeight);
+        await assertComposerInsideShell(page, keyboardHeight);
         await assertSingleDocumentScroller(page);
         await assertControlHitTargets(page);
 
         await page.fill('#chatInput', 'standalone page regression test');
         await page.click('#chatSendBtn');
+        await setViewportHeight(page, scenario.height);
         await expect(page.locator('#chatSendBtn')).toHaveText('Send');
         await expect(page.locator('#chatTranscript')).toContainText('I’m Trotter');
+        await assertComposerInsideShell(page);
 
+        await page.click('#chatInput');
+        await setViewportHeight(page, keyboardHeight);
         await page.click('#chatClearBtn');
+        await setViewportHeight(page, scenario.height);
         await expect(page.locator('#chatTranscript')).toContainText('Transcript cleared');
         await page.click('#chatInput');
         await expect(page.locator('#chatInput')).toBeFocused();
@@ -119,6 +158,7 @@ test.describe('Trotter standalone responsive page', () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto(`${baseUrl}/chat`);
     await expect(page.locator('#chatSendBtn')).toBeEnabled();
+    await installVisualViewportMock(page);
     const shell = await page.locator('.chat-page-shell').boundingBox();
     expect(shell.width).toBeLessThanOrEqual(920);
     expect(shell.height).toBeLessThanOrEqual(780);

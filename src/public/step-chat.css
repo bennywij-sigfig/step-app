@@ -22,6 +22,12 @@ body.chat-page-body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
+body.chat-page-body.chat-touch-viewport {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
 button,
 select,
 textarea,
@@ -56,7 +62,7 @@ button {
     display: flex;
     flex-direction: column;
     width: min(920px, 100%);
-    height: min(780px, calc(100dvh - clamp(24px, 6vw, 56px)));
+    height: min(780px, calc(var(--chat-visible-height, 100dvh) - clamp(24px, 6vw, 56px)));
     min-height: 0;
     margin: 0 auto;
     overflow: hidden;
@@ -334,7 +340,7 @@ button {
     body.chat-page-body { display: block; padding: 0; background: var(--surface, #fff); }
     .chat-page-shell {
         width: 100%;
-        height: 100dvh;
+        height: var(--chat-visible-height, 100dvh);
         border: 0;
         border-radius: 0;
         box-shadow: none;
@@ -367,7 +373,7 @@ button {
 
 @media (max-height: 520px) and (orientation: landscape) {
     body.chat-page-body { padding: 0; }
-    .chat-page-shell { width: 100%; height: 100dvh; border: 0; border-radius: 0; }
+    .chat-page-shell { width: 100%; height: var(--chat-visible-height, 100dvh); border: 0; border-radius: 0; }
     .chat-panel-header { padding-top: 5px; padding-bottom: 5px; }
     .chat-about { padding-bottom: max(4px, env(safe-area-inset-bottom)); }
     .chat-about-summary { min-height: 24px; }

@@ -18,15 +18,19 @@ describe('Trotter standalone mobile layout contract', () => {
     expect(page).toContain('href="/dashboard"');
   });
 
-  test('does not model keyboard or fixed-overlay geometry in JavaScript', () => {
-    expect(js).not.toContain('visualViewport');
-    expect(js).not.toContain('captureChatLayoutHeight');
-    expect(js).not.toContain('syncVisualViewport');
-    expect(js).not.toContain('resetVisualViewport');
+  test('uses VisualViewport only to resize the normal-flow shell above touch keyboards', () => {
+    expect(js).toContain('function initializeTouchViewport(shell, input)');
+    expect(js).toContain('window.visualViewport');
+    expect(js).toContain("document.body.classList.add('chat-touch-viewport')");
+    expect(js).toContain("shell.style.setProperty('--chat-visible-height'");
+    expect(js).toContain('window.requestAnimationFrame(sync)');
+    expect(js).toContain('if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);');
+    expect(js).not.toContain('offsetTop');
     expect(js).not.toContain('document.body.appendChild');
     expect(css).not.toContain('position: fixed');
     expect(css).not.toContain('--chat-keyboard-inset');
     expect(css).not.toContain('--chat-viewport-top');
+    expect(css).toMatch(/body\.chat-page-body\.chat-touch-viewport\s*\{[\s\S]*?align-items: flex-start/);
   });
 
   test('gives document ownership to the page and vertical scrolling to the transcript', () => {
@@ -45,11 +49,11 @@ describe('Trotter standalone mobile layout contract', () => {
   });
 
   test('uses versioned chat assets and responsive desktop/mobile shells', () => {
-    expect(page).toContain('/step-chat.css?v=20260902-standalone');
-    expect(page).toContain('/step-chat.js?v=20260902-standalone');
+    expect(page).toContain('/step-chat.css?v=20260902-standalone-v2');
+    expect(page).toContain('/step-chat.js?v=20260902-standalone-v2');
     expect(css).toContain('width: min(920px, 100%);');
-    expect(css).toContain('height: min(780px, calc(100dvh - clamp(24px, 6vw, 56px)));');
-    expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?height: 100dvh/);
+    expect(css).toContain('height: min(780px, calc(var(--chat-visible-height, 100dvh) - clamp(24px, 6vw, 56px)));');
+    expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?height: var\(--chat-visible-height, 100dvh\)/);
     expect(css).toContain('@media (max-height: 520px) and (orientation: landscape)');
   });
 });
