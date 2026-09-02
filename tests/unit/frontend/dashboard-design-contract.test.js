@@ -26,6 +26,13 @@ describe('dashboard design contract', () => {
     expect(html).toMatch(/\.user-data-list,\s*\.team-members-list\s*\{/);
   });
 
+  test('attaches disclosure handlers only within the freshly rendered leaderboard', () => {
+    expect(dashboard).toContain('attachDisclosureListeners(leaderboardDiv)');
+    expect(dashboard).toContain('attachDisclosureListeners(teamLeaderboard)');
+    expect(dashboard).toContain("container.querySelectorAll('.team-disclosure')");
+    expect(dashboard).not.toContain("document.querySelectorAll('.team-disclosure')");
+  });
+
   test('expanded leaderboard panels avoid decorative strokes and flickering height animations', () => {
     const disclosureRule = html.match(/\/\* Individual and team disclosures[\s\S]*?\.member-item\s*\{/)?.[0] || '';
     expect(disclosureRule).not.toContain('border-left');

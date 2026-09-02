@@ -40,6 +40,23 @@ describe('Champions Pantheon frontend', () => {
     expect(styles).toContain('min-height: var(--podium-height, 190px)');
   });
 
+  test('shows disclosure triangles on team podium capsules and opens first place by default', () => {
+    expect(script).toContain("<details class=\"team-podium-card\" ${index === 0 ? 'open' : ''}>");
+    expect(styles).toMatch(/\.team-podium-card > summary::before\s*\{[\s\S]*?content: "▶"/);
+    expect(styles).toMatch(/\.team-podium-card\[open\] > summary::before\s*\{\s*transform: rotate\(90deg\)/);
+  });
+
+  test('lets mouse and touch pointers directly rotate the trophy foot', () => {
+    expect(wireframe).toContain("stage.addEventListener('pointerdown'");
+    expect(wireframe).toContain("stage.addEventListener('pointermove'");
+    expect(wireframe).toContain("stage.addEventListener('pointerup'");
+    expect(wireframe).toContain('stage.setPointerCapture?.(event.pointerId)');
+    expect(wireframe).toContain('rotationAngle = dragStartAngle');
+    expect(styles).toMatch(/\.wireframe-stage\s*\{[\s\S]*?cursor: grab/);
+    expect(styles).toMatch(/\.wireframe-stage\s*\{[\s\S]*?touch-action: pan-y/);
+    expect(styles).toContain('.wireframe-stage.is-dragging { cursor: grabbing; }');
+  });
+
   test('keeps the WebGL spectacle lightweight and accessible', () => {
     expect(wireframe).toContain("powerPreference: 'low-power'");
     expect(wireframe).toContain('Math.min(window.devicePixelRatio || 1, 1.5)');

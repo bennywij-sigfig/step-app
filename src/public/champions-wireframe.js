@@ -135,7 +135,11 @@
     let running = false;
     let frameId = 0;
     let lastFrame = 0;
-    let pointerOffset = 0;
+    let lastDrawTime = 0;
+    let rotationAngle = -0.42;
+    let activePointerId = null;
+    let dragStartX = 0;
+    let dragStartAngle = rotationAngle;
     let contextLost = false;
 
     function resize() {
@@ -169,12 +173,16 @@
     function draw(now = 0) {
         running = false;
         if (contextLost) return;
-        const angle = reduceMotion.matches ? -0.42 : now * 0.00022 + pointerOffset;
+        const elapsed = lastDrawTime ? Math.min(now - lastDrawTime, 100) : 0;
+        if (!reduceMotion.matches && activePointerId === null) {
+            rotationAngle += elapsed * 0.00022;
+        }
+        lastDrawTime = now;
         const projected = new Float32Array(lines.length * 4);
         let cursor = 0;
         for (const [start, end] of lines) {
-            const a = project(vertices[start], angle);
-            const b = project(vertices[end], angle);
+            const a = project(vertices[start], rotationAngle);
+            const b = project(vertices[end], rotationAngle);
             projected[cursor++] = a[0]; projected[cursor++] = a[1];
             projected[cursor++] = b[0]; projected[cursor++] = b[1];
         }
@@ -213,12 +221,40 @@
     }, { threshold: 0.05 });
     observer.observe(stage);
 
+    stage.addEventListener('pointerdown', event => {
+        if (activePointerId !== null) return;
+        activePointerId = event.pointerId;
+        dragStartX = event.clientX;
+        dragStartAngle = rotationAngle;
+        lastDrawTime = performance.now();
+        stage.setPointerCapture?.(event.pointerId);
+        stage.classList.add('is-dragging');
+    });
     stage.addEventListener('pointermove', event => {
-        const rect = stage.getBoundingClientRect();
-        pointerOffset = ((event.clientX - rect.left) / rect.width - 0.5) * 0.35;
-    }, { passive: true });
-    stage.addEventListener('pointerleave', () => { pointerOffset = 0; });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden && visible) schedule(); });
+        if (event.pointerId !== activePointerId) return;
+        const width = Math.max(stage.getBoundingClientRect().width, 1);
+        rotationAngle = dragStartAngle + ((event.clientX - dragStartX) / width) * Math.PI * 2;
+        schedule();
+    });
+    const finishDrag = event => {
+        if (activePointerId === null || (event.pointerId != null && event.pointerId !== activePointerId)) return;
+        const pointerId = activePointerId;
+        activePointerId = null;
+        lastDrawTime = performance.now();
+        if (stage.hasPointerCapture?.(pointerId)) stage.releasePointerCapture(pointerId);
+        stage.classList.remove('is-dragging');
+        schedule();
+    };
+    stage.addEventListener('pointerup', finishDrag);
+    stage.addEventListener('pointercancel', finishDrag);
+    stage.addEventListener('lostpointercapture', finishDrag);
+    window.addEventListener('blur', () => finishDrag({ pointerId: activePointerId }));
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && visible) {
+            lastDrawTime = 0;
+            schedule();
+        }
+    });
     window.addEventListener('resize', () => {
         resize();
         schedule();

@@ -683,8 +683,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 leaderboardDiv.innerHTML = html;
                 
-                // Attach disclosure listeners for individual leaderboard
-                attachDisclosureListeners();
+                // Attach listeners only to the freshly rendered leaderboard.
+                // Scanning the whole document here used to add duplicate handlers
+                // to the hidden team leaderboard (and vice versa).
+                attachDisclosureListeners(leaderboardDiv);
                 return true;
             } catch (error) {
                 console.error('Leaderboard error:', error);
@@ -974,7 +976,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     : Boolean(data.data?.ranked?.length || data.data?.unranked?.length);
                 if (hasTeamRows) html += '<div class="leaderboard-footer">members · reporting</div>';
                 teamLeaderboard.innerHTML = html;
-                attachDisclosureListeners();
+                attachDisclosureListeners(teamLeaderboard);
                 return true;
             } catch (error) {
                 console.error('Team leaderboard error:', error);
@@ -984,8 +986,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Attach event listeners to disclosure triangles (both team and user)
-        function attachDisclosureListeners() {
-            const disclosureTriangles = document.querySelectorAll('.team-disclosure');
+        function attachDisclosureListeners(container) {
+            const disclosureTriangles = container.querySelectorAll('.team-disclosure');
             disclosureTriangles.forEach(triangle => {
                 triangle.addEventListener('click', function() {
                     const teamName = this.getAttribute('data-team');
@@ -1205,7 +1207,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         currentExpandedTeams.forEach(teamName => {
                             const disclosureElement = document.querySelector(`[data-team="${teamName}"]`);
                             if (disclosureElement && !expandedTeams.has(teamName)) {
-                                toggleTeamDisclosure(teamName, disclosureElement);
+                                toggleTeamDisclosure(
+                                    teamName,
+                                    disclosureElement.getAttribute('data-team-id'),
+                                    disclosureElement
+                                );
                             }
                         });
                     });
@@ -1252,7 +1258,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             currentExpandedTeams.forEach(teamName => {
                                 const disclosureElement = document.querySelector(`[data-team="${teamName}"]`);
                                 if (disclosureElement && !expandedTeams.has(teamName)) {
-                                    toggleTeamDisclosure(teamName, disclosureElement);
+                                    toggleTeamDisclosure(
+                                        teamName,
+                                        disclosureElement.getAttribute('data-team-id'),
+                                        disclosureElement
+                                    );
                                 }
                             });
                         });
