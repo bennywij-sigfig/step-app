@@ -22,6 +22,43 @@
     });
     const ordinal = rank => ({ 1: 'Champion', 2: 'Runner-up', 3: 'Third place' }[rank] || `#${rank}`);
     const medal = rank => ({ 1: 'Ⅰ', 2: 'Ⅱ', 3: 'Ⅲ' }[rank] || rank);
+    // September 15 remains a full challenge day. In 2026 Pacific daylight
+    // time is UTC-07:00, so this instant is midnight beginning September 16.
+    const CHALLENGE_2026_CLOSE = Date.parse('2026-09-16T00:00:00-07:00');
+
+    function updateChallengeCountdown() {
+        const remaining = Math.max(0, CHALLENGE_2026_CLOSE - Date.now());
+        const totalSeconds = Math.floor(remaining / 1000);
+        const values = {
+            countdownDays: Math.floor(totalSeconds / 86400),
+            countdownHours: Math.floor((totalSeconds % 86400) / 3600),
+            countdownMinutes: Math.floor((totalSeconds % 3600) / 60),
+            countdownSeconds: totalSeconds % 60
+        };
+        Object.entries(values).forEach(([id, value]) => {
+            byId(id).textContent = String(value).padStart(2, '0');
+        });
+        byId('countdownTimer').setAttribute(
+            'aria-label',
+            `${values.countdownDays} days, ${values.countdownHours} hours, ${values.countdownMinutes} minutes, and ${values.countdownSeconds} seconds remaining in the 2026 step challenge`
+        );
+
+        if (remaining === 0) {
+            byId('challengeCountdown').classList.add('is-complete');
+            byId('countdownKicker').textContent = 'THE HOUR IS WRITTEN';
+            byId('countdownTitle').textContent = 'Every step has been counted';
+            byId('countdownDecree').textContent = 'The 2026 challenge has crossed into legend. Let the counting cease and the tablets awaken.';
+            return false;
+        }
+        return true;
+    }
+
+    function startChallengeCountdown() {
+        if (!updateChallengeCountdown()) return;
+        const timer = window.setInterval(() => {
+            if (!updateChallengeCountdown()) window.clearInterval(timer);
+        }, 1000);
+    }
 
     function memberTiles(members) {
         return members.map(member => `
@@ -195,5 +232,6 @@
     }
 
     byId('retryChampions').addEventListener('click', loadChampions);
+    startChallengeCountdown();
     loadChampions();
 })();

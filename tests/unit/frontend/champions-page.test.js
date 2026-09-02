@@ -40,6 +40,25 @@ describe('Champions Pantheon frontend', () => {
     expect(styles).toContain('min-height: var(--podium-height, 190px)');
   });
 
+  test('ends with an ornate Pacific-time countdown to the 2026 challenge close', () => {
+    for (const id of [
+      'challengeCountdown', 'countdownTitle', 'countdownTimer',
+      'countdownDays', 'countdownHours', 'countdownMinutes', 'countdownSeconds'
+    ]) {
+      expect(page).toContain(`id="${id}"`);
+    }
+    expect(page.indexOf('id="challengeCountdown"')).toBeGreaterThan(page.indexOf('class="next-year"'));
+    expect(page).toContain('Until the final footfall is tallied');
+    expect(page).toContain('THE GATES CLOSE AT MIDNIGHT PACIFIC');
+    expect(script).toContain("byId('countdownTitle').textContent = 'Every step has been counted'");
+    expect(script).toContain("Date.parse('2026-09-16T00:00:00-07:00')");
+    expect(script).toContain('CHALLENGE_2026_CLOSE - Date.now()');
+    expect(script).toContain("window.setInterval(() => {");
+    expect(script).toContain("classList.add('is-complete')");
+    expect(styles).toContain('.challenge-countdown');
+    expect(styles).toContain('@keyframes countdown-orbit');
+  });
+
   test('shows disclosure triangles on team podium capsules and opens first place by default', () => {
     expect(script).toContain("<details class=\"team-podium-card\" ${index === 0 ? 'open' : ''}>");
     expect(styles).toMatch(/\.team-podium-card > summary::before\s*\{[\s\S]*?content: "▶"/);
