@@ -9,6 +9,10 @@ function escapeHtml(unsafe) {
         .replace(/'/g, "&#039;");
 }
 
+function formatDayCount(count) {
+    return `${count} day${count === 1 ? '' : 's'}`;
+}
+
 // Team disclosure functionality - must be global
 let expandedTeams = new Set(); // Track expanded state
 
@@ -624,7 +628,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${user.days_logged} days</div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${formatDayCount(user.days_logged)}</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -649,7 +653,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${user.days_logged} days</div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${formatDayCount(user.days_logged)}</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -671,7 +675,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${user.days_logged} days</div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${formatDayCount(user.days_logged)}</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -1006,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="member-stats">
                         <div><strong>${Math.round(member.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                        <div class="leaderboard-detail">${member.total_steps.toLocaleString()} total · ${member.days_logged} days</div>
+                        <div class="leaderboard-detail">${member.total_steps.toLocaleString()} total · ${formatDayCount(member.days_logged)}</div>
                     </div>
                 </div>
             `).join('');

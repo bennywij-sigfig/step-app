@@ -56,6 +56,7 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.api.steps).toBe('/api/steps');
       expect(ROUTES.api.leaderboard).toBe('/api/leaderboard');
       expect(ROUTES.api.teamLeaderboard).toBe('/api/team-leaderboard');
+      expect(ROUTES.api.champions).toBe('/api/champions');
       expect(ROUTES.api.userProfile).toBe('/api/user-profile');
       expect(ROUTES.api.settings).toBe('/api/settings');
     });
@@ -63,6 +64,7 @@ describe('Route Contract Tests', () => {
     test('should have expected page routes defined', () => {
       expect(ROUTES.pages).toBeDefined();
       expect(ROUTES.pages.dashboard).toBe('/');
+      expect(ROUTES.pages.champions).toBe('/champions');
       expect(ROUTES.pages.admin).toBe('/admin');
       expect(ROUTES.pages.health).toBe('/health');
     });

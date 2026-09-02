@@ -26,6 +26,7 @@ const ROUTES = {
     steps: '/api/steps',
     leaderboard: '/api/leaderboard',
     teamLeaderboard: '/api/team-leaderboard',
+    champions: '/api/champions',
     userProfile: '/api/user-profile',
     settings: '/api/settings'
   },
@@ -50,6 +51,7 @@ const ROUTES = {
   // Static Pages
   pages: {
     dashboard: '/',
+    champions: '/champions',
     admin: '/admin',
     health: '/health',
     pig: '/pig'
