@@ -18,7 +18,8 @@
         rememberOnDevice: false,
         imageObjectUrl: null,
         imageUploadEnabled: false,
-        imageBusy: false
+        imageBusy: false,
+        themeColorBeforeChat: null
     };
 
     const formatNumber = value => Number(value || 0).toLocaleString();
@@ -773,56 +774,52 @@
         return active.matches('textarea, input:not([type="button"]):not([type="checkbox"]):not([type="file"]), select, [contenteditable="true"]');
     }
 
-    function syncVisualViewport() {
+    function resetVisualViewport() {
         const overlay = document.getElementById('stepChatOverlay');
         if (!overlay) return;
+        overlay.style.removeProperty('--chat-visual-height');
+        overlay.style.removeProperty('--chat-visual-top');
+    }
 
-        // visualViewport is needed while the iOS keyboard is open. After a
-        // blur, Safari can retain its keyboard-sized height and offsetTop
-        // without emitting the final resize event. Stop trusting those stale
-        // values as soon as no chat editor has focus and let 100dvh take over.
+    function syncVisualViewport() {
+        const overlay = document.getElementById('stepChatOverlay');
         const viewport = window.visualViewport;
-        if (!viewport || !isChatEditorFocused(overlay)) {
-            overlay.style.removeProperty('--chat-visual-height');
-            overlay.style.removeProperty('--chat-visual-top');
+        if (!overlay || !viewport || !isChatEditorFocused(overlay)) {
+            resetVisualViewport();
             return;
         }
         overlay.style.setProperty('--chat-visual-height', `${Math.round(viewport.height || window.innerHeight)}px`);
         overlay.style.setProperty('--chat-visual-top', `${Math.round(viewport.offsetTop || 0)}px`);
     }
 
-    let viewportSyncFrame = null;
-    let viewportSyncTimers = [];
-
-    function scheduleVisualViewportSync() {
-        syncVisualViewport();
-        if (viewportSyncFrame !== null) window.cancelAnimationFrame(viewportSyncFrame);
-        viewportSyncTimers.forEach(timer => window.clearTimeout(timer));
-        viewportSyncFrame = window.requestAnimationFrame(() => {
-            viewportSyncFrame = null;
-            syncVisualViewport();
-        });
-        // iOS keyboard and browser chrome transitions do not have a reliable
-        // completion event. Recheck across the animation's settling window.
-        viewportSyncTimers = [80, 250, 500].map(delay => window.setTimeout(syncVisualViewport, delay));
+    function setChatBrowserColor(open) {
+        const themeColor = document.querySelector('meta[name="theme-color"]');
+        if (!themeColor) return;
+        if (open && state.themeColorBeforeChat === null) {
+            state.themeColorBeforeChat = themeColor.content;
+            themeColor.content = '#ffffff';
+        } else if (state.themeColorBeforeChat) {
+            themeColor.content = state.themeColorBeforeChat;
+            state.themeColorBeforeChat = null;
+        }
     }
 
     function openChat() {
         const overlay = document.getElementById('stepChatOverlay');
-        document.body.classList.add('trotter-open');
+        resetVisualViewport();
         overlay.hidden = false;
         document.body.style.overflow = 'hidden';
+        setChatBrowserColor(true);
         document.getElementById('chatInput').focus();
-        scheduleVisualViewportSync();
+        window.requestAnimationFrame(syncVisualViewport);
     }
 
     function closeChat() {
         const overlay = document.getElementById('stepChatOverlay');
         overlay.hidden = true;
-        overlay.style.removeProperty('--chat-visual-height');
-        overlay.style.removeProperty('--chat-visual-top');
-        document.body.classList.remove('trotter-open');
+        resetVisualViewport();
         document.body.style.overflow = '';
+        setChatBrowserColor(false);
         document.getElementById('chatOpenBtn').focus();
     }
 
@@ -852,13 +849,10 @@
         // Escape the dashboard container's stacking context so Tidbits and
         // other page cards can never paint above the modal.
         document.body.appendChild(overlay);
-        syncVisualViewport();
+        resetVisualViewport();
         window.visualViewport?.addEventListener('resize', syncVisualViewport);
         window.visualViewport?.addEventListener('scroll', syncVisualViewport);
-        window.addEventListener('resize', scheduleVisualViewportSync);
-        window.addEventListener('orientationchange', scheduleVisualViewportSync);
-        document.addEventListener('focusin', scheduleVisualViewportSync);
-        document.addEventListener('focusout', scheduleVisualViewportSync);
+        window.addEventListener('orientationchange', resetVisualViewport);
         window.addEventListener('beforeunload', () => {
             if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
         });
@@ -878,12 +872,13 @@
             processImageFile(file);
         });
         input.addEventListener('focus', () => {
-            scheduleVisualViewportSync();
+            window.requestAnimationFrame(syncVisualViewport);
             setTimeout(() => {
                 syncVisualViewport();
                 transcript.scrollTop = transcript.scrollHeight;
             }, 50);
         });
+        input.addEventListener('blur', resetVisualViewport);
 
         const storedTone = sessionStorage.getItem(TONE_STORAGE_KEY);
         if (['encouraging', 'neutral', 'droll', 'sarcastic', 'annoying'].includes(storedTone)) toneSelect.value = storedTone;
@@ -969,7 +964,7 @@
             // keyboard dimensions. Make mobile keyboard dismissal explicit.
             if (usesTouchKeyboard()) {
                 input.blur();
-                scheduleVisualViewportSync();
+                resetVisualViewport();
             }
             sendButton.disabled = true;
             sendButton.textContent = 'Thinking…';
@@ -987,7 +982,6 @@
                 sendButton.disabled = false;
                 sendButton.textContent = 'Send';
                 if (!usesTouchKeyboard()) input.focus();
-                scheduleVisualViewportSync();
             }
         });
     });
