@@ -2,6 +2,13 @@
 
 Base URL: `https://step-app-4x-yhw.fly.dev/api/v1`
 
+Authenticated web documentation:
+
+- Human-readable reference: `https://step-app-4x-yhw.fly.dev/api-docs`
+- OpenAPI 3.0 JSON: `https://step-app-4x-yhw.fly.dev/openapi.json`
+
+Both documentation routes require a normal Step Challenge web session. API calls use scoped bearer tokens as described below.
+
 Ask an administrator to create a scoped API token. The raw token is shown once. Store it in a secret manager or environment variable and send it only in the `Authorization` header:
 
 ```bash

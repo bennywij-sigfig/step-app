@@ -69,6 +69,13 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.pages.health).toBe('/health');
     });
 
+    test('should have expected authenticated documentation routes defined', () => {
+      expect(ROUTES.docs).toEqual({
+        page: '/api-docs',
+        openapi: '/openapi.json'
+      });
+    });
+
     test('should have expected bearer-token REST routes defined', () => {
       expect(ROUTES.rest).toBeDefined();
       expect(ROUTES.rest.profile).toBe('/api/v1/me');
@@ -146,6 +153,7 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.auth).toBeDefined();
       expect(ROUTES.api).toBeDefined();  
       expect(ROUTES.pages).toBeDefined();
+      expect(ROUTES.docs).toBeDefined();
       expect(ROUTES.rest).toBeDefined();
       expect(ROUTES.admin).toBeDefined();
       
