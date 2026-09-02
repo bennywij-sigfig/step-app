@@ -821,6 +821,24 @@ function getActiveDbConnection() {
   return { db: db, shouldClose: false };
 }
 
+const CONSUME_MAGIC_LINK_SQL = `UPDATE auth_tokens
+  SET used = 1
+  WHERE token = ? AND used = 0 AND expires_at > datetime('now')
+  RETURNING email`;
+
+function consumeMagicLinkToken(connection, hashedToken, callback, retriesRemaining = 2) {
+  connection.get(CONSUME_MAGIC_LINK_SQL, [hashedToken], (error, row) => {
+    if (error?.code === 'SQLITE_BUSY' && retriesRemaining > 0) {
+      const delayMs = (3 - retriesRemaining) * 50;
+      return setTimeout(
+        () => consumeMagicLinkToken(connection, hashedToken, callback, retriesRemaining - 1),
+        delayMs
+      );
+    }
+    callback(error, row);
+  });
+}
+
 // Development-only: Get magic link directly (localhost only)
 if (isDevelopment) {
   app.post('/dev/get-magic-link', magicLinkLimiter, async (req, res) => {
@@ -928,13 +946,7 @@ app.get('/auth/login', (req, res) => {
     // Atomically verify and consume the one-time token. A conditional UPDATE
     // prevents concurrent requests from both creating authenticated sessions.
     const hashedToken = hashToken(token);
-    activeDb.get(
-      `UPDATE auth_tokens
-       SET used = 1
-       WHERE token = ? AND used = 0 AND expires_at > datetime('now')
-       RETURNING email`,
-      [hashedToken],
-      (err, row) => {
+    consumeMagicLinkToken(activeDb, hashedToken, (err, row) => {
         if (err) {
           console.error('Token verification error:', err);
           if (shouldClose) activeDb.close();
