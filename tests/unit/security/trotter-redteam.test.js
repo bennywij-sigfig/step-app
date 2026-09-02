@@ -133,7 +133,11 @@ describe('Trotter deterministic red-team regression', () => {
     expect(result.requires_confirmation).toBe(true);
     expect(result.text).toBeNull();
     expect(result.primary_result.kind).toBe('step_preview');
-    expect(service.previewEntries).toHaveBeenCalledWith(42, [{ date: '2026-09-01', count: 70000 }]);
+    expect(service.previewEntries).toHaveBeenCalledWith(
+      42,
+      [{ date: '2026-09-01', count: 70000 }],
+      expect.objectContaining({ userId: 42, currentDate: '2026-09-02' })
+    );
     expect(service.commitPlan).not.toHaveBeenCalled();
   });
 

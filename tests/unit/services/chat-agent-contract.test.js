@@ -63,7 +63,11 @@ describe('Trotter tool registry contract', () => {
       { entries: [{ date: '2026-09-01', count: 8000 }] },
       { userId: 42, currentDate: '2026-09-02' }
     );
-    expect(service.previewEntries).toHaveBeenCalledWith(42, [{ date: '2026-09-01', count: 8000 }]);
+    expect(service.previewEntries).toHaveBeenCalledWith(
+      42,
+      [{ date: '2026-09-01', count: 8000 }],
+      expect.objectContaining({ userId: 42, currentDate: '2026-09-02' })
+    );
   });
 
   test('binds team rename review to the session user and rejects targeting arguments', async () => {
@@ -188,17 +192,28 @@ describe('bounded Trotter tool-agent contract', () => {
     expect(result.text).toContain('Seven days');
   });
 
-  test('bypasses the model for an explicit valid entry and lets the service enforce challenge dates', async () => {
+  test('resolves personal “today” from local date while leaving challenge authorization to the service', async () => {
     const model = { generate: jest.fn() };
     const service = fakeService();
     const registry = createChatToolRegistry({ service });
     const result = await runTrotterAgent({
       model, registry, message: 'log 9999 steps for today', history: [], tone: 'neutral',
-      context: { userId: 42, currentDate: '2026-08-26' }
+      context: {
+        userId: 42,
+        currentDate: '2026-08-26',
+        clientDate: '2026-08-25',
+        clientHour: 9,
+        clientTime: '9:00 AM',
+        clientTimezone: 'America/Los_Angeles'
+      }
     });
 
     expect(model.generate).not.toHaveBeenCalled();
-    expect(service.previewEntries).toHaveBeenCalledWith(42, [{ date: '2026-08-26', count: 9999 }]);
+    expect(service.previewEntries).toHaveBeenCalledWith(
+      42,
+      [{ date: '2026-08-25', count: 9999 }],
+      expect.objectContaining({ currentDate: '2026-08-26', clientDate: '2026-08-25' })
+    );
     expect(result).toMatchObject({ requires_confirmation: true, rounds: 0, primary_result: { kind: 'step_preview' } });
   });
 

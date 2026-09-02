@@ -214,7 +214,7 @@ function createChatToolRegistry({ service }) {
       case 'preview_step_entries': {
         assertArguments(rawArgs, ['entries']);
         const intent = validateChatIntent({ intent: 'record_steps', tone: 'neutral', entries: rawArgs.entries });
-        const preview = await service.previewEntries(userId, intent.entries);
+        const preview = await service.previewEntries(userId, intent.entries, context);
         return { kind: 'step_preview', ...preview };
       }
       default:

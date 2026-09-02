@@ -194,7 +194,7 @@
         const response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrfToken },
-            body: JSON.stringify(body)
+            body: JSON.stringify({ ...getClientDateContext(), ...body })
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data.error || 'Chat request failed');
@@ -382,6 +382,14 @@
             return `${entry.date}: ${formatNumber(entry.existing_count)} → ${formatNumber(entry.count)} — conflict`;
         }));
 
+        const warnedEntries = result.entries.filter(entry => entry.date_warning);
+        for (const entry of warnedEntries) {
+            const warning = document.createElement('div');
+            warning.className = 'chat-date-warning';
+            warning.textContent = `Check the date: ${entry.date_warning.message}`;
+            message.appendChild(warning);
+        }
+
         if (!result.plan_id) return;
         const actions = document.createElement('div');
         actions.className = 'chat-actions';
@@ -400,16 +408,40 @@
 
         if (result.summary.new > 0) {
             actions.appendChild(actionButton(
-                result.summary.conflicts ? 'Save new only' : `Save ${result.summary.new} entr${result.summary.new === 1 ? 'y' : 'ies'}`,
+                result.summary.conflicts
+                    ? (warnedEntries.length ? 'Yes, save new only' : 'Save new only')
+                    : `${warnedEntries.length ? 'Yes, save' : 'Save'} ${result.summary.new} entr${result.summary.new === 1 ? 'y' : 'ies'}`,
                 'secondary',
                 () => confirm('new_only')
             ));
         }
         if (result.summary.conflicts > 0) {
             actions.appendChild(actionButton(
-                `Overwrite ${result.summary.conflicts} conflict${result.summary.conflicts === 1 ? '' : 's'}`,
+                `${warnedEntries.length ? 'Yes, overwrite' : 'Overwrite'} ${result.summary.conflicts} conflict${result.summary.conflicts === 1 ? '' : 's'}`,
                 '',
                 () => confirm('overwrite_conflicts')
+            ));
+        }
+
+        if (result.entries.length === 1 && warnedEntries.length === 1 && warnedEntries[0].date_warning.suggested_date) {
+            const entry = warnedEntries[0];
+            actions.appendChild(actionButton(
+                entry.date_warning.code === 'early_local_today' ? 'Use yesterday instead' : 'Use local today instead',
+                'secondary',
+                async () => {
+                    for (const button of actions.querySelectorAll('button')) button.disabled = true;
+                    try {
+                        const payload = await postJson('/api/chat/entries/preview', {
+                            entries: [{ date: entry.date_warning.suggested_date, count: entry.count }],
+                            tone
+                        });
+                        renderResult(payload);
+                        actions.remove();
+                    } catch (error) {
+                        createMessage('error', error.message);
+                        for (const button of actions.querySelectorAll('button')) button.disabled = false;
+                    }
+                }
             ));
         }
         message.appendChild(actions);

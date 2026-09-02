@@ -184,6 +184,16 @@ button {
 .chat-verified-facts.collapsed summary { cursor: pointer; font-weight: 600; list-style-position: inside; }
 .chat-verified-facts.collapsed:not([open]) { padding-bottom: 0; }
 
+.chat-date-warning {
+    margin-top: 10px;
+    padding: 10px 12px;
+    color: #654b00;
+    background: rgba(255, 193, 7, 0.14);
+    border: 1px solid rgba(180, 130, 0, 0.32);
+    border-radius: 9px;
+    font-size: 13px;
+}
+
 .chat-actions {
     display: flex;
     flex-wrap: wrap;
