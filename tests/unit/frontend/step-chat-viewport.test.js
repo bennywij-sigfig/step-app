@@ -3,54 +3,52 @@ const path = require('path');
 
 const root = path.join(__dirname, '../../..');
 const js = fs.readFileSync(path.join(root, 'src/public/step-chat.js'), 'utf8');
-const html = fs.readFileSync(path.join(root, 'src/views/dashboard.html'), 'utf8');
+const dashboard = fs.readFileSync(path.join(root, 'src/views/dashboard.html'), 'utf8');
+const page = fs.readFileSync(path.join(root, 'src/views/chat.html'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'src/public/step-chat.css'), 'utf8');
 
-describe('Trotter mobile visual viewport contract', () => {
-  test('keeps the fixed hit-test shell stable and adjusts only internal padding', () => {
-    expect(js).toContain('function isChatEditorFocused(overlay)');
-    expect(js).toContain('if (!overlay || !viewport || !isChatEditorFocused(overlay)) return;');
-    expect(js).toContain("overlay.style.removeProperty('--chat-viewport-top')");
-    expect(js).toContain("overlay.style.removeProperty('--chat-keyboard-inset')");
-    expect(js).toContain("overlay.style.setProperty('--chat-viewport-top'");
-    expect(js).toContain("overlay.style.setProperty('--chat-keyboard-inset'");
-    expect(html).toContain('position: fixed;\n            inset: 0;');
-    expect(html).toContain('max(16px, env(safe-area-inset-top), var(--chat-viewport-top, 0px))');
-    expect(html).toContain('max(16px, env(safe-area-inset-bottom), var(--chat-keyboard-inset, 0px))');
-    expect(html).toContain('padding: var(--chat-viewport-top, 0px) 0 var(--chat-keyboard-inset, 0px);');
-    expect(html).not.toContain('top: var(--chat-visual-top');
-    expect(html).not.toContain('height: var(--chat-visual-height');
+describe('Trotter standalone mobile layout contract', () => {
+  test('uses an authenticated standalone page instead of a dashboard overlay', () => {
+    expect(dashboard).toContain('id="trotterNav" href="/chat"');
+    expect(dashboard).not.toContain('id="stepChatOverlay"');
+    expect(dashboard).not.toContain('/step-chat.js');
+    expect(page).toContain('id="stepChatOverlay" class="chat-page-shell"');
+    expect(page).toContain('id="chatCloseBtn"');
+    expect(page).toContain('href="/dashboard"');
   });
 
-  test('uses a minimal event-driven viewport lifecycle without delayed global focus writes', () => {
-    expect(js).toContain("window.visualViewport?.addEventListener('resize', syncVisualViewport)");
-    expect(js).toContain("window.visualViewport?.addEventListener('scroll', syncVisualViewport)");
-    expect(js).toContain("window.addEventListener('orientationchange', () => {");
-    expect(js).toContain('window.requestAnimationFrame(captureChatLayoutHeight)');
-    expect(js).not.toContain('scheduleVisualViewportSync');
-    expect(js).not.toContain("document.addEventListener('focusin'");
-    expect(js).not.toContain("document.addEventListener('focusout'");
-    expect(js).not.toContain('[80, 250, 500]');
-    expect(js).not.toContain("input.addEventListener('blur', resetVisualViewport)");
-    expect(js).toContain("} else if (!isChatEditorFocused(overlay)) {");
-    expect(js).toContain("input.addEventListener('pointerdown', () => {");
-    expect(js).toContain('if (document.activeElement !== input) captureChatLayoutHeight();');
+  test('does not model keyboard or fixed-overlay geometry in JavaScript', () => {
+    expect(js).not.toContain('visualViewport');
+    expect(js).not.toContain('captureChatLayoutHeight');
+    expect(js).not.toContain('syncVisualViewport');
+    expect(js).not.toContain('resetVisualViewport');
+    expect(js).not.toContain('document.body.appendChild');
+    expect(css).not.toContain('position: fixed');
+    expect(css).not.toContain('--chat-keyboard-inset');
+    expect(css).not.toContain('--chat-viewport-top');
   });
 
-  test('dismisses touch keyboards in portrait and landscape and never asynchronously refocuses them', () => {
+  test('gives document ownership to the page and vertical scrolling to the transcript', () => {
+    expect(css).toMatch(/html,\s*body\s*\{[\s\S]*?overflow: hidden/);
+    expect(css).toMatch(/\.chat-transcript\s*\{[\s\S]*?overflow-y: auto/);
+    expect(css).toContain('-webkit-overflow-scrolling: touch;');
+    expect(css).toContain('touch-action: pan-y;');
+    expect(css).toContain('overscroll-behavior: contain;');
+  });
+
+  test('dismisses touch keyboards after submit without asynchronous mobile refocus', () => {
     expect(js).toContain('function usesTouchKeyboard()');
-    expect(js).toContain('navigator.maxTouchPoints > 0');
-    expect(js).toContain('if (usesTouchKeyboard()) {\n                input.blur();\n                resetVisualViewport();');
+    expect(js).toContain('if (usesTouchKeyboard()) input.blur();');
     expect(js).toContain('if (!usesTouchKeyboard()) input.focus();');
     expect(js).not.toContain("sendButton.textContent = 'Send';\n                input.focus();");
   });
 
-  test('avoids extra mobile compositor masks and matches Safari chrome to the chat', () => {
-    expect(html).not.toContain('body.dashboard-page.trotter-open::after');
-    expect(html).not.toContain('body.dashboard-page.trotter-open > :not(.chat-overlay)');
-    expect(html).toContain('background: var(--surface, #fff);\n                backdrop-filter: none;');
-    expect(js).toContain("themeColor.content = '#ffffff'");
-    expect(js).toContain('open && state.themeColorBeforeChat === null');
-    expect(js).toContain('setChatBrowserColor(false)');
-    expect(js).not.toContain("classList.add('trotter-open')");
+  test('uses versioned chat assets and responsive desktop/mobile shells', () => {
+    expect(page).toContain('/step-chat.css?v=20260902-standalone');
+    expect(page).toContain('/step-chat.js?v=20260902-standalone');
+    expect(css).toContain('width: min(920px, 100%);');
+    expect(css).toContain('height: min(780px, calc(100dvh - clamp(24px, 6vw, 56px)));');
+    expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?height: 100dvh/);
+    expect(css).toContain('@media (max-height: 520px) and (orientation: landscape)');
   });
 });

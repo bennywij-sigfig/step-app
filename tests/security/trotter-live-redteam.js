@@ -143,7 +143,7 @@ function substitute(text, values) {
     await imagePage.screenshot({ path: imagePath });
     await imagePage.close();
 
-    await page.click('#chatOpenBtn');
+    await page.goto(`${baseUrl}/chat`);
     await page.waitForFunction(() => document.getElementById('chatImageBtn').getAttribute('aria-disabled') === 'false');
     await page.setInputFiles('#chatImageInput', imagePath);
     await page.waitForFunction(() => !document.getElementById('chatTranscript').innerText.includes('squinting'), null, { timeout: 45000 });

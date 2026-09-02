@@ -169,8 +169,12 @@
             backdrop-filter: blur(10px);
         }
         
-        .nav button {
+        .nav button,
+        .nav a {
+            display: flex;
             flex: 1;
+            align-items: center;
+            justify-content: center;
             padding: 12px 16px;
             border: none;
             border-radius: 12px;
@@ -178,6 +182,7 @@
             color: white;
             font-weight: 500;
             font-size: 14px;
+            text-decoration: none;
             cursor: pointer;
             transition: all 0.3s ease;
             min-height: 44px;
@@ -185,7 +190,9 @@
             overflow: hidden;
         }
         
-        .nav button:hover {
+        .nav button:hover,
+        .nav a:hover,
+        .nav a:focus-visible {
             background: rgba(255, 255, 255, 0.1);
         }
         
@@ -200,8 +207,9 @@
                 gap: 6px;
                 padding: 4px;
             }
-            .nav button {
-                padding: 14px 12px;
+            .nav button,
+            .nav a {
+                padding: 14px 8px;
                 font-size: 13px;
             }
         }
@@ -1226,395 +1234,6 @@
             }
         }
 
-        .visually-hidden {
-            position: absolute;
-            width: 1px;
-            height: 1px;
-            padding: 0;
-            margin: -1px;
-            overflow: hidden;
-            clip: rect(0, 0, 0, 0);
-            white-space: nowrap;
-            border: 0;
-        }
-
-        .step-form-actions {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-group .chat-beta-btn {
-            background: transparent;
-            color: var(--primary-color);
-            border: 2px solid var(--line, rgba(21, 94, 117, 0.2));
-            box-shadow: none;
-        }
-
-        .chat-overlay,
-        body.dashboard-page > .chat-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: max(16px, env(safe-area-inset-top), var(--chat-viewport-top, 0px)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom), var(--chat-keyboard-inset, 0px)) max(16px, env(safe-area-inset-left));
-            background: rgba(15, 23, 42, 0.55);
-            backdrop-filter: blur(8px);
-        }
-
-        .chat-overlay[hidden],
-        body.dashboard-page > .chat-overlay[hidden] {
-            display: none;
-        }
-
-        .chat-panel {
-            display: flex;
-            flex-direction: column;
-            width: min(860px, 78vw);
-            height: min(740px, calc(100dvh - 48px));
-            max-height: 100%;
-            overflow: hidden;
-            color: var(--ink, #172033);
-            background: var(--surface, #fff);
-            border: 1px solid rgba(255, 255, 255, 0.58);
-            border-radius: 18px;
-            box-shadow: 0 24px 70px rgba(15, 23, 42, 0.35);
-        }
-
-        .chat-panel-header,
-        .chat-composer {
-            display: flex;
-            flex: 0 0 auto;
-            align-items: center;
-            gap: 8px;
-            padding: 12px;
-        }
-
-        .chat-panel-header {
-            border-bottom: 1px solid var(--line, #ddd);
-        }
-
-        .chat-panel-header h2 {
-            flex: 1;
-            margin: 0;
-            font-size: 18px;
-        }
-
-        .chat-tone-select {
-            min-height: 36px;
-            max-width: 130px;
-            padding: 6px 8px;
-            border: 1px solid var(--line, #ccc);
-            border-radius: 9px;
-            background: #fff;
-            font: inherit;
-            font-size: 13px;
-        }
-
-        .chat-panel-header button {
-            min-height: 36px;
-            padding: 7px 10px;
-            color: var(--primary-color);
-            background: transparent;
-            box-shadow: none;
-        }
-
-        .chat-transcript {
-            flex: 1;
-            min-height: 0;
-            padding: 14px;
-            overflow-y: auto;
-            overscroll-behavior: contain;
-        }
-
-        .chat-message {
-            width: fit-content;
-            max-width: min(76%, 680px);
-            margin: 0 0 10px;
-            padding: 10px 12px;
-            border-radius: 13px;
-            line-height: 1.4;
-            white-space: pre-wrap;
-            overflow-wrap: anywhere;
-        }
-
-        .chat-message.user {
-            margin-left: auto;
-            color: #fff;
-            background: var(--primary-color);
-        }
-
-        .chat-message.assistant {
-            background: color-mix(in srgb, var(--primary-color) 9%, white);
-        }
-
-        .chat-message.error {
-            color: #721c24;
-            background: #fbe9eb;
-        }
-
-        .chat-result-list {
-            margin: 8px 0 0;
-            padding-left: 20px;
-        }
-
-        .chat-verified-facts {
-            margin-top: 10px;
-            padding-top: 9px;
-            border-top: 1px solid var(--line, #ccd6dd);
-            color: var(--muted-ink, #526174);
-            font-size: 12px;
-        }
-
-        .chat-verified-facts .chat-result-list {
-            margin-top: 5px;
-        }
-
-        .chat-verified-facts.collapsed {
-            padding-top: 7px;
-        }
-
-        .chat-verified-facts.collapsed summary {
-            cursor: pointer;
-            font-weight: 600;
-            list-style-position: inside;
-        }
-
-        .chat-verified-facts.collapsed:not([open]) {
-            padding-bottom: 0;
-        }
-
-        .chat-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .chat-actions button {
-            min-height: 38px;
-            padding: 8px 11px;
-            font-size: 13px;
-        }
-
-        .chat-actions .secondary {
-            color: var(--primary-color);
-            background: transparent;
-            border: 1px solid var(--line, #ccc);
-            box-shadow: none;
-        }
-
-        .chat-composer {
-            align-items: flex-end;
-            border-top: 1px solid var(--line, #ddd);
-        }
-
-        .chat-image-btn {
-            display: inline-flex;
-            flex: 0 0 auto;
-            align-items: center;
-            justify-content: center;
-            min-width: 48px;
-            min-height: 48px;
-            padding: 10px;
-            color: var(--primary-color);
-            background: transparent;
-            border: 1px solid var(--line, #ccc);
-            border-radius: 10px;
-            box-shadow: none;
-            cursor: pointer;
-        }
-
-        .chat-image-btn[aria-disabled="true"] {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .chat-message.chat-image-review {
-            width: 100%;
-            max-width: 100%;
-        }
-
-        .chat-image-thumb {
-            display: block;
-            width: min(180px, 100%);
-            max-height: 150px;
-            margin: 10px 0;
-            object-fit: contain;
-            border: 1px solid var(--line, #ddd);
-            border-radius: 10px;
-        }
-
-        .chat-image-entry {
-            display: grid;
-            grid-template-columns: 20px minmax(0, 1.25fr) minmax(0, 0.75fr);
-            gap: 7px;
-            align-items: center;
-            margin-top: 8px;
-        }
-
-        .chat-image-entry input[type="date"],
-        .chat-image-entry input[type="number"] {
-            display: block;
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
-            min-height: 40px;
-            padding: 7px;
-            border: 1px solid var(--line, #ccc);
-            border-radius: 8px;
-            font: inherit;
-            font-size: 14px;
-            line-height: normal;
-            overflow: hidden;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-
-        .chat-image-confidence,
-        .chat-image-warning {
-            margin-top: 5px;
-            color: var(--muted-ink, #666);
-            font-size: 12px;
-        }
-
-        .chat-composer textarea {
-            flex: 1;
-            height: 48px;
-            min-height: 48px;
-            max-height: 120px;
-            resize: none;
-            overflow-y: auto;
-            padding: 11px 12px;
-            border: 2px solid var(--line, #ddd);
-            border-radius: 10px;
-            font: inherit;
-            line-height: 1.35;
-        }
-
-        .chat-composer textarea::placeholder {
-            font-size: 11px;
-        }
-
-        #chatSendBtn {
-            flex: 0 0 108px;
-            width: 108px;
-            min-width: 108px;
-            height: 48px;
-            min-height: 48px;
-        }
-
-        .chat-about {
-            position: relative;
-            flex: 0 0 auto;
-            padding: 0 14px 9px;
-        }
-
-        .chat-about-summary {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            min-height: 28px;
-            color: var(--muted-ink, #666);
-            font-size: 11px;
-            font-weight: 500;
-            white-space: nowrap;
-        }
-
-        .chat-about-toggle {
-            width: auto;
-            min-height: 28px;
-            padding: 3px 0;
-            color: inherit;
-            background: transparent !important;
-            border: 0;
-            border-radius: 0;
-            box-shadow: none !important;
-            font-size: 11px;
-            font-weight: 600;
-            text-align: left;
-            text-decoration: underline;
-            text-underline-offset: 2px;
-            white-space: nowrap;
-            opacity: 0.78;
-        }
-
-        .chat-about-toggle:hover,
-        .chat-about-toggle:focus-visible {
-            opacity: 1;
-        }
-
-        .chat-about-popover {
-            position: absolute;
-            right: 12px;
-            bottom: calc(100% + 5px);
-            left: 12px;
-            z-index: 2;
-            max-height: min(240px, 45dvh);
-            overflow-y: auto;
-            padding: 13px;
-            color: var(--ink, #172033);
-            background: #fff;
-            border: 1px solid var(--line, #ddd);
-            border-radius: 12px;
-            box-shadow: 0 12px 35px rgba(15, 23, 42, 0.22);
-            font-size: 12px;
-            line-height: 1.45;
-        }
-
-        .chat-about-popover[hidden] {
-            display: none;
-        }
-
-        .chat-about-popover p {
-            margin: 0 0 8px;
-        }
-
-        .chat-about-popover p:last-child {
-            margin-bottom: 0;
-        }
-
-        .chat-remember-option {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            margin: 10px 0 5px;
-            font-weight: 600;
-        }
-
-        .chat-remember-option input {
-            width: 18px;
-            height: 18px;
-            margin: 0;
-        }
-
-        .chat-remember-note {
-            color: var(--muted-ink, #666);
-            font-size: 11px;
-        }
-
-        @media (max-width: 600px) {
-            .chat-overlay,
-            body.dashboard-page > .chat-overlay {
-                box-sizing: border-box;
-                align-items: stretch;
-                padding: var(--chat-viewport-top, 0px) 0 var(--chat-keyboard-inset, 0px);
-                background: var(--surface, #fff);
-                backdrop-filter: none;
-            }
-
-            .chat-panel {
-                width: 100%;
-                height: 100%;
-                max-height: 100%;
-                border: 0;
-                border-radius: 0;
-                padding-top: env(safe-area-inset-top);
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-        }
 
         /* Ensure touch targets are at least 44px for accessibility */
         @media (hover: none) and (pointer: coarse) {
@@ -1639,6 +1258,7 @@
         <button id="myStepsBtn" class="active">My Steps</button>
         <button id="leaderboardBtn">Individuals</button>
         <button id="teamLeaderboardBtn">Teams</button>
+        <a id="trotterNav" href="/chat" aria-label="Open Trotter chat">🐷 Trotter</a>
     </div>
 
     <div id="myStepsView" class="card">
@@ -1661,8 +1281,7 @@
                             <div class="validation-feedback" id="stepsValidation"></div>
                         </div>
                     </div>
-                    <div class="form-group step-form-actions">
-                        <button type="button" id="chatOpenBtn" class="chat-beta-btn">Trotter (beta)</button>
+                    <div class="form-group">
                         <button type="submit" id="submitStepsBtn">Save Steps</button>
                     </div>
                 </form>
@@ -1686,50 +1305,6 @@
         </div>
     </div>
 
-    <div id="stepChatOverlay" class="chat-overlay" hidden>
-        <section class="chat-panel" role="dialog" aria-modal="true" aria-labelledby="stepChatTitle">
-            <header class="chat-panel-header">
-                <h2 id="stepChatTitle">Trotter <small>(beta)</small></h2>
-                <label class="visually-hidden" for="chatToneSelect">Response tone</label>
-                <select id="chatToneSelect" class="chat-tone-select" title="Response tone">
-                    <option value="neutral" selected>Neutral</option>
-                    <option value="encouraging">Encouraging</option>
-                    <option value="droll">Droll</option>
-                    <option value="sarcastic">Sarcastic</option>
-                    <option value="annoying">Annoying 🐷</option>
-                </select>
-                <button type="button" id="chatClearBtn">Clear</button>
-                <button type="button" id="chatCloseBtn" aria-label="Close chat">Close</button>
-            </header>
-            <div id="chatTranscript" class="chat-transcript" aria-live="polite"></div>
-            <form id="chatForm" class="chat-composer">
-                <label id="chatImageBtn" class="chat-image-btn" role="button" tabindex="0" aria-label="Upload or paste a step screenshot" aria-disabled="true" title="Upload or paste a step screenshot">
-                    <span aria-hidden="true">📷</span>
-                    <input type="file" id="chatImageInput" class="visually-hidden" accept="image/jpeg,image/png,image/webp">
-                </label>
-                <label class="visually-hidden" for="chatInput">Message Trotter</label>
-                <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Message or paste a pic/screenshot" required></textarea>
-                <button type="submit" id="chatSendBtn">Send</button>
-            </form>
-            <div class="chat-about">
-                <div class="chat-about-summary">
-                    <span>Trotter can misstep. Trust her, but verify.</span>
-                    <button type="button" id="chatAboutBtn" class="chat-about-toggle" aria-expanded="false" aria-controls="chatAboutPopover">Details</button>
-                </div>
-                <div id="chatAboutPopover" class="chat-about-popover" hidden>
-                    <p><strong>About Trotter</strong></p>
-                    <p>Gemini processes your message, recent local conversation context, screenshots you upload, and relevant app data needed to answer—such as participant or team names, challenge details, steps, and leaderboard results. For our usage they delete input after 72h and do not use it for training. This web app does not store screenshots or server-side chat history.</p>
-                    <p>Trotter can misread an image or phrase a fact incorrectly. Please review extracted dates and step counts before saving.</p>
-                    <label class="chat-remember-option">
-                        <input type="checkbox" id="chatRememberToggle">
-                        Keep this transcript after I close this tab (local storage, 21 days expiry)
-                    </label>
-                    <p class="chat-remember-note">Use this only on a private device. Trotter still sends only recent context—not the full saved transcript—to Gemini.</p>
-                </div>
-            </div>
-        </section>
-    </div>
-
     <div id="leaderboardView" class="card hidden">
         <h2>Individual Leaderboard</h2>
         <div id="leaderboard">
@@ -1749,7 +1324,6 @@
     <script src="/theme-manager.js"></script>
     <script src="/mega-confetti-physics.js"></script>
     <script src="/confetti.js"></script>
-    <script src="/step-chat.js"></script>
     <script src="/dashboard.js"></script>    </div>
 
     <!-- Unobtrusive Extras Section -->

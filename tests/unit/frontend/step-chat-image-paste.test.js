@@ -2,15 +2,16 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '../../..');
-const html = fs.readFileSync(path.join(root, 'src/views/dashboard.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'src/views/chat.html'), 'utf8');
+const css = fs.readFileSync(path.join(root, 'src/public/step-chat.css'), 'utf8');
 const js = fs.readFileSync(path.join(root, 'src/public/step-chat.js'), 'utf8');
 
 describe('Trotter image paste contract', () => {
   test('advertises image paste in the composer', () => {
     expect(html).toContain('aria-label="Upload or paste a step screenshot"');
     expect(html).toContain('placeholder="Message or paste a pic/screenshot"');
-    expect(html).toContain('.chat-composer textarea::placeholder');
-    expect(html).toContain('font-size: 11px');
+    expect(css).toContain('.chat-composer textarea');
+    expect(css).toContain('font-size: 16px');
   });
 
   test('routes pasted image files through the shared image workflow', () => {

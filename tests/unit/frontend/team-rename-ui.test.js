@@ -5,6 +5,7 @@ const root = path.join(__dirname, '../../..');
 const chat = fs.readFileSync(path.join(root, 'src/public/step-chat.js'), 'utf8');
 const dashboard = fs.readFileSync(path.join(root, 'src/public/dashboard.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'src/views/dashboard.html'), 'utf8');
+const chatPage = fs.readFileSync(path.join(root, 'src/views/chat.html'), 'utf8');
 
 describe('team rename and identity UI contract', () => {
   test('renders a review with explicit confirm and cancel actions', () => {
@@ -12,13 +13,13 @@ describe('team rename and identity UI contract', () => {
     expect(chat).toContain("actionButton('Rename team'");
     expect(chat).toContain("actionButton('Cancel'");
     expect(chat).toContain("postJson('/api/chat/team-rename/confirm'");
-    expect(chat).toContain("new CustomEvent('team-renamed')");
+    expect(chat).not.toContain("new CustomEvent('team-renamed')");
   });
 
-  test('refreshes live dashboard identity after a confirmed rename', () => {
-    expect(dashboard).toContain("window.addEventListener('team-renamed'");
-    expect(dashboard).toContain('loadCurrentUser()');
-    expect(dashboard).toContain('loadTeamLeaderboard()');
+  test('returns through normal navigation so the dashboard reloads current identity', () => {
+    expect(chatPage).toContain('id="chatCloseBtn"');
+    expect(chatPage).toContain('href="/dashboard"');
+    expect(dashboard).not.toContain("window.addEventListener('team-renamed'");
   });
 
   test('derives subtle team color from immutable team ID rather than name', () => {

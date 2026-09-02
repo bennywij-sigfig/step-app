@@ -8,6 +8,7 @@ describe('dashboard design contract', () => {
   const dashboard = readSource('src/public/dashboard.js');
   const icons = readSource('src/public/app-icons.js');
   const theme = readSource('src/public/season-theme.css');
+  const chat = readSource('src/public/step-chat.css');
 
   test('uses a neutral system sans stack for the data-dense dashboard', () => {
     const dashboardFontRule = theme.match(/body\.dashboard-page\s*\{[\s\S]*?\}/)?.[0] || '';
@@ -69,10 +70,12 @@ describe('dashboard design contract', () => {
     expect(dashboard).toContain('return false;');
   });
 
-  test('keeps leaderboard rankings vertical and lets Trotter expand on desktop', () => {
+  test('keeps leaderboard rankings vertical and links to a responsive standalone Trotter page', () => {
     expect(html).not.toMatch(/#leaderboard,\s*#teamLeaderboard\s*\{[\s\S]*?grid-template-columns/);
-    expect(html).toMatch(/\.chat-panel\s*\{[\s\S]*?width: min\(860px, 78vw\)/);
-    expect(html).toMatch(/@media \(max-width: 600px\)[\s\S]*?\.chat-panel\s*\{[\s\S]*?width: 100%/);
+    expect(html).toContain('id="trotterNav" href="/chat"');
+    expect(html).not.toContain('id="stepChatOverlay"');
+    expect(chat).toMatch(/\.chat-page-shell\s*\{[\s\S]*?width: min\(920px, 100%\)/);
+    expect(chat).toMatch(/@media \(max-width: 600px\)[\s\S]*?\.chat-page-shell\s*\{[\s\S]*?width: 100%/);
   });
 
   test('aligns view widths and distinguishes individual rows without recoloring teams', () => {

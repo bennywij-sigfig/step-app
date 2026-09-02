@@ -498,13 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        // Refresh the existing dashboard after Step Chat commits entries.
-        window.addEventListener('step-chat-saved', loadSteps);
-        window.addEventListener('team-renamed', async () => {
-            await loadCurrentUser();
-            await Promise.all([loadLeaderboard(), loadTeamLeaderboard()]);
-        });
-        
+
         // Render at most 30 elapsed dates. Future challenge dates made the old
         // chart look empty and compressed useful data into narrow bars.
         function renderStepsChart(steps) {

@@ -64,6 +64,7 @@ describe('Route Contract Tests', () => {
     test('should have expected page routes defined', () => {
       expect(ROUTES.pages).toBeDefined();
       expect(ROUTES.pages.dashboard).toBe('/');
+      expect(ROUTES.pages.chat).toBe('/chat');
       expect(ROUTES.pages.champions).toBe('/champions');
       expect(ROUTES.pages.admin).toBe('/admin');
       expect(ROUTES.pages.health).toBe('/health');

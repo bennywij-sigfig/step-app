@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>Trotter - Step Challenge</title>
+    <script>
+        (() => {
+            const themes = ['default', 'golden-hour', 'evergreen', 'berry-pace', 'tidepool', 'night-run'];
+            const legacy = {
+                sunset: 'golden-hour', forest: 'evergreen', lavender: 'berry-pace', monochrome: 'night-run',
+                'warm-focus': 'golden-hour', 'cool-calm': 'tidepool', 'sage-zen': 'evergreen', 'soft-light': 'default'
+            };
+            const stored = localStorage.getItem('userTheme') || localStorage.getItem('adminTheme') || 'default';
+            const theme = themes.includes(stored) ? stored : (legacy[stored] || 'default');
+            if (theme !== 'default') document.documentElement.dataset.theme = theme;
+        })();
+    </script>
+    <link rel="stylesheet" href="/season-theme.css">
+    <link rel="stylesheet" href="/step-chat.css?v=20260902-standalone">
+</head>
+<body class="chat-page-body">
+    <main id="stepChatOverlay" class="chat-page-shell" aria-labelledby="stepChatTitle">
+        <header class="chat-panel-header">
+            <h1 id="stepChatTitle">Trotter <small>(beta)</small></h1>
+            <label class="visually-hidden" for="chatToneSelect">Response tone</label>
+            <select id="chatToneSelect" class="chat-tone-select" title="Response tone">
+                <option value="neutral" selected>Neutral</option>
+                <option value="encouraging">Encouraging</option>
+                <option value="droll">Droll</option>
+                <option value="sarcastic">Sarcastic</option>
+                <option value="annoying">Annoying 🐷</option>
+            </select>
+            <button type="button" id="chatClearBtn" class="chat-header-action">Clear</button>
+            <a id="chatCloseBtn" class="chat-header-action" href="/dashboard" aria-label="Back to dashboard">Close</a>
+        </header>
+
+        <div id="chatTranscript" class="chat-transcript" aria-live="polite"></div>
+
+        <form id="chatForm" class="chat-composer">
+            <label id="chatImageBtn" class="chat-image-btn" role="button" tabindex="0" aria-label="Upload or paste a step screenshot" aria-disabled="true" title="Upload or paste a step screenshot">
+                <span aria-hidden="true">📷</span>
+                <input type="file" id="chatImageInput" class="visually-hidden" accept="image/jpeg,image/png,image/webp">
+            </label>
+            <label class="visually-hidden" for="chatInput">Message Trotter</label>
+            <textarea id="chatInput" rows="1" maxlength="2000" placeholder="Message or paste a pic/screenshot" required></textarea>
+            <button type="submit" id="chatSendBtn">Send</button>
+        </form>
+
+        <div class="chat-about">
+            <div class="chat-about-summary">
+                <span>Trotter can misstep. Trust her, but verify.</span>
+                <button type="button" id="chatAboutBtn" class="chat-about-toggle" aria-expanded="false" aria-controls="chatAboutPopover">Details</button>
+            </div>
+            <div id="chatAboutPopover" class="chat-about-popover" hidden>
+                <p><strong>About Trotter</strong></p>
+                <p>Gemini processes your message, recent local conversation context, screenshots you upload, and relevant app data needed to answer—such as participant or team names, challenge details, steps, and leaderboard results. For our usage they delete input after 72h and do not use it for training. This web app does not store screenshots or server-side chat history.</p>
+                <p>Trotter can misread an image or phrase a fact incorrectly. Please review extracted dates and step counts before saving.</p>
+                <label class="chat-remember-option">
+                    <input type="checkbox" id="chatRememberToggle">
+                    Keep this transcript on this device (local storage, 21 days expiry)
+                </label>
+                <p class="chat-remember-note">Use this only on a private device. Trotter still sends only recent context—not the full saved transcript—to Gemini.</p>
+            </div>
+        </div>
+    </main>
+    <script src="/step-chat.js?v=20260902-standalone"></script>
+</body>
+</html>

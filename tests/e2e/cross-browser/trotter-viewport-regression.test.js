@@ -3,7 +3,7 @@ const { test, expect } = require('@playwright/test');
 const baseUrl = process.env.TROTTER_VIEWPORT_URL || 'http://localhost:3100';
 
 async function authenticate(page) {
-  const email = `trotter-viewport-${Date.now()}@example.com`;
+  const email = `trotter-page-${Date.now()}@example.com`;
   const response = await fetch(`${baseUrl}/dev/get-magic-link`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -16,74 +16,37 @@ async function authenticate(page) {
   loginUrl.protocol = target.protocol;
   loginUrl.host = target.host;
   await page.goto(loginUrl.toString());
-  await expect(page.locator('#chatOpenBtn')).toBeVisible();
+  await expect(page.locator('#trotterNav')).toBeVisible();
 }
 
-async function installVisualViewportMock(page) {
-  await page.evaluate(() => {
-    const viewport = window.visualViewport;
-    const state = { height: viewport.height, offsetTop: viewport.offsetTop };
-    Object.defineProperties(viewport, {
-      height: { configurable: true, get: () => state.height },
-      offsetTop: { configurable: true, get: () => state.offsetTop }
-    });
-    Object.defineProperty(navigator, 'maxTouchPoints', {
-      configurable: true,
-      value: 5
-    });
-    window.__setTrotterVisualViewport = ({ height, offsetTop }) => {
-      state.height = height;
-      state.offsetTop = offsetTop;
-      viewport.dispatchEvent(new Event('resize'));
-      viewport.dispatchEvent(new Event('scroll'));
-    };
-  });
-}
-
-async function assertStableShell(page) {
-  const shell = await page.locator('#stepChatOverlay').evaluate(element => {
-    const rect = element.getBoundingClientRect();
-    return {
-      top: rect.top,
-      left: rect.left,
-      width: rect.width,
-      height: rect.height,
-      position: getComputedStyle(element).position,
-      inlineTop: element.style.top,
-      inlineHeight: element.style.height
-    };
-  });
-  expect(shell.top).toBe(0);
-  expect(shell.left).toBe(0);
-  expect(shell.width).toBeGreaterThan(0);
-  expect(shell.height).toBeGreaterThan(0);
-  expect(shell.position).toBe('fixed');
-  expect(shell.inlineTop).toBe('');
-  expect(shell.inlineHeight).toBe('');
-}
-
-async function assertControlHitTargets(page, visibleTop, visibleBottom) {
+async function assertControlHitTargets(page) {
   for (const selector of ['#chatClearBtn', '#chatCloseBtn', '#chatInput', '#chatSendBtn']) {
     const target = page.locator(selector);
     const box = await target.boundingBox();
     expect(box, `${selector} should have a box`).not.toBeNull();
-    expect(box.y, `${selector} should be below the visual top`).toBeGreaterThanOrEqual(visibleTop - 1);
-    expect(box.y + box.height, `${selector} should be above the keyboard`).toBeLessThanOrEqual(visibleBottom + 1);
-    const hit = await page.evaluate(({ selector, x, layoutY, visualY }) => {
-      const direct = document.elementFromPoint(x, layoutY);
-      const visual = document.elementFromPoint(x, visualY);
-      return Boolean(direct?.closest(selector) || visual?.closest(selector));
-    }, {
-      selector,
-      x: box.x + box.width / 2,
-      layoutY: box.y + box.height / 2,
-      visualY: box.y + box.height / 2 - visibleTop
-    });
+    const hit = await page.evaluate(({ selector, x, y }) => {
+      return Boolean(document.elementFromPoint(x, y)?.closest(selector));
+    }, { selector, x: box.x + box.width / 2, y: box.y + box.height / 2 });
     expect(hit, `${selector} should own its painted hit target`).toBeTruthy();
   }
 }
 
-test.describe('Trotter stable visual viewport shell', () => {
+async function assertSingleDocumentScroller(page) {
+  const layout = await page.evaluate(() => ({
+    bodyOverflow: getComputedStyle(document.body).overflow,
+    transcriptOverflow: getComputedStyle(document.getElementById('chatTranscript')).overflowY,
+    shellPosition: getComputedStyle(document.getElementById('stepChatOverlay')).position,
+    visualViewportListenersAbsent: !document.documentElement.innerHTML.includes('--chat-keyboard-inset')
+  }));
+  expect(layout.bodyOverflow).toBe('hidden');
+  expect(layout.transcriptOverflow).toBe('auto');
+  expect(layout.shellPosition).not.toBe('fixed');
+  expect(layout.visualViewportListenersAbsent).toBeTruthy();
+  const horizontalOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(horizontalOverflow).toBeLessThanOrEqual(1);
+}
+
+test.describe('Trotter standalone responsive page', () => {
   test.beforeEach(async ({ page }) => {
     await page.route('**/api/chat/config', route => route.fulfill({
       status: 200,
@@ -100,59 +63,67 @@ test.describe('Trotter stable visual viewport shell', () => {
       });
     });
     await authenticate(page);
-    await installVisualViewportMock(page);
   });
 
-  test('keeps controls hittable through submit and refocus across touch layouts', async ({ page }) => {
+  test('keeps chat controls and scrolling usable across responsive touch layouts', async ({ page }) => {
     const scenarios = [
-      { name: 'portrait phone', width: 390, height: 664, visualTop: 80, visualHeight: 340 },
-      { name: 'landscape phone', width: 844, height: 390, visualTop: 20, visualHeight: 250 },
-      { name: 'tablet', width: 820, height: 1180, visualTop: 120, visualHeight: 650 }
+      { name: 'small phone', width: 360, height: 640 },
+      { name: 'portrait phone', width: 390, height: 844 },
+      { name: 'landscape phone', width: 844, height: 390 },
+      { name: 'tablet', width: 820, height: 1180 }
     ];
 
     for (const scenario of scenarios) {
       await test.step(scenario.name, async () => {
         await page.setViewportSize({ width: scenario.width, height: scenario.height });
-        await page.click('#chatOpenBtn');
-        await expect(page.locator('#stepChatOverlay')).toBeVisible();
-        await assertStableShell(page);
+        await expect(page.locator('#trotterNav')).toBeVisible();
+        await page.click('#trotterNav');
+        await expect(page.locator('#chatSendBtn')).toBeEnabled();
+        await assertSingleDocumentScroller(page);
+        await assertControlHitTargets(page);
 
-        await page.evaluate(({ height, offsetTop }) => {
-          window.__setTrotterVisualViewport({ height, offsetTop });
-        }, { height: scenario.visualHeight, offsetTop: scenario.visualTop });
-        await assertStableShell(page);
-        await assertControlHitTargets(page, scenario.visualTop, scenario.visualTop + scenario.visualHeight);
-
-        await page.fill('#chatInput', 'viewport regression test');
+        await page.fill('#chatInput', 'standalone page regression test');
         await page.click('#chatSendBtn');
         await expect(page.locator('#chatSendBtn')).toHaveText('Send');
-        await assertStableShell(page);
-        await expect(page.locator('#stepChatOverlay')).not.toHaveAttribute('style', /chat-(viewport-top|keyboard-inset)/);
-
-        await page.click('#chatInput');
-        await page.evaluate(({ height, offsetTop }) => {
-          window.__setTrotterVisualViewport({ height, offsetTop });
-        }, { height: scenario.visualHeight, offsetTop: scenario.visualTop });
-        await assertStableShell(page);
-        await assertControlHitTargets(page, scenario.visualTop, scenario.visualTop + scenario.visualHeight);
+        await expect(page.locator('#chatTranscript')).toContainText('I’m Trotter');
 
         await page.click('#chatClearBtn');
         await expect(page.locator('#chatTranscript')).toContainText('Transcript cleared');
+        await page.click('#chatInput');
+        await expect(page.locator('#chatInput')).toBeFocused();
+
+        await page.evaluate(() => {
+          const transcript = document.getElementById('chatTranscript');
+          for (let index = 0; index < 40; index += 1) {
+            const message = document.createElement('div');
+            message.className = 'chat-message assistant';
+            message.textContent = `Scroll regression message ${index + 1}`;
+            transcript.appendChild(message);
+          }
+          transcript.scrollTop = 0;
+        });
+        const transcript = page.locator('#chatTranscript');
+        await expect.poll(() => transcript.evaluate(element => element.scrollHeight > element.clientHeight)).toBeTruthy();
+        await transcript.evaluate(element => { element.scrollTop = element.scrollHeight; });
+        await expect.poll(() => transcript.evaluate(element => element.scrollTop > 0)).toBeTruthy();
+        await assertControlHitTargets(page);
+
         await page.click('#chatCloseBtn');
-        await expect(page.locator('#stepChatOverlay')).toBeHidden();
+        await expect(page).toHaveURL(/\/dashboard$/);
+        await expect(page.locator('#trotterNav')).toBeVisible();
       });
     }
   });
 
-  test('preserves normal desktop modal geometry and controls', async ({ page }) => {
+  test('uses a centered, bounded chat workspace on desktop', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.click('#chatOpenBtn');
-    await assertStableShell(page);
-    const panel = await page.locator('.chat-panel').boundingBox();
-    expect(panel.width).toBeLessThanOrEqual(860);
-    expect(panel.height).toBeLessThanOrEqual(740);
-    await page.click('#chatClearBtn');
-    await page.click('#chatCloseBtn');
-    await expect(page.locator('#stepChatOverlay')).toBeHidden();
+    await page.goto(`${baseUrl}/chat`);
+    await expect(page.locator('#chatSendBtn')).toBeEnabled();
+    const shell = await page.locator('.chat-page-shell').boundingBox();
+    expect(shell.width).toBeLessThanOrEqual(920);
+    expect(shell.height).toBeLessThanOrEqual(780);
+    expect(shell.x).toBeGreaterThan(0);
+    await assertSingleDocumentScroller(page);
+    await assertControlHitTargets(page);
   });
 });

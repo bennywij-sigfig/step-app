@@ -57,6 +57,7 @@ const ROUTES = {
   // Static Pages
   pages: {
     dashboard: '/',
+    chat: '/chat',
     champions: '/champions',
     admin: '/admin',
     health: '/health',

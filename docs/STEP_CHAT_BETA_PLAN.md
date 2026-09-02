@@ -2,7 +2,7 @@
 
 ## Product scope
 
-Trotter is opened from a **Trotter (beta)** button immediately left of **Save Steps**.
+Trotter opens as an authenticated standalone page at `/chat` from the dashboard’s primary **Trotter** navigation item. Keeping chat in its own document avoids mobile keyboard and nested-scroll conflicts with the dashboard while preserving the browser’s normal Back behavior.
 It supports:
 
 - Previewing one or many step entries for the authenticated user

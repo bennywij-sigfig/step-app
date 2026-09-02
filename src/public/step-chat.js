@@ -18,9 +18,7 @@
         rememberOnDevice: false,
         imageObjectUrl: null,
         imageUploadEnabled: false,
-        imageBusy: false,
-        themeColorBeforeChat: null,
-        chatLayoutHeight: 0
+        imageBusy: false
     };
 
     const formatNumber = value => Number(value || 0).toLocaleString();
@@ -394,7 +392,6 @@
                 const data = await postJson('/api/chat/confirm', { plan_id: result.plan_id, mode });
                 createMessage('assistant', `Saved ${data.result.saved} entr${data.result.saved === 1 ? 'y' : 'ies'}${data.result.skipped ? `; skipped ${data.result.skipped}` : ''}.`);
                 actions.remove();
-                window.dispatchEvent(new CustomEvent('step-chat-saved'));
             } catch (error) {
                 createMessage('error', error.message);
                 for (const button of actions.querySelectorAll('button')) button.disabled = false;
@@ -429,7 +426,6 @@
                 const data = await postJson('/api/chat/team-rename/confirm', { plan_id: result.plan_id });
                 createMessage('assistant', `Your team is now “${data.result.name}”.`);
                 actions.remove();
-                window.dispatchEvent(new CustomEvent('team-renamed'));
             } catch (error) {
                 createMessage('error', error.message);
                 for (const button of actions.querySelectorAll('button')) button.disabled = false;
@@ -769,78 +765,8 @@
             || Boolean(window.matchMedia?.('(hover: none), (pointer: coarse)').matches);
     }
 
-    function isChatEditorFocused(overlay) {
-        const active = document.activeElement;
-        if (!active || !overlay.contains(active)) return false;
-        return active.matches('textarea, input:not([type="button"]):not([type="checkbox"]):not([type="file"]), select, [contenteditable="true"]');
-    }
-
-    function captureChatLayoutHeight() {
-        const viewport = window.visualViewport;
-        state.chatLayoutHeight = Math.max(
-            document.documentElement.clientHeight || 0,
-            window.innerHeight || 0,
-            (viewport?.height || 0) + (viewport?.offsetTop || 0)
-        );
-    }
-
-    function resetVisualViewport() {
-        const overlay = document.getElementById('stepChatOverlay');
-        if (!overlay) return;
-        overlay.style.removeProperty('--chat-viewport-top');
-        overlay.style.removeProperty('--chat-keyboard-inset');
-    }
-
-    function syncVisualViewport() {
-        const overlay = document.getElementById('stepChatOverlay');
-        const viewport = window.visualViewport;
-        if (!overlay || !viewport || !isChatEditorFocused(overlay)) return;
-
-        // Never move or resize the fixed overlay itself. iOS Safari can paint
-        // a moved fixed layer in one place while leaving its touch hit region
-        // elsewhere after keyboard dismissal. Keep that shell at inset: 0 and
-        // fit its children into the visual viewport using ordinary padding.
-        const layoutHeight = state.chatLayoutHeight || window.innerHeight || viewport.height;
-        const visualTop = Math.max(0, Math.round(viewport.offsetTop || 0));
-        const keyboardInset = Math.max(0, Math.round(layoutHeight - visualTop - viewport.height));
-        overlay.style.setProperty('--chat-viewport-top', `${visualTop}px`);
-        overlay.style.setProperty('--chat-keyboard-inset', `${keyboardInset}px`);
-    }
-
-    function setChatBrowserColor(open) {
-        const themeColor = document.querySelector('meta[name="theme-color"]');
-        if (!themeColor) return;
-        if (open && state.themeColorBeforeChat === null) {
-            state.themeColorBeforeChat = themeColor.content;
-            themeColor.content = '#ffffff';
-        } else if (state.themeColorBeforeChat) {
-            themeColor.content = state.themeColorBeforeChat;
-            state.themeColorBeforeChat = null;
-        }
-    }
-
-    function openChat() {
-        const overlay = document.getElementById('stepChatOverlay');
-        resetVisualViewport();
-        captureChatLayoutHeight();
-        overlay.hidden = false;
-        document.body.style.overflow = 'hidden';
-        setChatBrowserColor(true);
-        document.getElementById('chatInput').focus();
-        window.requestAnimationFrame(syncVisualViewport);
-    }
-
-    function closeChat() {
-        const overlay = document.getElementById('stepChatOverlay');
-        overlay.hidden = true;
-        resetVisualViewport();
-        document.body.style.overflow = '';
-        setChatBrowserColor(false);
-        document.getElementById('chatOpenBtn').focus();
-    }
-
     document.addEventListener('DOMContentLoaded', () => {
-        const overlay = document.getElementById('stepChatOverlay');
+        const shell = document.getElementById('stepChatOverlay');
         const transcript = document.getElementById('chatTranscript');
         const form = document.getElementById('chatForm');
         const input = document.getElementById('chatInput');
@@ -851,7 +777,7 @@
         const aboutButton = document.getElementById('chatAboutBtn');
         const aboutPopover = document.getElementById('chatAboutPopover');
         const rememberToggle = document.getElementById('chatRememberToggle');
-        if (!overlay || !form) return;
+        if (!shell || !form) return;
 
         const closeAbout = () => {
             aboutPopover.hidden = true;
@@ -862,21 +788,8 @@
             input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
         };
 
-        // Escape the dashboard container's stacking context so Tidbits and
-        // other page cards can never paint above the modal.
-        document.body.appendChild(overlay);
-        resetVisualViewport();
-        window.visualViewport?.addEventListener('resize', syncVisualViewport);
-        window.visualViewport?.addEventListener('scroll', syncVisualViewport);
-        window.addEventListener('orientationchange', () => {
-            resetVisualViewport();
-            window.requestAnimationFrame(captureChatLayoutHeight);
-        });
         window.addEventListener('beforeunload', () => {
             if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
-        });
-        input.addEventListener('pointerdown', () => {
-            if (document.activeElement !== input) captureChatLayoutHeight();
         });
         input.addEventListener('input', resizeComposerInput);
         input.addEventListener('paste', event => {
@@ -894,9 +807,7 @@
             processImageFile(file);
         });
         input.addEventListener('focus', () => {
-            window.requestAnimationFrame(syncVisualViewport);
             setTimeout(() => {
-                syncVisualViewport();
                 transcript.scrollTop = transcript.scrollHeight;
             }, 50);
         });
@@ -908,11 +819,6 @@
         createMessage('assistant', 'Trotter is trotting over…', false);
         initializeConfig();
 
-        document.getElementById('chatOpenBtn').addEventListener('click', openChat);
-        document.getElementById('chatCloseBtn').addEventListener('click', () => {
-            closeAbout();
-            closeChat();
-        });
         aboutButton.addEventListener('click', () => {
             const willOpen = aboutPopover.hidden;
             aboutPopover.hidden = !willOpen;
@@ -947,17 +853,6 @@
             transcript.replaceChildren();
             createMessage('assistant', 'Transcript cleared. What would you like to do?', false);
         });
-        overlay.addEventListener('click', event => {
-            if (event.target === overlay) {
-                closeAbout();
-                closeChat();
-            } else if (!isChatEditorFocused(overlay)) {
-                // Reset only after the control's click has been delivered.
-                // Doing this synchronously on textarea blur can move the
-                // target between touchstart and click on iOS.
-                resetVisualViewport();
-            }
-        });
         document.addEventListener('click', event => {
             if (!event.target.closest('.chat-about')) closeAbout();
         });
@@ -968,13 +863,13 @@
             }
         });
         document.addEventListener('keydown', event => {
-            if (event.key !== 'Escape' || overlay.hidden) return;
+            if (event.key !== 'Escape') return;
             if (!aboutPopover.hidden) {
                 closeAbout();
                 aboutButton.focus();
                 return;
             }
-            closeChat();
+            window.location.assign('/dashboard');
         });
 
         form.addEventListener('submit', async event => {
@@ -984,14 +879,9 @@
             createMessage('user', message);
             input.value = '';
             resizeComposerInput();
-            // A delayed focus() after the request is no longer backed by a
-            // user gesture on iOS. Safari may scroll to the textarea without
-            // reopening the keyboard, stranding visualViewport at its old
-            // keyboard dimensions. Make mobile keyboard dismissal explicit.
-            if (usesTouchKeyboard()) {
-                input.blur();
-                resetVisualViewport();
-            }
+            // Keep keyboard dismissal deterministic on touch devices, but let
+            // Safari own all viewport panning and restoration.
+            if (usesTouchKeyboard()) input.blur();
             sendButton.disabled = true;
             sendButton.textContent = 'Thinking…';
             try {

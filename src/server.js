@@ -1082,6 +1082,16 @@ app.get('/dashboard.html', requireAuth, (req, res) => {
   res.redirect('/dashboard');
 });
 
+// Trotter chat is a dedicated document so mobile Safari owns keyboard and
+// document scrolling without a fixed modal competing with the dashboard.
+app.get('/chat', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'chat.html'));
+});
+
+app.get('/chat.html', requireAuth, (req, res) => {
+  res.redirect('/chat');
+});
+
 // Authenticated REST API documentation. The documentation uses the normal web
 // session; bearer credentials are required only when calling /api/v1 itself.
 app.get('/api-docs', requireAuth, (req, res) => {
