@@ -693,6 +693,50 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        let pendingDateWarningConfirmation = null;
+
+        function renderDateWarning(warning, date, rawSteps) {
+            const messageDiv = document.getElementById('stepsMessage');
+            messageDiv.innerHTML = '';
+
+            const panel = document.createElement('div');
+            panel.className = 'message date-warning';
+            const text = document.createElement('p');
+            text.textContent = warning.message;
+            panel.appendChild(text);
+
+            const actions = document.createElement('div');
+            actions.className = 'date-warning-actions';
+            const saveButton = document.createElement('button');
+            saveButton.type = 'button';
+            saveButton.textContent = `Yes, save for ${formatCompactDate(date)}`;
+            saveButton.addEventListener('click', () => {
+                for (const button of actions.querySelectorAll('button')) button.disabled = true;
+                pendingDateWarningConfirmation = { date, rawSteps };
+                document.getElementById('stepsForm').requestSubmit();
+            });
+            actions.appendChild(saveButton);
+
+            if (warning.suggested_date) {
+                const changeButton = document.createElement('button');
+                changeButton.type = 'button';
+                changeButton.className = 'secondary';
+                changeButton.textContent = warning.code === 'early_local_today'
+                    ? `Use yesterday (${formatCompactDate(warning.suggested_date)})`
+                    : `Use local today (${formatCompactDate(warning.suggested_date)})`;
+                changeButton.addEventListener('click', () => {
+                    for (const button of actions.querySelectorAll('button')) button.disabled = true;
+                    document.getElementById('date').value = warning.suggested_date;
+                    validateDateInput(document.getElementById('date'), currentUser?.current_challenge);
+                    document.getElementById('stepsForm').requestSubmit();
+                });
+                actions.appendChild(changeButton);
+            }
+
+            panel.appendChild(actions);
+            messageDiv.appendChild(panel);
+        }
+
         // Handle form submission
         document.getElementById('stepsForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -749,6 +793,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            const dateWarningConfirmed = pendingDateWarningConfirmation?.date === date
+                && pendingDateWarningConfirmation?.rawSteps === rawSteps;
+            pendingDateWarningConfirmation = null;
+
             if (window.stepEntryUX?.isEnabled) window.stepEntryUX.handleSubmitStart();
 
             try {
@@ -761,7 +809,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify({
                         date: date,
                         count: steps,
-                        csrfToken: token
+                        csrfToken: token,
+                        client_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        date_warning_confirmed: dateWarningConfirmed
                     })
                 });
                 
@@ -783,7 +833,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     loadSteps(); // Reload the steps list
                 } else {
                     if (window.stepEntryUX?.isEnabled) window.stepEntryUX.handleSubmitError();
-                    if (response.status === 429) {
+                    if (response.status === 409 && data.code === 'STEP_DATE_CONFIRMATION_REQUIRED' && data.warning) {
+                        renderDateWarning(data.warning, date, rawSteps);
+                    } else if (response.status === 429) {
                         const retryAfter = Math.floor(data.retryAfter / 60) || 60; // Convert to minutes
                         messageDiv.innerHTML = '<div class="message error">Too many requests. Please wait ' + retryAfter + ' minutes before trying again.</div>';
                     } else {

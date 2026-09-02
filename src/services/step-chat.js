@@ -1,5 +1,6 @@
 const { isValidDate } = require('../utils/validation');
 const { normalizeTeamName, teamNameKey, TeamNameValidationError } = require('../utils/team-name');
+const { getStepDateWarning } = require('../utils/step-date-warning');
 const {
   getCurrentChallengeDay,
   getTotalChallengeDays,
@@ -179,7 +180,7 @@ function createStepChatService({
     return { previous_name: plan.currentName, name: proposedName };
   }
 
-  async function previewEntries(userId, entries) {
+  async function previewEntries(userId, entries, dateContext = null) {
     const [user, challenge] = await Promise.all([
       get('SELECT id, archived_at FROM users WHERE id = ?', [userId]),
       getActiveChallenge()
@@ -198,7 +199,12 @@ function createStepChatService({
     const preview = validated.map(entry => {
       const existingCount = existingByDate.has(entry.date) ? existingByDate.get(entry.date) : null;
       const status = existingCount === null ? 'new' : existingCount === entry.count ? 'unchanged' : 'conflict';
-      return { ...entry, existing_count: existingCount, status };
+      return {
+        ...entry,
+        existing_count: existingCount,
+        status,
+        date_warning: getStepDateWarning(entry.date, dateContext)
+      };
     });
 
     return {
@@ -626,9 +632,9 @@ function createStepChatService({
     return { kind: 'help', message: messages[reason] || messages.general };
   }
 
-  async function executeIntent(userId, intent) {
+  async function executeIntent(userId, intent, dateContext = null) {
     switch (intent.intent) {
-      case 'record_steps': return { kind: 'step_preview', ...(await previewEntries(userId, intent.entries)) };
+      case 'record_steps': return { kind: 'step_preview', ...(await previewEntries(userId, intent.entries, dateContext)) };
       case 'show_my_steps': return getMySteps(userId, intent.start_date, intent.end_date);
       case 'individual_leaderboard': return individualLeaderboard();
       case 'team_leaderboard': return teamLeaderboard();

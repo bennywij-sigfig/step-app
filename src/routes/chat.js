@@ -1,8 +1,8 @@
 const express = require('express');
 const crypto = require('crypto');
 const { ALLOWED_TONES } = require('../services/chat-intent');
-const { isValidDate } = require('../utils/validation');
 const { runTrotterAgent } = require('../services/chat-agent');
+const { getClientDateContext } = require('../utils/step-date-warning');
 
 const MESSAGE_LIMIT = 2000;
 const HISTORY_MESSAGE_LIMIT = 50;
@@ -140,22 +140,17 @@ function createChatRouter({
   }
 
   function applyClientDateContext(context, body) {
-    const clientDate = body?.client_date;
-    const clientTimezone = body?.client_timezone;
-    if (!isValidDate(clientDate) || typeof clientTimezone !== 'string' || clientTimezone.length > 64) return context;
-    try {
-      new Intl.DateTimeFormat('en-US', { timeZone: clientTimezone }).format(new Date());
-      const serverDate = Date.parse(`${context.currentDate}T00:00:00Z`);
-      const browserDate = Date.parse(`${clientDate}T00:00:00Z`);
-      if (Math.abs(serverDate - browserDate) > 2 * 86400000) return context;
-      // currentDate is the canonical, generous challenge date (Singapore is
-      // the first supported region to reach a new date). A browser in Pacific
-      // time can legitimately still be on the prior local date, so it must not
-      // make Trotter report an already-open challenge as upcoming.
-      return { ...context, clientDate, clientTimezone };
-    } catch (_) {
-      return context;
-    }
+    const localContext = getClientDateContext(body?.client_timezone, new Date(now()));
+    if (!localContext) return context;
+
+    const serverDate = Date.parse(`${context.currentDate}T00:00:00Z`);
+    const browserDate = Date.parse(`${localContext.clientDate}T00:00:00Z`);
+    if (Math.abs(serverDate - browserDate) > 2 * 86400000) return context;
+
+    // currentDate remains the generous Singapore authorization/challenge
+    // anchor. Personal words such as “today” use this independently validated
+    // local context instead of trusting a date string supplied by the browser.
+    return { ...context, ...localContext };
   }
 
   function attachPlan(req, result) {
@@ -213,7 +208,7 @@ function createChatRouter({
     if (['challenge_info', 'challenge_outlook', 'calculate_overtake', 'calculate_target_average'].includes(intent.intent) && !intent.as_of_date) {
       intent.as_of_date = context.currentDate;
     }
-    const result = await service.executeIntent(req.session.userId, intent);
+    const result = await service.executeIntent(req.session.userId, intent, context);
     if (result.kind === 'step_preview') attachPlan(req, result);
     if (result.kind === 'team_rename_preview') attachTeamRenamePlan(req, result);
 
@@ -277,7 +272,13 @@ function createChatRouter({
           tone,
           context: {
             userId: req.session.userId,
-            currentDate: context.currentDate
+            currentDate: context.currentDate,
+            ...(context.clientDate ? {
+              clientDate: context.clientDate,
+              clientHour: context.clientHour,
+              clientTime: context.clientTime,
+              clientTimezone: context.clientTimezone
+            } : {})
           }
         });
         const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
@@ -407,7 +408,8 @@ function createChatRouter({
 
   router.post('/entries/preview', requireApiAuth, validateCSRFToken, chatApiLimiter, async (req, res) => {
     try {
-      const result = { kind: 'step_preview', ...(await service.previewEntries(req.session.userId, req.body?.entries)) };
+      const context = applyClientDateContext(await service.getContext(req.session.userId), req.body);
+      const result = { kind: 'step_preview', ...(await service.previewEntries(req.session.userId, req.body?.entries, context)) };
       attachPlan(req, result);
       const tone = ALLOWED_TONES.has(req.body?.tone) ? req.body.tone : 'neutral';
       res.json({ intent: 'record_steps', tone, result, reply: null });

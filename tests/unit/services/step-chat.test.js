@@ -103,6 +103,27 @@ describe('Step Chat deterministic write service', () => {
     expect(preview.entries.map(entry => entry.status)).toEqual(['new', 'unchanged', 'conflict']);
   });
 
+  test('adds local-date warnings without changing Singapore-anchored validity', async () => {
+    const preview = await service.previewEntries(
+      1,
+      [{ date: '2025-08-21', count: 6500 }],
+      {
+        clientDate: '2025-08-20',
+        clientHour: 17,
+        clientTime: '5:00 PM',
+        clientTimezone: 'America/Los_Angeles'
+      }
+    );
+
+    expect(preview.entries[0]).toMatchObject({
+      date: '2025-08-21',
+      date_warning: {
+        code: 'date_ahead_of_local_day',
+        suggested_date: '2025-08-20'
+      }
+    });
+  });
+
   test('new-only confirmation does not overwrite a conflict', async () => {
     const plan = await service.previewEntries(1, [
       { date: '2025-08-19', count: 4000 },

@@ -120,8 +120,8 @@ describe('Step Chat routes', () => {
     expect(accepted.at(-1).text).toContain('49:');
   });
 
-  test('preserves canonical challenge date when the validated browser date is behind it', async () => {
-    const { app, provider } = buildApp();
+  test('preserves canonical challenge date while deriving local date from the validated browser timezone', async () => {
+    const { app, provider } = buildApp({ now: () => Date.parse('2026-08-25T03:00:00Z') });
     const agent = request.agent(app);
     await agent.post('/test-login').expect(200);
     const response = await agent.post('/api/chat')
@@ -129,7 +129,7 @@ describe('Step Chat routes', () => {
       .send({
         message: 'What did I do yesterday?',
         tone: 'droll',
-        client_date: '2026-08-24',
+        client_date: '2099-01-01',
         client_timezone: 'America/Los_Angeles'
       })
       .expect(200);
@@ -137,6 +137,8 @@ describe('Step Chat routes', () => {
     expect(provider.interpret).toHaveBeenCalledWith('What did I do yesterday?', {
       currentDate: '2026-08-25',
       clientDate: '2026-08-24',
+      clientHour: 20,
+      clientTime: '8:00 PM',
       clientTimezone: 'America/Los_Angeles',
       challenge: null
     }, []);
@@ -188,9 +190,11 @@ describe('Step Chat routes', () => {
       })
       .expect(200);
 
-    expect(executeIntent).toHaveBeenCalledWith(42, {
-      intent: 'challenge_info', tone: 'neutral', as_of_date: '2026-08-25'
-    });
+    expect(executeIntent).toHaveBeenCalledWith(
+      42,
+      { intent: 'challenge_info', tone: 'neutral', as_of_date: '2026-08-25' },
+      expect.objectContaining({ currentDate: '2026-08-25' })
+    );
   });
 
   test('never runs the voice pass for rejected/help requests', async () => {
@@ -587,6 +591,7 @@ describe('Step Chat routes', () => {
       end_date: '2026-08-31'
     };
     const { app } = buildApp({
+      now: () => Date.parse('2026-08-25T19:00:00Z'),
       providerOverrides: { extractImage },
       serviceOverrides: {
         getContext: jest.fn(async () => ({ currentDate: '2026-08-25', challenge }))
@@ -610,6 +615,8 @@ describe('Step Chat routes', () => {
     expect(extractImage).toHaveBeenCalledWith(expect.any(Buffer), 'image/png', {
       currentDate: '2026-08-25',
       clientDate: '2026-08-25',
+      clientHour: 12,
+      clientTime: '12:00 PM',
       clientTimezone: 'America/Los_Angeles',
       challenge
     });
@@ -635,7 +642,11 @@ describe('Step Chat routes', () => {
       .set('X-CSRF-Token', 'csrf-test')
       .send({ entries: [{ date: '2026-08-20', count: 8000 }], tone: 'droll' })
       .expect(200);
-    expect(service.previewEntries).toHaveBeenCalledWith(42, [{ date: '2026-08-20', count: 8000 }]);
+    expect(service.previewEntries).toHaveBeenCalledWith(
+      42,
+      [{ date: '2026-08-20', count: 8000 }],
+      expect.objectContaining({ currentDate: '2026-08-25' })
+    );
     expect(response.body).toMatchObject({
       intent: 'record_steps', tone: 'droll',
       result: { kind: 'step_preview', plan_id: expect.any(String) }

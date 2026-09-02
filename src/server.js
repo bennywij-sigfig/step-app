@@ -53,6 +53,7 @@ const {
   getLatestSupportedLocalDate,
   isDateInChallengePeriod
 } = require('./utils/challenge');
+const { getClientDateContext, getStepDateWarning } = require('./utils/step-date-warning');
 
 // Load environment variables
 require('dotenv').config();
@@ -1349,6 +1350,19 @@ app.post('/api/steps', apiLimiter, requireApiAuth, validateCSRFToken, sanitizeUs
       return res.status(400).json({ error: 'Cannot enter steps for future dates' });
     }
     
+    // A Singapore-authorized date may still look surprising in the user's
+    // local timezone. Require one explicit retry, but never turn this soft
+    // warning into a new authorization boundary.
+    const clientDateContext = getClientDateContext(req.body.client_timezone);
+    const dateWarning = getStepDateWarning(date, clientDateContext);
+    if (dateWarning && req.body.date_warning_confirmed !== true) {
+      return res.status(409).json({
+        error: dateWarning.message,
+        code: 'STEP_DATE_CONFIRMATION_REQUIRED',
+        warning: dateWarning
+      });
+    }
+
     // Use validated count instead of raw input
     const stepCount = validatedCount;
 

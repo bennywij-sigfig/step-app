@@ -35,6 +35,13 @@ It does not support arbitrary questions, web access, SQL, admin actions, or modi
 
 The model never receives a general-purpose write, SQL, shell, URL-fetch, filesystem, admin, or cross-user tool.
 
+## Local date intent and global acceptance
+
+- Singapore's calendar date remains the liberal future-entry ceiling, so a valid international entry is never rejected merely because another region is still on the prior day.
+- Personal phrases such as “today” and “yesterday” resolve from a server-derived date for the browser's validated IANA timezone. The browser's claimed date string is not trusted. Challenge timing continues to use the canonical global window.
+- A globally allowed date receives a soft warning when it is later than the user's local date, or when it is local today before 6 PM. The warning does not alter authorization.
+- Dashboard saves require an explicit retry after the warning. Trotter shows the same warning in its existing review-and-confirm flow and offers a suggested-date re-preview for a single entry.
+
 ## Image extraction prototype
 
 - One JPEG, PNG, or WebP screenshot per request
@@ -74,7 +81,7 @@ All endpoints require the existing authenticated session. POST endpoints require
 - 2,000 characters per user message
 - 31 dates per batch in the beta
 - 0–70,000 steps per date, matching the existing application rule
-- Current or past dates only
+- Dates no later than the current Singapore calendar date
 - Active challenge date range when a challenge exists
 - One model interpretation call per message, plus a short read-only voice pass for non-write results
 - Step previews remain deterministic and do not use the voice pass

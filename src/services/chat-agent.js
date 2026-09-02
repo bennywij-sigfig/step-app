@@ -12,7 +12,7 @@ class ChatAgentProtocolError extends Error {
   }
 }
 
-function parseDirectStepRequest(message, currentDate) {
+function parseDirectStepRequest(message, currentDate, clientDate = null) {
   const match = String(message || '').match(
     /^\s*(?:log|record|add)\s+(\d+|\d{1,3}(?:,\d{3})+)\s+steps?\s+(?:for|on)\s+(today|yesterday|\d{4}-\d{2}-\d{2})[.!]?\s*$/i
   );
@@ -24,9 +24,10 @@ function parseDirectStepRequest(message, currentDate) {
   if (!Number.isSafeInteger(count) || count < 0 || count > 70000) return null;
 
   let date = match[2].toLowerCase();
-  if (date === 'today') date = currentDate;
+  const relativeDate = /^\d{4}-\d{2}-\d{2}$/.test(clientDate || '') ? clientDate : currentDate;
+  if (date === 'today') date = relativeDate;
   if (date === 'yesterday') {
-    const priorDate = new Date(`${currentDate}T00:00:00Z`);
+    const priorDate = new Date(`${relativeDate}T00:00:00Z`);
     priorDate.setUTCDate(priorDate.getUTCDate() - 1);
     date = priorDate.toISOString().slice(0, 10);
   }
@@ -53,7 +54,7 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
   // Keep the most common explicit write phrasing deterministic. This prevents
   // the language model from turning a valid count (for example 9,999) into an
   // unrelated range error; the service remains authoritative for date bounds.
-  const directEntry = parseDirectStepRequest(message, context?.currentDate);
+  const directEntry = parseDirectStepRequest(message, context?.currentDate, context?.clientDate);
   if (directEntry) {
     const result = await registry.execute('preview_step_entries', { entries: [directEntry] }, context);
     return {
