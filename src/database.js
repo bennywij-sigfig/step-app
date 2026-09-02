@@ -354,6 +354,16 @@ if (!shouldDelayInit) {
     FOREIGN KEY (user_id) REFERENCES users (id)
   )`);
 
+  // Compact audit trail for confirmed Trotter mutations. One row is written
+  // per confirmation, never per step entry, and free-form prompts are omitted.
+  db.run(`CREATE TABLE IF NOT EXISTS trotter_audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    action TEXT NOT NULL CHECK (action IN ('steps_commit', 'team_rename')),
+    details TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   // Settings table for configurable app settings
   db.run(`CREATE TABLE IF NOT EXISTS settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -394,6 +404,7 @@ if (!shouldDelayInit) {
   db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_expires ON mcp_tokens(expires_at)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_token_user ON mcp_audit_log(token_id, user_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_created ON mcp_audit_log(created_at)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_trotter_audit_created ON trotter_audit_log(created_at)`);
   
   // Add scopes column to existing tokens if it doesn't exist
   db.run(`ALTER TABLE mcp_tokens ADD COLUMN scopes TEXT DEFAULT 'steps:read,steps:write,profile:read'`, (err) => {

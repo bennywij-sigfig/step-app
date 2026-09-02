@@ -39,6 +39,11 @@ function createStepChatService({
   });
   const get = (sql, params = []) => getFrom(db, sql, params);
   const all = (sql, params = []) => allFrom(db, sql, params);
+  const recordAudit = (connection, userId, action, details) => runOn(
+    connection,
+    'INSERT INTO trotter_audit_log (user_id, action, details) VALUES (?, ?, ?)',
+    [userId, action, JSON.stringify(details)]
+  );
 
   async function getActiveChallenge(connection = db) {
     return getFrom(connection, 'SELECT * FROM challenges WHERE is_active = 1 LIMIT 1');
@@ -158,6 +163,11 @@ function createStepChatService({
           [proposedName, teamNameKey(proposedName), user.team_id, plan.currentName]
         );
         if (update.changes !== 1) throw userError('The team name changed; ask Trotter to review the rename again');
+        await recordAudit(transactionDb, userId, 'team_rename', {
+          team_id: plan.teamId,
+          previous_name: plan.currentName,
+          new_name: proposedName
+        });
         await runOn(transactionDb, 'COMMIT');
       } catch (error) {
         await runOn(transactionDb, 'ROLLBACK').catch(() => {});
@@ -251,6 +261,17 @@ function createStepChatService({
               challenge_id = excluded.challenge_id,
               updated_at = datetime('now')
           `, [userId, entry.date, entry.count, plan.challengeId]);
+        }
+        if (entriesToSave.length > 0) {
+          await recordAudit(transactionDb, userId, 'steps_commit', {
+            challenge_id: plan.challengeId,
+            mode,
+            entries: entriesToSave.map(entry => ({
+              date: entry.date,
+              previous_count: entry.existing_count,
+              new_count: entry.count
+            }))
+          });
         }
         await runOn(transactionDb, 'COMMIT');
       } catch (error) {

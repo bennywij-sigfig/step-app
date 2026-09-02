@@ -33,6 +33,10 @@ describe('Step Chat deterministic write service', () => {
       count INTEGER NOT NULL, challenge_id INTEGER, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, date)
     )`);
+    await run(db, `CREATE TABLE trotter_audit_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+      action TEXT NOT NULL, details TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
     await run(db, `INSERT INTO teams (id, name, name_key) VALUES (1, 'Team A', 'team a')`);
     await run(db, 'INSERT INTO users (id, name, team_id) VALUES (1, ?, 1), (2, ?, NULL)', ['Tester', 'Target']);
     await run(db, `INSERT INTO challenges
@@ -67,6 +71,12 @@ describe('Step Chat deterministic write service', () => {
     expect(await get(db, 'SELECT name, name_key FROM teams WHERE id = 1'))
       .toEqual({ name: 'Hot Steppers 🔥', name_key: 'hot steppers 🔥' });
     expect((await get(db, 'SELECT team_id FROM users WHERE id = 1')).team_id).toBe(1);
+    const audit = await get(db, 'SELECT user_id, action, details FROM trotter_audit_log');
+    expect(audit.user_id).toBe(1);
+    expect(audit.action).toBe('team_rename');
+    expect(JSON.parse(audit.details)).toEqual({
+      team_id: 1, previous_name: 'Team A', new_name: 'Hot Steppers 🔥'
+    });
   });
 
   test('rejects no-team users, normalized collisions, and stale rename plans', async () => {
@@ -103,6 +113,14 @@ describe('Step Chat deterministic write service', () => {
     expect(result.saved).toBe(1);
     expect((await get(db, `SELECT count FROM steps WHERE user_id = 1 AND date = '2025-08-19'`)).count).toBe(4000);
     expect((await get(db, `SELECT count FROM steps WHERE user_id = 1 AND date = '2025-08-20'`)).count).toBe(5000);
+    const audit = await get(db, 'SELECT user_id, action, details FROM trotter_audit_log');
+    expect(audit.user_id).toBe(1);
+    expect(audit.action).toBe('steps_commit');
+    expect(JSON.parse(audit.details)).toEqual({
+      challenge_id: 9,
+      mode: 'new_only',
+      entries: [{ date: '2025-08-19', previous_count: null, new_count: 4000 }]
+    });
   });
 
   test('explicit overwrite updates conflicts', async () => {

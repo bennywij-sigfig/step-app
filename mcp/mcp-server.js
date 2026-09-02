@@ -768,15 +768,17 @@ const handleMCPRequest = async (body, ipAddress, userAgent, authHeader = null) =
     const toolName = body.params?.name;
     const toolArgs = body.params?.arguments || {};
     
-    // Extract token from Bearer header or tool arguments
-    let token = null;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.substring(7); // Remove 'Bearer ' prefix
-    } else if (toolArgs.token) {
+    // Extract a bounded token from the Bearer header or legacy tool arguments.
+    // Authorization schemes are case-insensitive under HTTP semantics.
+    const bearerMatch = typeof authHeader === 'string'
+      ? authHeader.match(/^Bearer\s+(.+)$/i)
+      : null;
+    let token = bearerMatch?.[1] || null;
+    if (!token && typeof toolArgs.token === 'string') {
       token = toolArgs.token; // Backward compatibility
     }
 
-    if (!token) {
+    if (!token || token.length > 512) {
       return {
         jsonrpc: '2.0',
         error: {

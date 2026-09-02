@@ -178,6 +178,23 @@ describe('Authentication Flow Integration Tests', () => {
 
       expect(response.text).toContain('Invalid or expired');
     });
+
+    test('should allow only one concurrent redemption of a magic link', async () => {
+      const generated = await request(app)
+        .post('/dev/get-magic-link')
+        .send({ email: 'single-use@example.com' })
+        .expect(200);
+      const url = new URL(generated.body.magicLink);
+      const loginPath = `${url.pathname}${url.search}`;
+
+      const responses = await Promise.all([
+        request(app).get(loginPath),
+        request(app).get(loginPath)
+      ]);
+
+      expect(responses.map(response => response.status).sort()).toEqual([302, 400]);
+      expect(responses.find(response => response.status === 400).text).toContain('Invalid or expired');
+    });
   });
 
   describe('Session Management', () => {

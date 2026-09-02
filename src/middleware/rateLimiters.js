@@ -1,5 +1,30 @@
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
+
+function getMcpCredential(req) {
+  const authorization = typeof req.get === 'function'
+    ? req.get('Authorization')
+    : req.headers?.authorization;
+  const bearerMatch = typeof authorization === 'string'
+    ? authorization.match(/^Bearer\s+(.+)$/i)
+    : null;
+  const candidate = bearerMatch?.[1] || req.body?.params?.arguments?.token;
+  return typeof candidate === 'string' && candidate.length > 0 && candidate.length <= 512
+    ? candidate
+    : null;
+}
+
+function getMcpCredentialRateLimitKey(req) {
+  const credential = getMcpCredential(req);
+  if (!credential) return `mcp_hourly_ip_${ipKeyGenerator(req.ip)}`;
+  const digest = crypto.createHash('sha256').update(credential).digest('hex');
+  return `mcp_hourly_token_${digest}`;
+}
+
+function getMcpBurstRateLimitKey(req) {
+  return `mcp_burst_ip_${ipKeyGenerator(req.ip)}`;
+}
 
 // Skip rate limiting entirely for tests when DISABLE_RATE_LIMITING is set
 const skipRateLimit = process.env.DISABLE_RATE_LIMITING === 'true' || process.env.NODE_ENV === 'test';
@@ -34,7 +59,7 @@ const apiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   legacyHeaders: false,
   // Use session-based key generator for authenticated users, IP-based for anonymous
   keyGenerator: (req) => {
-    return req.session?.userId ? `api_user_${req.session.userId}` : `api_ip_${ipKeyGenerator(req)}`;
+    return req.session?.userId ? `api_user_${req.session.userId}` : `api_ip_${ipKeyGenerator(req.ip)}`;
   },
   handler: (req, res) => {
     console.log(`API rate limit exceeded for user: ${req.session?.userId || 'anonymous'} from IP: ${req.ip}`);
@@ -53,7 +78,7 @@ const chatApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => req.session?.userId
     ? `chat_user_${req.session.userId}`
-    : `chat_ip_${ipKeyGenerator(req)}`,
+    : `chat_ip_${ipKeyGenerator(req.ip)}`,
   handler: (req, res) => res.status(429).json({
     error: 'Chat limit reached. Please try again later.',
     retryAfter: 3600
@@ -133,7 +158,7 @@ const adminApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   legacyHeaders: false,
   // Use session-based key generator for authenticated users, IP-based for anonymous
   keyGenerator: (req) => {
-    return req.session?.userId ? `admin_user_${req.session.userId}` : `admin_ip_${ipKeyGenerator(req)}`;
+    return req.session?.userId ? `admin_user_${req.session.userId}` : `admin_ip_${ipKeyGenerator(req.ip)}`;
   },
   handler: (req, res) => {
     console.log(`Admin API rate limit exceeded for user: ${req.session?.userId || 'anonymous'} from IP: ${req.ip}`);
@@ -154,14 +179,12 @@ const mcpApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Use token-based key generator
-  keyGenerator: (req) => {
-    const token = req.body?.params?.token || req.query?.token || 'anonymous';
-    return `mcp_hourly_${token}`;
-  },
+  // Bearer and legacy argument credentials receive separate buckets without
+  // retaining raw tokens in the limiter store. Requests with no usable
+  // credential are scoped to their source IP.
+  keyGenerator: getMcpCredentialRateLimitKey,
   handler: (req, res) => {
-    const token = req.body?.params?.token || req.query?.token || 'unknown';
-    console.log(`MCP API hourly rate limit exceeded for token: ${token.substring(0, 10)}... from IP: ${req.ip}`);
+    console.log(`MCP API hourly rate limit exceeded from IP: ${req.ip}`);
     res.status(429).json({
       jsonrpc: '2.0',
       error: {
@@ -184,14 +207,11 @@ const mcpBurstLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Use token-based key generator
-  keyGenerator: (req) => {
-    const token = req.body?.params?.token || req.query?.token || 'anonymous';
-    return `mcp_burst_${token}`;
-  },
+  // Always keep a coarse IP burst ceiling. This prevents unauthenticated
+  // callers from bypassing protection by rotating fabricated Bearer tokens.
+  keyGenerator: getMcpBurstRateLimitKey,
   handler: (req, res) => {
-    const token = req.body?.params?.token || req.query?.token || 'unknown';
-    console.log(`MCP API burst rate limit exceeded for token: ${token.substring(0, 10)}... from IP: ${req.ip}`);
+    console.log(`MCP API burst rate limit exceeded from IP: ${req.ip}`);
     res.status(429).json({
       jsonrpc: '2.0',
       error: {
@@ -216,4 +236,7 @@ module.exports = {
   adminApiLimiter,
   mcpApiLimiter,
   mcpBurstLimiter,
+  getMcpCredential,
+  getMcpCredentialRateLimitKey,
+  getMcpBurstRateLimitKey,
 };

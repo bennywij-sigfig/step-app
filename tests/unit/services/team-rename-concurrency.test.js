@@ -31,6 +31,7 @@ describe('team rename concurrency', () => {
       await run(db, 'PRAGMA journal_mode = WAL');
       await run(db, 'CREATE TABLE teams(id INTEGER PRIMARY KEY, name TEXT UNIQUE, name_key TEXT UNIQUE)');
       await run(db, 'CREATE TABLE users(id INTEGER PRIMARY KEY, team_id INTEGER, archived_at TEXT)');
+      await run(db, 'CREATE TABLE trotter_audit_log(id INTEGER PRIMARY KEY, user_id INTEGER, action TEXT, details TEXT, created_at TEXT)');
       await run(db, `INSERT INTO teams VALUES(7, 'Original', 'original')`);
       await run(db, 'INSERT INTO users VALUES(1, 7, NULL), (2, 7, NULL)');
 
@@ -73,6 +74,7 @@ describe('team rename concurrency', () => {
       await run(db, 'PRAGMA journal_mode = WAL');
       await run(db, 'CREATE TABLE teams(id INTEGER PRIMARY KEY, name TEXT UNIQUE, name_key TEXT UNIQUE)');
       await run(db, 'CREATE TABLE users(id INTEGER PRIMARY KEY, team_id INTEGER, archived_at TEXT)');
+      await run(db, 'CREATE TABLE trotter_audit_log(id INTEGER PRIMARY KEY, user_id INTEGER, action TEXT, details TEXT, created_at TEXT)');
       await run(db, `INSERT INTO teams VALUES(1, 'One', 'one'), (2, 'Two', 'two')`);
       await run(db, 'INSERT INTO users VALUES(1, 1, NULL), (2, 2, NULL)');
       const service = createStepChatService({

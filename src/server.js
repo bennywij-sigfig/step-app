@@ -907,10 +907,14 @@ app.get('/auth/login', (req, res) => {
     // Get appropriate database connection for current environment
     ({ db: activeDb, shouldClose } = getActiveDbConnection());
     
-    // Verify token (hash before comparison for security)
+    // Atomically verify and consume the one-time token. A conditional UPDATE
+    // prevents concurrent requests from both creating authenticated sessions.
     const hashedToken = hashToken(token);
     activeDb.get(
-      `SELECT * FROM auth_tokens WHERE token = ? AND used = 0 AND expires_at > datetime('now')`,
+      `UPDATE auth_tokens
+       SET used = 1
+       WHERE token = ? AND used = 0 AND expires_at > datetime('now')
+       RETURNING email`,
       [hashedToken],
       (err, row) => {
         if (err) {
@@ -927,9 +931,6 @@ app.get('/auth/login', (req, res) => {
 
         devLog('Valid token found for email:', row.email);
         const normalizedEmail = normalizeEmail(row.email);
-        
-        // Mark token as used
-        activeDb.run(`UPDATE auth_tokens SET used = 1 WHERE token = ?`, [hashedToken]);
 
         // Create or get user and set session
         activeDb.get(`SELECT * FROM users WHERE email = ?`, [normalizedEmail], (err, user) => {
