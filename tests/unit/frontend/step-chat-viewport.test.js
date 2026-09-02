@@ -9,7 +9,8 @@ const css = fs.readFileSync(path.join(root, 'src/public/step-chat.css'), 'utf8')
 
 describe('Trotter standalone mobile layout contract', () => {
   test('uses an authenticated standalone page instead of a dashboard overlay', () => {
-    expect(dashboard).toContain('id="trotterNav" href="/chat"');
+    expect(dashboard).toContain('id="chatOpenBtn" class="chat-beta-btn" href="/chat"');
+    expect(dashboard).not.toContain('id="trotterNav"');
     expect(dashboard).not.toContain('id="stepChatOverlay"');
     expect(dashboard).not.toContain('/step-chat.js');
     expect(page).toContain('id="stepChatOverlay" class="chat-page-shell"');

@@ -16,7 +16,7 @@ async function authenticate(page) {
   loginUrl.protocol = target.protocol;
   loginUrl.host = target.host;
   await page.goto(loginUrl.toString());
-  await expect(page.locator('#trotterNav')).toBeVisible();
+  await expect(page.locator('#chatOpenBtn')).toBeVisible();
 }
 
 async function assertControlHitTargets(page) {
@@ -76,8 +76,8 @@ test.describe('Trotter standalone responsive page', () => {
     for (const scenario of scenarios) {
       await test.step(scenario.name, async () => {
         await page.setViewportSize({ width: scenario.width, height: scenario.height });
-        await expect(page.locator('#trotterNav')).toBeVisible();
-        await page.click('#trotterNav');
+        await expect(page.locator('#chatOpenBtn')).toBeVisible();
+        await page.click('#chatOpenBtn');
         await expect(page.locator('#chatSendBtn')).toBeEnabled();
         await assertSingleDocumentScroller(page);
         await assertControlHitTargets(page);
@@ -110,7 +110,7 @@ test.describe('Trotter standalone responsive page', () => {
 
         await page.click('#chatCloseBtn');
         await expect(page).toHaveURL(/\/dashboard$/);
-        await expect(page.locator('#trotterNav')).toBeVisible();
+        await expect(page.locator('#chatOpenBtn')).toBeVisible();
       });
     }
   });

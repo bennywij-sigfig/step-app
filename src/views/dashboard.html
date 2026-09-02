@@ -169,12 +169,8 @@
             backdrop-filter: blur(10px);
         }
         
-        .nav button,
-        .nav a {
-            display: flex;
+        .nav button {
             flex: 1;
-            align-items: center;
-            justify-content: center;
             padding: 12px 16px;
             border: none;
             border-radius: 12px;
@@ -182,7 +178,6 @@
             color: white;
             font-weight: 500;
             font-size: 14px;
-            text-decoration: none;
             cursor: pointer;
             transition: all 0.3s ease;
             min-height: 44px;
@@ -190,9 +185,7 @@
             overflow: hidden;
         }
         
-        .nav button:hover,
-        .nav a:hover,
-        .nav a:focus-visible {
+        .nav button:hover {
             background: rgba(255, 255, 255, 0.1);
         }
         
@@ -207,9 +200,8 @@
                 gap: 6px;
                 padding: 4px;
             }
-            .nav button,
-            .nav a {
-                padding: 14px 8px;
+            .nav button {
+                padding: 14px 12px;
                 font-size: 13px;
             }
         }
@@ -221,6 +213,33 @@
 
         .form-group {
             margin-bottom: 14px;
+        }
+
+        .step-form-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-form-actions .chat-beta-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 10px 14px;
+            color: var(--primary-color);
+            background: transparent;
+            border: 2px solid rgba(21, 94, 117, 0.2);
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .step-form-actions .chat-beta-btn:hover,
+        .step-form-actions .chat-beta-btn:focus-visible {
+            background: rgba(255, 255, 255, 0.65);
+            border-color: var(--primary-color);
         }
         
         .form-group label {
@@ -1258,7 +1277,6 @@
         <button id="myStepsBtn" class="active">My Steps</button>
         <button id="leaderboardBtn">Individuals</button>
         <button id="teamLeaderboardBtn">Teams</button>
-        <a id="trotterNav" href="/chat" aria-label="Open Trotter chat">🐷 Trotter</a>
     </div>
 
     <div id="myStepsView" class="card">
@@ -1281,7 +1299,8 @@
                             <div class="validation-feedback" id="stepsValidation"></div>
                         </div>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group step-form-actions">
+                        <a id="chatOpenBtn" class="chat-beta-btn" href="/chat" role="button">Trotter (beta)</a>
                         <button type="submit" id="submitStepsBtn">Save Steps</button>
                     </div>
                 </form>

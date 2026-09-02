@@ -72,7 +72,8 @@ describe('dashboard design contract', () => {
 
   test('keeps leaderboard rankings vertical and links to a responsive standalone Trotter page', () => {
     expect(html).not.toMatch(/#leaderboard,\s*#teamLeaderboard\s*\{[\s\S]*?grid-template-columns/);
-    expect(html).toContain('id="trotterNav" href="/chat"');
+    expect(html).toContain('id="chatOpenBtn" class="chat-beta-btn" href="/chat"');
+    expect(html).not.toContain('id="trotterNav"');
     expect(html).not.toContain('id="stepChatOverlay"');
     expect(chat).toMatch(/\.chat-page-shell\s*\{[\s\S]*?width: min\(920px, 100%\)/);
     expect(chat).toMatch(/@media \(max-width: 600px\)[\s\S]*?\.chat-page-shell\s*\{[\s\S]*?width: 100%/);
