@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0f3d4c">
+    <title>REST API Documentation — Step Challenge</title>
+    <link rel="stylesheet" href="/api-docs.css">
+</head>
+<body>
+    <a class="skip-link" href="#apiReference">Skip to API reference</a>
+    <header class="docs-header">
+        <div class="docs-header-inner">
+            <a href="/admin" class="back-link">← Admin</a>
+            <span class="version-badge" id="apiVersion">OpenAPI</span>
+        </div>
+    </header>
+
+    <main id="apiReference">
+        <section class="docs-hero">
+            <p class="eyebrow">STEP CHALLENGE</p>
+            <h1 id="apiTitle">REST API</h1>
+            <p id="apiDescription">Loading the authenticated API specification…</p>
+            <div class="hero-actions">
+                <a href="/openapi.json" class="primary-action">View OpenAPI JSON</a>
+                <a href="#endpoints" class="secondary-action">Browse endpoints</a>
+            </div>
+        </section>
+
+        <section class="auth-card" aria-labelledby="authenticationTitle">
+            <div>
+                <p class="eyebrow">AUTHENTICATION</p>
+                <h2 id="authenticationTitle">Bearer token, sent in the header</h2>
+                <p>Ask an administrator to create a scoped token. The raw token is displayed only once. Keep it in a secret manager or environment variable—never in a URL, request body, source control, or log.</p>
+            </div>
+            <pre><code>Authorization: Bearer step_…</code></pre>
+        </section>
+
+        <section id="endpoints" class="endpoints-section" aria-labelledby="endpointsTitle">
+            <div class="section-heading">
+                <p class="eyebrow">REFERENCE</p>
+                <h2 id="endpointsTitle">Endpoints</h2>
+                <p id="serverUrl"></p>
+            </div>
+            <div id="docsLoading" class="loading-state" role="status">Reading the specification…</div>
+            <div id="docsError" class="error-state" hidden>
+                <strong>Could not load the API specification.</strong>
+                <button type="button" id="retryDocs">Try again</button>
+            </div>
+            <div id="endpointList" class="endpoint-list"></div>
+        </section>
+
+        <section class="rules-card" aria-labelledby="rulesTitle">
+            <p class="eyebrow">RULES OF THE ROAD</p>
+            <h2 id="rulesTitle">Predictable and deliberately narrow</h2>
+            <ul>
+                <li>Dates use <code>YYYY-MM-DD</code>.</li>
+                <li>Counts are whole numbers from 0 through 70,000.</li>
+                <li>Future dates are rejected.</li>
+                <li>Active challenges accept only dates in their inclusive challenge range.</li>
+                <li><code>POST</code> never overwrites; <code>PUT</code> explicitly replaces an existing entry.</li>
+                <li>Every operation is isolated to the token owner and recorded in the API audit log.</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        <span>Authenticated documentation</span>
+        <a href="/dashboard">Return to Step Challenge</a>
+    </footer>
+
+    <script src="/api-docs.js"></script>
+</body>
+</html>

@@ -48,6 +48,12 @@ const ROUTES = {
     steps: '/api/v1/steps'
   },
 
+  // Authenticated API documentation
+  docs: {
+    page: '/api-docs',
+    openapi: '/openapi.json'
+  },
+
   // Static Pages
   pages: {
     dashboard: '/',

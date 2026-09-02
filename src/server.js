@@ -40,6 +40,7 @@ const { createChatRouter } = require('./routes/chat');
 const { createRestApiRouter } = require('./routes/rest-api');
 const { createApiTokenAdminRouter } = require('./routes/api-token-admin');
 const { createApiTokenService } = require('./services/api-tokens');
+const { openApiDocument } = require('./config/openapi');
 const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
 const { hashToken, generateSecureToken } = require('./utils/token');
 const { isLocalhostRequest } = require('./utils/local-request');
@@ -1079,6 +1080,21 @@ app.get('/dashboard', requireAuth, (req, res) => {
 // Redirect dashboard.html to protected route
 app.get('/dashboard.html', requireAuth, (req, res) => {
   res.redirect('/dashboard');
+});
+
+// Authenticated REST API documentation. The documentation uses the normal web
+// session; bearer credentials are required only when calling /api/v1 itself.
+app.get('/api-docs', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'api-docs.html'));
+});
+
+app.get('/api-docs.html', requireAuth, (req, res) => {
+  res.redirect('/api-docs');
+});
+
+app.get('/openapi.json', apiLimiter, requireApiAuth, (req, res) => {
+  res.set('Cache-Control', 'private, max-age=3600');
+  res.json(openApiDocument);
 });
 
 // Past champions (protected)

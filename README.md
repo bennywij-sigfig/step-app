@@ -76,6 +76,8 @@ Required Fly secrets:
 - `src/public/` — browser JavaScript and CSS
 - `src/views/` — HTML pages
 - `src/routes/rest-api.js` — versioned bearer-token API
+- `src/config/openapi.js` — OpenAPI 3.0 contract served at authenticated `/openapi.json`
+- `/api-docs` — authenticated human-readable API reference
 - `docs/REST_API_GUIDE.md` — API usage and examples
 - `tests/` — unit, integration, and browser tests
 - `docs/` — operational and historical notes
