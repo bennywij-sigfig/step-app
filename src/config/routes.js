@@ -35,30 +35,24 @@ const ROUTES = {
     users: '/api/admin/users',
     teams: '/api/admin/teams',
     challenges: '/api/admin/challenges',
-    mcpTokens: '/api/admin/mcp-tokens',
-    mcpAudit: '/api/admin/mcp-audit',
+    apiTokens: '/api/admin/api-tokens',
+    apiAudit: '/api/admin/api-tokens/audit/recent',
     confetti: '/api/admin/confetti-threshold',
     export: '/api/admin/export'
   },
 
-  // MCP Routes
-  mcp: {
-    main: '/mcp',
-    capabilities: '/mcp/capabilities'
+  // Bearer-token REST API
+  rest: {
+    profile: '/api/v1/me',
+    steps: '/api/v1/steps'
   },
 
   // Static Pages
   pages: {
     dashboard: '/',
     admin: '/admin',
-    mcpSetup: '/mcp-setup',
     health: '/health',
     pig: '/pig'
-  },
-
-  // Download Routes
-  downloads: {
-    pythonBridge: '/download/step_bridge.py'
   }
 };
 

@@ -142,35 +142,29 @@ describe('Database Integrity Regression Tests', () => {
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS mcp_tokens (
+        db.run(`CREATE TABLE IF NOT EXISTS api_tokens (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          token TEXT UNIQUE NOT NULL,
+          token_hash TEXT UNIQUE NOT NULL,
+          token_prefix TEXT NOT NULL,
           user_id INTEGER NOT NULL,
           name TEXT NOT NULL,
-          permissions TEXT DEFAULT 'read_write' CHECK (permissions IN ('read_only', 'read_write')),
-          scopes TEXT DEFAULT 'steps:read,steps:write,profile:read',
+          scopes TEXT NOT NULL,
           expires_at DATETIME NOT NULL,
+          revoked_at DATETIME,
           last_used_at DATETIME,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id)
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )`);
 
-        db.run(`CREATE TABLE IF NOT EXISTS mcp_audit_log (
+        db.run(`CREATE TABLE IF NOT EXISTS api_audit_log (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           token_id INTEGER NOT NULL,
           user_id INTEGER NOT NULL,
           action TEXT NOT NULL,
-          params TEXT,
-          old_value TEXT,
-          new_value TEXT,
-          was_overwrite BOOLEAN DEFAULT 0,
+          status_code INTEGER NOT NULL,
+          details TEXT,
           ip_address TEXT,
-          user_agent TEXT,
-          success BOOLEAN DEFAULT 1,
-          error_message TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (token_id) REFERENCES mcp_tokens (id),
-          FOREIGN KEY (user_id) REFERENCES users (id)
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 
         db.run(`CREATE TABLE IF NOT EXISTS settings (
@@ -186,10 +180,10 @@ describe('Database Integrity Regression Tests', () => {
         db.run(`CREATE INDEX IF NOT EXISTS idx_steps_challenge_date_user ON steps(challenge_id, date, user_id)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_steps_user_challenge ON steps(user_id, challenge_id)`);
         db.run(`CREATE INDEX IF NOT EXISTS idx_challenges_active ON challenges(is_active) WHERE is_active = 1`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_user ON mcp_tokens(user_id)`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_expires ON mcp_tokens(expires_at)`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_token_user ON mcp_audit_log(token_id, user_id)`);
-        db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_created ON mcp_audit_log(created_at)`, (err) => {
+        db.run(`CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_api_tokens_expires ON api_tokens(expires_at)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_api_audit_token_created ON api_audit_log(token_id, created_at)`);
+        db.run(`CREATE INDEX IF NOT EXISTS idx_api_audit_created ON api_audit_log(created_at)`, (err) => {
           if (err) return reject(err);
           resolve();
         });
@@ -200,8 +194,8 @@ describe('Database Integrity Regression Tests', () => {
   describe('Schema Integrity Tests', () => {
     test('should have all required tables', async () => {
       const expectedTables = [
-        'users', 'teams', 'steps', 'auth_tokens', 
-        'challenges', 'mcp_tokens', 'mcp_audit_log', 'settings'
+        'users', 'teams', 'steps', 'auth_tokens',
+        'challenges', 'api_tokens', 'api_audit_log', 'settings'
       ];
 
       const tables = await new Promise((resolve, reject) => {
@@ -293,27 +287,16 @@ describe('Database Integrity Regression Tests', () => {
       })).rejects.toThrow();
     });
 
-    test('should have correct MCP tables with proper relationships', async () => {
-      // Check mcp_tokens foreign key to users
-      const mcpTokensForeignKeys = await new Promise((resolve, reject) => {
-        db.all("PRAGMA foreign_key_list(mcp_tokens)", (err, rows) => {
-          if (err) return reject(err);
-          resolve(rows);
-        });
+    test('should have hashed API tokens related to users', async () => {
+      const columns = await new Promise((resolve, reject) => {
+        db.all("PRAGMA table_info(api_tokens)", (err, rows) => err ? reject(err) : resolve(rows));
       });
-
-      expect(mcpTokensForeignKeys.some(fk => fk.table === 'users' && fk.from === 'user_id')).toBe(true);
-
-      // Check mcp_audit_log foreign keys
-      const auditForeignKeys = await new Promise((resolve, reject) => {
-        db.all("PRAGMA foreign_key_list(mcp_audit_log)", (err, rows) => {
-          if (err) return reject(err);
-          resolve(rows);
-        });
+      expect(columns.map(column => column.name)).toContain('token_hash');
+      expect(columns.map(column => column.name)).not.toContain('token');
+      const foreignKeys = await new Promise((resolve, reject) => {
+        db.all("PRAGMA foreign_key_list(api_tokens)", (err, rows) => err ? reject(err) : resolve(rows));
       });
-
-      expect(auditForeignKeys.some(fk => fk.table === 'mcp_tokens' && fk.from === 'token_id')).toBe(true);
-      expect(auditForeignKeys.some(fk => fk.table === 'users' && fk.from === 'user_id')).toBe(true);
+      expect(foreignKeys.some(fk => fk.table === 'users' && fk.from === 'user_id')).toBe(true);
     });
 
     test('should have all required indexes for performance', async () => {
@@ -328,10 +311,10 @@ describe('Database Integrity Regression Tests', () => {
         'idx_steps_challenge_date_user',
         'idx_steps_user_challenge',
         'idx_challenges_active',
-        'idx_mcp_tokens_user',
-        'idx_mcp_tokens_expires',
-        'idx_mcp_audit_token_user',
-        'idx_mcp_audit_created'
+        'idx_api_tokens_user',
+        'idx_api_tokens_expires',
+        'idx_api_audit_token_created',
+        'idx_api_audit_created'
       ];
 
       expectedIndexes.forEach(indexName => {
@@ -413,37 +396,21 @@ describe('Database Integrity Regression Tests', () => {
       })).rejects.toThrow(/UNIQUE constraint failed/);
     });
 
-    test('should enforce MCP token uniqueness', async () => {
-      // Create user first
+    test('should enforce API token hash uniqueness', async () => {
       const userId = await new Promise((resolve, reject) => {
-        db.run(
-          "INSERT INTO users (email, name) VALUES (?, ?)",
-          ['mcp@example.com', 'MCP User'],
-          function(err) {
-            if (err) return reject(err);
-            resolve(this.lastID);
-          }
-        );
+        db.run("INSERT INTO users (email, name) VALUES (?, ?)", ['api@example.com', 'API User'], function(err) {
+          if (err) return reject(err);
+          resolve(this.lastID);
+        });
       });
-
-      const token = 'test-token-123';
-      
-      // Insert first MCP token
+      const params = ['a'.repeat(64), 'step_example…', userId, 'Test Token', 'profile:read', '2030-12-31 23:59:59'];
       await new Promise((resolve, reject) => {
-        db.run(
-          "INSERT INTO mcp_tokens (token, user_id, name, expires_at) VALUES (?, ?, ?, ?)",
-          [token, userId, 'Test Token', '2025-12-31 23:59:59'],
-          (err) => err ? reject(err) : resolve()
-        );
+        db.run("INSERT INTO api_tokens (token_hash, token_prefix, user_id, name, scopes, expires_at) VALUES (?, ?, ?, ?, ?, ?)", params,
+          err => err ? reject(err) : resolve());
       });
-
-      // Attempt to insert duplicate token should fail
       await expect(new Promise((resolve, reject) => {
-        db.run(
-          "INSERT INTO mcp_tokens (token, user_id, name, expires_at) VALUES (?, ?, ?, ?)",
-          [token, userId, 'Another Token', '2025-12-31 23:59:59'],
-          (err) => err ? reject(err) : resolve()
-        );
+        db.run("INSERT INTO api_tokens (token_hash, token_prefix, user_id, name, scopes, expires_at) VALUES (?, ?, ?, ?, ?, ?)", params,
+          err => err ? reject(err) : resolve());
       })).rejects.toThrow(/UNIQUE constraint failed/);
     });
 
@@ -481,83 +448,15 @@ describe('Database Integrity Regression Tests', () => {
       })).rejects.toThrow(/FOREIGN KEY constraint failed/);
     });
 
-    test('should maintain referential integrity with mcp_tokens->users foreign key', async () => {
-      await new Promise((resolve) => {
-        db.run('PRAGMA foreign_keys = ON', resolve); // Enable foreign key constraints
-      });
-
-      // Attempt to insert MCP token with non-existent user_id should fail
+    test('should maintain referential integrity with api_tokens->users foreign key', async () => {
+      await new Promise(resolve => db.run('PRAGMA foreign_keys = ON', resolve));
       await expect(new Promise((resolve, reject) => {
         db.run(
-          "INSERT INTO mcp_tokens (token, user_id, name, expires_at) VALUES (?, ?, ?, ?)",
-          ['token-123', 999, 'Invalid Token', '2025-12-31 23:59:59'],
-          (err) => err ? reject(err) : resolve()
+          "INSERT INTO api_tokens (token_hash, token_prefix, user_id, name, scopes, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+          ['b'.repeat(64), 'step_invalid…', 999, 'Invalid Token', 'profile:read', '2030-12-31 23:59:59'],
+          err => err ? reject(err) : resolve()
         );
       })).rejects.toThrow(/FOREIGN KEY constraint failed/);
-    });
-
-    test('should maintain referential integrity in mcp_audit_log', async () => {
-      await new Promise((resolve) => {
-        db.run('PRAGMA foreign_keys = ON', resolve);
-      });
-
-      // Attempt to insert audit log with non-existent token_id should fail
-      await expect(new Promise((resolve, reject) => {
-        db.run(
-          "INSERT INTO mcp_audit_log (token_id, user_id, action) VALUES (?, ?, ?)",
-          [999, 1, 'test_action'],
-          (err) => err ? reject(err) : resolve()
-        );
-      })).rejects.toThrow(/FOREIGN KEY constraint failed/);
-    });
-
-    test('should handle cascade relationships correctly', async () => {
-      await new Promise((resolve) => {
-        db.run('PRAGMA foreign_keys = ON', resolve);
-      });
-
-      // Create user
-      const userId = await new Promise((resolve, reject) => {
-        db.run(
-          "INSERT INTO users (email, name) VALUES (?, ?)",
-          ['cascade@example.com', 'Cascade User'],
-          function(err) {
-            if (err) return reject(err);
-            resolve(this.lastID);
-          }
-        );
-      });
-
-      // Create MCP token
-      const tokenId = await new Promise((resolve, reject) => {
-        db.run(
-          "INSERT INTO mcp_tokens (token, user_id, name, expires_at) VALUES (?, ?, ?, ?)",
-          ['cascade-token', userId, 'Cascade Token', '2025-12-31 23:59:59'],
-          function(err) {
-            if (err) return reject(err);
-            resolve(this.lastID);
-          }
-        );
-      });
-
-      // Create audit log entry
-      await new Promise((resolve, reject) => {
-        db.run(
-          "INSERT INTO mcp_audit_log (token_id, user_id, action) VALUES (?, ?, ?)",
-          [tokenId, userId, 'test_action'],
-          (err) => err ? reject(err) : resolve()
-        );
-      });
-
-      // Verify all records exist
-      const auditCount = await new Promise((resolve, reject) => {
-        db.get("SELECT COUNT(*) as count FROM mcp_audit_log WHERE token_id = ?", [tokenId], (err, row) => {
-          if (err) return reject(err);
-          resolve(row.count);
-        });
-      });
-
-      expect(auditCount).toBe(1);
     });
   });
 
@@ -1006,12 +905,11 @@ describe('Database Integrity Regression Tests', () => {
       expect(usesIndex).toBe(true);
     });
 
-    test('MCP audit log queries should perform well', async () => {
-      // Insert audit log data
+    test('REST API audit log queries should perform well', async () => {
       const tokenId = await new Promise((resolve, reject) => {
         db.run(
-          "INSERT INTO mcp_tokens (token, user_id, name, expires_at) VALUES (?, ?, ?, ?)",
-          ['perf-token', 1, 'Performance Token', '2025-12-31 23:59:59'],
+          "INSERT INTO api_tokens (token_hash, token_prefix, user_id, name, scopes, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+          ['c'.repeat(64), 'step_perf…', 1, 'Performance Token', 'profile:read', '2030-12-31 23:59:59'],
           function(err) {
             if (err) return reject(err);
             resolve(this.lastID);
@@ -1019,28 +917,22 @@ describe('Database Integrity Regression Tests', () => {
         );
       });
 
-      // Insert 1000 audit log entries
       for (let i = 0; i < 1000; i++) {
         await new Promise((resolve, reject) => {
           db.run(
-            "INSERT INTO mcp_audit_log (token_id, user_id, action, created_at) VALUES (?, ?, ?, datetime('now', '-' || ? || ' minutes'))",
+            "INSERT INTO api_audit_log (token_id, user_id, action, status_code, created_at) VALUES (?, ?, ?, 200, datetime('now', '-' || ? || ' minutes'))",
             [tokenId, 1, `action_${i}`, i],
-            (err) => err ? reject(err) : resolve()
+            err => err ? reject(err) : resolve()
           );
         });
       }
 
       const startTime = Date.now();
-      
-      // Query recent audit logs
       const logs = await new Promise((resolve, reject) => {
         db.all(
-          "SELECT action, created_at FROM mcp_audit_log WHERE token_id = ? ORDER BY created_at DESC LIMIT 50",
+          "SELECT action, created_at FROM api_audit_log WHERE token_id = ? ORDER BY created_at DESC LIMIT 50",
           [tokenId],
-          (err, rows) => {
-            if (err) return reject(err);
-            resolve(rows);
-          }
+          (err, rows) => err ? reject(err) : resolve(rows)
         );
       });
 

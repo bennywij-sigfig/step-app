@@ -8,10 +8,10 @@ describe('normalized live team source contract', () => {
   const chat = read('src/services/step-chat.js');
   const shadow = read('src/shadow-api.js');
   const database = read('src/database.js');
-  const mcp = read('mcp/mcp-server.js');
+  const restApi = read('src/routes/rest-api.js');
 
   test('live query paths do not read or write the deprecated copied name', () => {
-    for (const source of [server, chat, shadow, mcp]) {
+    for (const source of [server, chat, shadow, restApi]) {
       expect(source).not.toMatch(/\bu\.team\b/);
       expect(source).not.toMatch(/UPDATE\s+users\s+SET\s+team\s*=/i);
       expect(source).not.toMatch(/GROUP\s+BY\s+u\.team/i);
@@ -22,7 +22,7 @@ describe('normalized live team source contract', () => {
     expect(server).toContain('t.id = u.team_id');
     expect(chat).toContain('t.id = u.team_id');
     expect(shadow).toContain('t.id = u.team_id');
-    expect(mcp).toContain('t.id = u.team_id');
+    expect(restApi).toContain('t.id = u.team_id');
   });
 
   test('migration is transactional, validates mappings, and clears duplicate names', () => {

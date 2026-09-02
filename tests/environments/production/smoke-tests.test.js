@@ -81,37 +81,17 @@ describe('Production Smoke Tests', () => {
     });
   });
 
-  describe('MCP Integration', () => {
-    test('should provide MCP capabilities', async () => {
+  describe('Bearer-token REST API', () => {
+    test('should require authentication on the versioned API', async () => {
       if (!isProduction) return;
-
-      const response = await request(baseUrl)
-        .get('/mcp/capabilities')
-        .expect(200);
-
-      expect(response.body).toHaveProperty('capabilities');
-      expect(response.body.capabilities).toHaveProperty('tools');
-      expect(Array.isArray(response.body.capabilities.tools)).toBe(true);
+      await request(baseUrl).get('/api/v1/me').expect(401);
+      await request(baseUrl).get('/api/v1/steps').expect(401);
     });
 
-    test('should handle MCP JSON-RPC requests', async () => {
+    test('should no longer expose retired MCP routes', async () => {
       if (!isProduction) return;
-
-      // Test valid request without authentication - should return tools list
-      const response = await request(baseUrl)
-        .post('/mcp')
-        .send({
-          jsonrpc: '2.0',
-          method: 'tools/list',
-          id: 1
-          // No token required for tools/list
-        })
-        .expect(200);
-
-      expect(response.body).toHaveProperty('jsonrpc');
-      expect(response.body).toHaveProperty('result');
-      expect(response.body.result).toHaveProperty('tools');
-      expect(Array.isArray(response.body.result.tools)).toBe(true);
+      await request(baseUrl).get('/mcp/capabilities').expect(404);
+      await request(baseUrl).post('/mcp').send({ jsonrpc: '2.0', method: 'tools/list', id: 1 }).expect(404);
     });
   });
 

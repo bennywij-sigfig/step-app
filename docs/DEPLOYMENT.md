@@ -149,6 +149,8 @@ primary_region = 'ord'
 | `MAILGUN_DOMAIN` | Yes | Email domain | `your-company.com` |
 | `FROM_EMAIL` | Yes | Sender email | `noreply@your-company.com` |
 | `PUBLIC_BASE_URL` | Yes | Canonical HTTPS origin for authentication links | `https://steps.your-company.com` |
+| `REST_API_BURST_LIMIT_MAX` | No | Per-IP REST API requests per minute | `75` |
+| `REST_API_TOKEN_LIMIT_MAX` | No | Per-token REST API requests per hour | `300` |
 | `PORT` | No | Server port | `3000` (default) |
 
 ## Operational Procedures

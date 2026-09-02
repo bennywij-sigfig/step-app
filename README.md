@@ -16,8 +16,8 @@ Small company step-challenge app built with Express, SQLite, and vanilla JavaScr
 - Passwordless Mailgun login
 - Daily step entry and CSV export
 - Individual and team leaderboards
-- Admin management for users, teams, challenges, themes, and MCP tokens
-- MCP API and local bridges
+- Admin management for users, teams, challenges, themes, and API tokens
+- Scoped bearer-token REST API for profile and step automation
 
 ## Local development
 
@@ -75,6 +75,7 @@ Required Fly secrets:
 - `src/database.js` — SQLite schema and backups
 - `src/public/` — browser JavaScript and CSS
 - `src/views/` — HTML pages
-- `mcp/` — MCP bridges and utilities
+- `src/routes/rest-api.js` — versioned bearer-token API
+- `docs/REST_API_GUIDE.md` — API usage and examples
 - `tests/` — unit, integration, and browser tests
 - `docs/` — operational and historical notes

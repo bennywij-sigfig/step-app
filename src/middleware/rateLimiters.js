@@ -1,29 +1,14 @@
-const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
 
-function getMcpCredential(req) {
-  const authorization = typeof req.get === 'function'
-    ? req.get('Authorization')
-    : req.headers?.authorization;
-  const bearerMatch = typeof authorization === 'string'
-    ? authorization.match(/^Bearer\s+(.+)$/i)
-    : null;
-  const candidate = bearerMatch?.[1] || req.body?.params?.arguments?.token;
-  return typeof candidate === 'string' && candidate.length > 0 && candidate.length <= 512
-    ? candidate
-    : null;
+function getApiPreAuthRateLimitKey(req) {
+  return `rest_api_ip_${ipKeyGenerator(req.ip)}`;
 }
 
-function getMcpCredentialRateLimitKey(req) {
-  const credential = getMcpCredential(req);
-  if (!credential) return `mcp_hourly_ip_${ipKeyGenerator(req.ip)}`;
-  const digest = crypto.createHash('sha256').update(credential).digest('hex');
-  return `mcp_hourly_token_${digest}`;
-}
-
-function getMcpBurstRateLimitKey(req) {
-  return `mcp_burst_ip_${ipKeyGenerator(req.ip)}`;
+function getApiTokenRateLimitKey(req) {
+  return req.apiToken?.id
+    ? `rest_api_token_${req.apiToken.id}`
+    : getApiPreAuthRateLimitKey(req);
 }
 
 // Skip rate limiting entirely for tests when DISABLE_RATE_LIMITING is set
@@ -169,59 +154,32 @@ const adminApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
   }
 });
 
-// MCP API rate limiter - token-based (hourly limit)
-const mcpApiLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: parseInt(process.env.MCP_API_LIMIT_MAX) || 300, // increased from 60 to 300 per hour per token
-  message: {
-    error: 'Too many MCP API requests, please try again in an hour.',
-    retryAfter: 3600
-  },
+// A coarse IP limit runs before bearer authentication so rotating fabricated
+// credentials cannot create unlimited token buckets.
+const apiPreAuthLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
+  windowMs: 60 * 1000,
+  max: parseInt(process.env.REST_API_BURST_LIMIT_MAX, 10) || 75,
   standardHeaders: true,
   legacyHeaders: false,
-  // Bearer and legacy argument credentials receive separate buckets without
-  // retaining raw tokens in the limiter store. Requests with no usable
-  // credential are scoped to their source IP.
-  keyGenerator: getMcpCredentialRateLimitKey,
-  handler: (req, res) => {
-    console.log(`MCP API hourly rate limit exceeded from IP: ${req.ip}`);
-    res.status(429).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32004,
-        message: 'Rate limit exceeded',
-        data: 'Too many MCP API requests, please try again in an hour.'
-      },
-      id: req.body?.id || null
-    });
-  }
+  keyGenerator: getApiPreAuthRateLimitKey,
+  handler: (req, res) => res.status(429).json({
+    error: 'Too many API requests. Please slow down.',
+    retry_after: 60
+  })
 });
 
-// MCP API burst rate limiter - protect against rapid fire requests
-const mcpBurstLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: parseInt(process.env.MCP_BURST_LIMIT_MAX) || 75, // increased from 15 to 75 per minute per token
-  message: {
-    error: 'Too many rapid MCP API requests, please slow down.',
-    retryAfter: 60
-  },
+// This limiter runs only after successful authentication and therefore uses
+// the database token ID, never a raw bearer credential.
+const apiTokenLimiter = skipRateLimit ? (req, res, next) => next() : rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: parseInt(process.env.REST_API_TOKEN_LIMIT_MAX, 10) || 300,
   standardHeaders: true,
   legacyHeaders: false,
-  // Always keep a coarse IP burst ceiling. This prevents unauthenticated
-  // callers from bypassing protection by rotating fabricated Bearer tokens.
-  keyGenerator: getMcpBurstRateLimitKey,
-  handler: (req, res) => {
-    console.log(`MCP API burst rate limit exceeded from IP: ${req.ip}`);
-    res.status(429).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32005,
-        message: 'Burst rate limit exceeded',
-        data: 'Too many rapid requests, please slow down and try again in a minute.'
-      },
-      id: req.body?.id || null
-    });
-  }
+  keyGenerator: getApiTokenRateLimitKey,
+  handler: (req, res) => res.status(429).json({
+    error: 'API token rate limit reached. Please try again later.',
+    retry_after: 3600
+  })
 });
 
 module.exports = {
@@ -234,9 +192,8 @@ module.exports = {
   chatImageGlobalLimiter,
   teamRenameLimiter,
   adminApiLimiter,
-  mcpApiLimiter,
-  mcpBurstLimiter,
-  getMcpCredential,
-  getMcpCredentialRateLimitKey,
-  getMcpBurstRateLimitKey,
+  apiPreAuthLimiter,
+  apiTokenLimiter,
+  getApiPreAuthRateLimitKey,
+  getApiTokenRateLimitKey,
 };

@@ -235,33 +235,24 @@ describe('Database Module', () => {
       });
     });
 
-    test('should create MCP tokens table with correct structure', () => {
+    test('should create hashed REST API tokens table with correct structure', () => {
       return new Promise((resolve, reject) => {
-        db.run(`CREATE TABLE IF NOT EXISTS mcp_tokens (
-          token TEXT PRIMARY KEY,
-          user_id INTEGER NOT NULL,
-          scopes TEXT NOT NULL DEFAULT 'steps:read,steps:write,profile:read',
+        db.run(`CREATE TABLE IF NOT EXISTS api_tokens (
+          id INTEGER PRIMARY KEY, token_hash TEXT UNIQUE NOT NULL, token_prefix TEXT NOT NULL,
+          user_id INTEGER NOT NULL, name TEXT NOT NULL, scopes TEXT NOT NULL,
+          expires_at DATETIME NOT NULL, revoked_at DATETIME, last_used_at DATETIME,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          expires_at DATETIME NOT NULL,
-          last_used_at DATETIME,
-          last_ip TEXT,
-          last_user_agent TEXT,
-          FOREIGN KEY (user_id) REFERENCES users (id)
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )`, (err) => {
           if (err) return reject(err);
-          
-          db.all("PRAGMA table_info(mcp_tokens)", (err, columns) => {
+
+          db.all("PRAGMA table_info(api_tokens)", (err, columns) => {
             if (err) return reject(err);
-            
-            expect(columns).toHaveLength(8);
-            expect(columns[0].name).toBe('token');
-            expect(columns[1].name).toBe('user_id');
-            expect(columns[2].name).toBe('scopes');
-            expect(columns[3].name).toBe('created_at');
-            expect(columns[4].name).toBe('expires_at');
-            expect(columns[5].name).toBe('last_used_at');
-            expect(columns[6].name).toBe('last_ip');
-            expect(columns[7].name).toBe('last_user_agent');
+            expect(columns.map(column => column.name)).toEqual([
+              'id', 'token_hash', 'token_prefix', 'user_id', 'name', 'scopes',
+              'expires_at', 'revoked_at', 'last_used_at', 'created_at'
+            ]);
+            expect(columns.map(column => column.name)).not.toContain('token');
             resolve();
           });
         });

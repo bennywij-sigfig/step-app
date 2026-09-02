@@ -1,5 +1,7 @@
 # Security Implementation Plan - Step Challenge App
 
+> Historical plan: MCP references describe the retired implementation. See `REST_API_MIGRATION_PLAN.md` for the current programmatic API architecture.
+
 ## 🎯 IMPLEMENTATION COMPLETED ✅
 
 **Status:** ALL CRITICAL SECURITY FIXES SUCCESSFULLY IMPLEMENTED  

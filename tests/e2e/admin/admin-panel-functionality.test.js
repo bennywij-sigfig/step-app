@@ -125,7 +125,7 @@ test.describe('Admin Panel Functionality Tests', () => {
       'button:has-text("Manage Users")',
       'button:has-text("Manage Teams")',
       'button:has-text("Manage Challenges")',
-      'button:has-text("MCP Tokens")',
+      'button:has-text("API Tokens")',
       'button:has-text("Overview")',
       'button:has-text("Extras")'
     ];
@@ -141,7 +141,7 @@ test.describe('Admin Panel Functionality Tests', () => {
       { button: 'Overview', view: 'overviewView' },
       { button: 'Manage Teams', view: 'manageTeamsView' },
       { button: 'Manage Challenges', view: 'challengesView' },
-      { button: 'MCP Tokens', view: 'mcpTokensView' },
+      { button: 'API Tokens', view: 'apiTokensView' },
       { button: 'Extras', view: 'extrasView' },
       { button: 'Manage Users', view: 'usersView' }
     ];

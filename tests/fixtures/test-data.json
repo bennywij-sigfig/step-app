@@ -63,13 +63,5 @@
       "count": 15000,
       "challenge_id": 1
     }
-  ],
-  "mcp_tokens": [
-    {
-      "token": "mcp_test_token_123456789",
-      "user_id": 1,
-      "scopes": "steps:read,steps:write,profile:read",
-      "expires_at": "2025-12-31T23:59:59Z"
-    }
   ]
 }

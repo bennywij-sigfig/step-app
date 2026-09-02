@@ -103,37 +103,37 @@ async function initializeTestDatabase(dbPath) {
           FOREIGN KEY (user_id) REFERENCES users (id)
         )`,
 
-        // MCP tokens table
-        `CREATE TABLE mcp_tokens (
+        `CREATE TABLE api_tokens (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
-          token TEXT UNIQUE NOT NULL,
+          token_hash TEXT UNIQUE NOT NULL,
+          token_prefix TEXT NOT NULL,
           user_id INTEGER NOT NULL,
           name TEXT NOT NULL,
-          permissions TEXT DEFAULT 'read_write' CHECK (permissions IN ('read_only', 'read_write')),
-          scopes TEXT DEFAULT 'steps:read,steps:write,profile:read',
+          scopes TEXT NOT NULL,
           expires_at DATETIME NOT NULL,
+          revoked_at DATETIME,
           last_used_at DATETIME,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (user_id) REFERENCES users (id)
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )`,
 
-        // MCP audit log table
-        `CREATE TABLE mcp_audit_log (
+        `CREATE TABLE api_audit_log (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           token_id INTEGER NOT NULL,
           user_id INTEGER NOT NULL,
           action TEXT NOT NULL,
-          params TEXT,
-          old_value TEXT,
-          new_value TEXT,
-          was_overwrite BOOLEAN DEFAULT 0,
+          status_code INTEGER NOT NULL,
+          details TEXT,
           ip_address TEXT,
-          user_agent TEXT,
-          success BOOLEAN DEFAULT 1,
-          error_message TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (token_id) REFERENCES mcp_tokens (id),
-          FOREIGN KEY (user_id) REFERENCES users (id)
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`,
+
+        `CREATE TABLE trotter_audit_log (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          action TEXT NOT NULL,
+          details TEXT NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )`,
 
         // Settings table
@@ -152,10 +152,11 @@ async function initializeTestDatabase(dbPath) {
         `CREATE INDEX IF NOT EXISTS idx_steps_challenge_date_user ON steps(challenge_id, date, user_id)`,
         `CREATE INDEX IF NOT EXISTS idx_steps_user_challenge ON steps(user_id, challenge_id)`,
         `CREATE INDEX IF NOT EXISTS idx_challenges_active ON challenges(is_active) WHERE is_active = 1`,
-        `CREATE INDEX IF NOT EXISTS idx_mcp_tokens_user ON mcp_tokens(user_id)`,
-        `CREATE INDEX IF NOT EXISTS idx_mcp_tokens_expires ON mcp_tokens(expires_at)`,
-        `CREATE INDEX IF NOT EXISTS idx_mcp_audit_token_user ON mcp_audit_log(token_id, user_id)`,
-        `CREATE INDEX IF NOT EXISTS idx_mcp_audit_created ON mcp_audit_log(created_at)`
+        `CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_api_tokens_expires ON api_tokens(expires_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_api_audit_token_created ON api_audit_log(token_id, created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_api_audit_created ON api_audit_log(created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_trotter_audit_created ON trotter_audit_log(created_at)`
       ];
 
       let completedOperations = 0;

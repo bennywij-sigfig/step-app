@@ -283,15 +283,15 @@ describe('normalized live teams preserve current and historical behavior', () =>
       { team: 'Current Green', member_count: 1 }
     ]);
 
-    await run(db, `INSERT INTO mcp_tokens
-      (token, user_id, name, permissions, scopes, expires_at)
-      VALUES ('mcp_contract_profile_token', 1, 'Contract token', 'read_only', 'profile:read', '2030-01-01T00:00:00Z')`);
-    const mcpProfile = await agent.post('/mcp')
-      .set('Authorization', 'Bearer mcp_contract_profile_token')
-      .send({ jsonrpc: '2.0', method: 'tools/call', params: { name: 'get_user_profile', arguments: {} }, id: 1 })
+    const apiToken = `step_${'a'.repeat(43)}`;
+    await run(db, `INSERT INTO api_tokens
+      (token_hash, token_prefix, user_id, name, scopes, expires_at)
+      VALUES (?, 'step_aaaaaaaa…', 1, 'Contract token', 'profile:read', '2030-01-01T00:00:00Z')`,
+    [crypto.createHash('sha256').update(apiToken).digest('hex')]);
+    const apiProfile = await agent.get('/api/v1/me')
+      .set('Authorization', `Bearer ${apiToken}`)
       .expect(200);
-    const profileText = mcpProfile.body.result.content[0].text;
-    expect(JSON.parse(profileText).user).toMatchObject({
+    expect(apiProfile.body.user).toMatchObject({
       email: 'admin@example.com', name: 'Admin Walker', team: 'Current Blue'
     });
 

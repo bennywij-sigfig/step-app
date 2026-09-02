@@ -187,7 +187,7 @@ test.describe('Admin Security Boundaries Tests', () => {
     const adminEndpoints = [
       { path: '/api/admin/users', method: 'GET', name: 'Users list' },
       { path: '/api/admin/challenges', method: 'GET', name: 'Challenges list' },
-      { path: '/api/admin/mcp-tokens', method: 'GET', name: 'MCP tokens list' },
+      { path: '/api/admin/api-tokens', method: 'GET', name: 'API tokens list' },
       { path: '/api/admin/export-csv', method: 'GET', name: 'Data export' }
     ];
     
@@ -231,7 +231,7 @@ test.describe('Admin Security Boundaries Tests', () => {
         'button:has-text("Manage Users")',
         'button:has-text("Manage Teams")',
         'button:has-text("Manage Challenges")',
-        'button:has-text("MCP Tokens")'
+        'button:has-text("API Tokens")'
       ];
       
       for (const selector of adminElements) {
@@ -648,7 +648,7 @@ test.describe('Admin Security Boundaries Tests', () => {
     const authorizationTests = [
       { endpoint: '/api/admin/users', requiredRole: 'admin', description: 'User management' },
       { endpoint: '/api/admin/challenges', requiredRole: 'admin', description: 'Challenge management' },
-      { endpoint: '/api/admin/mcp-tokens', requiredRole: 'admin', description: 'MCP token management' },
+      { endpoint: '/api/admin/api-tokens', requiredRole: 'admin', description: 'API token management' },
       { endpoint: '/api/admin/export-csv', requiredRole: 'admin', description: 'Data export' }
     ];
     
@@ -726,7 +726,7 @@ test.describe('Admin Security Boundaries Tests', () => {
     
     if (hasAdminPrivileges) {
       // Test admin functions are working
-      const adminTabs = ['Manage Users', 'Manage Teams', 'Manage Challenges', 'MCP Tokens'];
+      const adminTabs = ['Manage Users', 'Manage Teams', 'Manage Challenges', 'API Tokens'];
       let workingTabs = 0;
       
       for (const tab of adminTabs) {

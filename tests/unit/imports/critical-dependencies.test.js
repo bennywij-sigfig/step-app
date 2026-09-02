@@ -69,8 +69,8 @@ describe('Critical Dependencies Import Validation', () => {
         expect(rateLimiters.magicLinkLimiter).toBeDefined();
         expect(rateLimiters.apiLimiter).toBeDefined();
         expect(rateLimiters.adminApiLimiter).toBeDefined();
-        expect(rateLimiters.mcpApiLimiter).toBeDefined();
-        expect(rateLimiters.mcpBurstLimiter).toBeDefined();
+        expect(rateLimiters.apiPreAuthLimiter).toBeDefined();
+        expect(rateLimiters.apiTokenLimiter).toBeDefined();
       }).not.toThrow();
     });
 
@@ -110,14 +110,14 @@ describe('Critical Dependencies Import Validation', () => {
       }).not.toThrow();
     });
 
-    test('should import MCP modules', () => {
+    test('should import REST API modules', () => {
       expect(() => {
-        const mcpServer = require('../../../mcp/mcp-server');
-        
-        expect(mcpServer).toBeDefined();
-        expect(mcpServer.handleMCPRequest).toBeDefined();
-        expect(mcpServer.getMCPCapabilities).toBeDefined();
-        expect(mcpServer.mcpUtils).toBeDefined();
+        const tokenService = require('../../../src/services/api-tokens');
+        const restApi = require('../../../src/routes/rest-api');
+
+        expect(tokenService.createApiTokenService).toBeDefined();
+        expect(tokenService.generateApiToken).toBeDefined();
+        expect(restApi.createRestApiRouter).toBeDefined();
       }).not.toThrow();
     });
   });

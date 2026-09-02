@@ -1,5 +1,7 @@
 # Step Challenge App - TODO List
 
+> Current architecture note (September 2026): the unused MCP integration was retired in favor of the scoped bearer-token REST API in `REST_API_GUIDE.md`. Older completed sections below are retained as project history.
+
 ## ✅ **AUGUST 24, 2026 - APPLICATION REVIVED**
 
 - Production is healthy at https://step-app-4x-yhw.fly.dev/

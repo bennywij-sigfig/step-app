@@ -39,7 +39,7 @@ describe('2026 seasonal themes', () => {
   });
 
   test('all primary views load the shared seasonal stylesheet', () => {
-    for (const file of ['src/public/index.html', 'src/views/dashboard.html', 'src/views/admin.html', 'src/views/mcp-setup.html']) {
+    for (const file of ['src/public/index.html', 'src/views/dashboard.html', 'src/views/admin.html']) {
       const html = fs.readFileSync(path.join(__dirname, '../../..', file), 'utf8');
       expect(html).toContain('href="/season-theme.css"');
     }

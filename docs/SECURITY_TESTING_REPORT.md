@@ -1,5 +1,7 @@
 # Security Testing Report - Critical Fixes Regression Testing
 
+> Historical report: MCP references describe the retired implementation. The current programmatic integration is the bearer-token REST API documented in `REST_API_GUIDE.md`.
+
 **Date:** August 11, 2025  
 **Branch:** `security-fixes`  
 **Testing Focus:** Verify no regressions after Phase 1 & 2 security fixes

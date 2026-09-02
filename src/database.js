@@ -321,37 +321,33 @@ if (!shouldDelayInit) {
     }
   });
 
-  // MCP tokens table for API access with enhanced security
-  db.run(`CREATE TABLE IF NOT EXISTS mcp_tokens (
+  // Hashed bearer credentials for the versioned REST API. Raw tokens are
+  // returned once at creation and are never persisted.
+  db.run(`CREATE TABLE IF NOT EXISTS api_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    token TEXT UNIQUE NOT NULL,
+    token_hash TEXT UNIQUE NOT NULL,
+    token_prefix TEXT NOT NULL,
     user_id INTEGER NOT NULL,
     name TEXT NOT NULL,
-    permissions TEXT DEFAULT 'read_write' CHECK (permissions IN ('read_only', 'read_write')),
-    scopes TEXT DEFAULT 'steps:read,steps:write,profile:read',
+    scopes TEXT NOT NULL,
     expires_at DATETIME NOT NULL,
+    revoked_at DATETIME,
     last_used_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
   )`);
 
-  // MCP audit log for security and debugging
-  db.run(`CREATE TABLE IF NOT EXISTS mcp_audit_log (
+  // Compact request audit. It deliberately contains no raw token and no
+  // unrestricted request body.
+  db.run(`CREATE TABLE IF NOT EXISTS api_audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     token_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     action TEXT NOT NULL,
-    params TEXT,
-    old_value TEXT,
-    new_value TEXT,
-    was_overwrite BOOLEAN DEFAULT 0,
+    status_code INTEGER NOT NULL,
+    details TEXT,
     ip_address TEXT,
-    user_agent TEXT,
-    success BOOLEAN DEFAULT 1,
-    error_message TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (token_id) REFERENCES mcp_tokens (id),
-    FOREIGN KEY (user_id) REFERENCES users (id)
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
   // Compact audit trail for confirmed Trotter mutations. One row is written
@@ -399,22 +395,13 @@ if (!shouldDelayInit) {
     });
   });
   
-  // MCP performance indexes
-  db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_user ON mcp_tokens(user_id)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_tokens_expires ON mcp_tokens(expires_at)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_token_user ON mcp_audit_log(token_id, user_id)`);
-  db.run(`CREATE INDEX IF NOT EXISTS idx_mcp_audit_created ON mcp_audit_log(created_at)`);
+  // Programmatic API and Trotter audit indexes support token lookup, admin
+  // inspection, and optional age-based pruning without indexing JSON details.
+  db.run(`CREATE INDEX IF NOT EXISTS idx_api_tokens_user ON api_tokens(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_api_tokens_expires ON api_tokens(expires_at)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_api_audit_token_created ON api_audit_log(token_id, created_at)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_api_audit_created ON api_audit_log(created_at)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_trotter_audit_created ON trotter_audit_log(created_at)`);
-  
-  // Add scopes column to existing tokens if it doesn't exist
-  db.run(`ALTER TABLE mcp_tokens ADD COLUMN scopes TEXT DEFAULT 'steps:read,steps:write,profile:read'`, (err) => {
-    // Ignore error if column already exists
-    if (err && !err.message.includes('duplicate column name')) {
-      console.error('Error adding scopes column:', err);
-    } else if (!err) {
-      console.log('✅ Added scopes column to mcp_tokens table');
-    }
-  });
 
   // Add archived_at column to users table for user archiving functionality
   db.run(`ALTER TABLE users ADD COLUMN archived_at DATETIME DEFAULT NULL`, (err) => {
@@ -432,15 +419,6 @@ if (!shouldDelayInit) {
       console.error('Error creating archived_at index:', err);
     } else {
       console.log('✅ Created index on users.archived_at column');
-    }
-  });
-  
-  // Update existing tokens to have default scopes if they don't already
-  db.run(`UPDATE mcp_tokens SET scopes = 'steps:read,steps:write,profile:read' WHERE scopes IS NULL OR scopes = ''`, (err) => {
-    if (err) {
-      console.error('Error updating default scopes:', err);
-    } else {
-      console.log('✅ Updated existing tokens with default scopes');
     }
   });
   

@@ -18,7 +18,7 @@ describe('admin constrained mobile layout contract', () => {
   test('renders high-density admin tables as labeled mobile cards', () => {
     for (const id of [
       '#usersTable', '#manageTeamsTable', '#challengesTable',
-      '#archivesTable', '#mcpTokensTable', '#mcpAuditTable'
+      '#archivesTable', '#apiTokensTable', '#apiAuditTable'
     ]) {
       expect(css).toContain(`body.admin-page ${id}`);
     }

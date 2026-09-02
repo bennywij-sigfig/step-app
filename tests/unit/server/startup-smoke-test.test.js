@@ -44,6 +44,8 @@ describe('Server Startup Smoke Tests (Critical)', () => {
         require('../../../src/utils/validation');
         require('../../../src/utils/token');
         require('../../../src/utils/challenge');
+        require('../../../src/services/api-tokens');
+        require('../../../src/routes/rest-api');
       }).not.toThrow();
     });
 
@@ -89,13 +91,12 @@ describe('Server Startup Smoke Tests (Critical)', () => {
     });
   });
 
-  describe('MCP Integration Availability', () => {
-    test('should load MCP server module without errors', () => {
+  describe('REST API Availability', () => {
+    test('should load REST API modules without errors', () => {
       expect(() => {
-        const mcpServer = require('../../../mcp/mcp-server');
-        expect(mcpServer).toBeDefined();
-        expect(mcpServer.handleMCPRequest).toBeDefined();
-        expect(mcpServer.getMCPCapabilities).toBeDefined();
+        expect(require('../../../src/routes/rest-api').createRestApiRouter).toBeDefined();
+        expect(require('../../../src/routes/api-token-admin').createApiTokenAdminRouter).toBeDefined();
+        expect(require('../../../src/services/api-tokens').createApiTokenService).toBeDefined();
       }).not.toThrow();
     });
   });
@@ -138,7 +139,8 @@ describe('Server Startup Smoke Tests (Critical)', () => {
       const criticalPaths = [
         '../../../src/server.js',
         '../../../src/database.js',
-        '../../../mcp/mcp-server.js',
+        '../../../src/routes/rest-api.js',
+        '../../../src/services/api-tokens.js',
         '../../../package.json'
       ];
       

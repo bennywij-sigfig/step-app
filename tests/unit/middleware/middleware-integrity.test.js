@@ -11,7 +11,7 @@
  */
 
 const { requireAuth, requireApiAuth, requireAdmin, requireApiAdmin } = require('../../../src/middleware/auth');
-const { magicLinkLimiter, apiLimiter, adminApiLimiter, mcpApiLimiter, mcpBurstLimiter } = require('../../../src/middleware/rateLimiters');
+const { magicLinkLimiter, apiLimiter, adminApiLimiter, apiTokenLimiter, apiPreAuthLimiter } = require('../../../src/middleware/rateLimiters');
 
 describe('Middleware Integrity Tests', () => {
   describe('Authentication Middleware', () => {
@@ -192,11 +192,11 @@ describe('Middleware Integrity Tests', () => {
         expect(typeof adminApiLimiter).toBe('function');
       });
 
-      test('should have MCP API limiters configured correctly', () => {
-        expect(mcpApiLimiter).toBeDefined();
-        expect(typeof mcpApiLimiter).toBe('function');
-        expect(mcpBurstLimiter).toBeDefined();
-        expect(typeof mcpBurstLimiter).toBe('function');
+      test('should have REST API limiters configured correctly', () => {
+        expect(apiTokenLimiter).toBeDefined();
+        expect(typeof apiTokenLimiter).toBe('function');
+        expect(apiPreAuthLimiter).toBeDefined();
+        expect(typeof apiPreAuthLimiter).toBe('function');
       });
     });
 
@@ -231,8 +231,8 @@ describe('Middleware Integrity Tests', () => {
           { name: 'magicLinkLimiter', limiter: magicLinkLimiter },
           { name: 'apiLimiter', limiter: apiLimiter },
           { name: 'adminApiLimiter', limiter: adminApiLimiter },
-          { name: 'mcpApiLimiter', limiter: mcpApiLimiter },
-          { name: 'mcpBurstLimiter', limiter: mcpBurstLimiter }
+          { name: 'apiTokenLimiter', limiter: apiTokenLimiter },
+          { name: 'apiPreAuthLimiter', limiter: apiPreAuthLimiter }
         ];
 
         limiters.forEach(({ name, limiter }) => {
@@ -256,12 +256,12 @@ describe('Middleware Integrity Tests', () => {
       expect(magicLinkLimiter).toBeDefined();
       expect(apiLimiter).toBeDefined();
       expect(adminApiLimiter).toBeDefined();
-      expect(mcpApiLimiter).toBeDefined();
-      expect(mcpBurstLimiter).toBeDefined();
+      expect(apiTokenLimiter).toBeDefined();
+      expect(apiPreAuthLimiter).toBeDefined();
 
       // All should be functions
       [requireAuth, requireApiAuth, requireAdmin, requireApiAdmin,
-       magicLinkLimiter, apiLimiter, adminApiLimiter, mcpApiLimiter, mcpBurstLimiter]
+       magicLinkLimiter, apiLimiter, adminApiLimiter, apiTokenLimiter, apiPreAuthLimiter]
         .forEach(middleware => {
           expect(typeof middleware).toBe('function');
         });

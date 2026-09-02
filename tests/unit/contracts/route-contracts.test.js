@@ -67,10 +67,10 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.pages.health).toBe('/health');
     });
 
-    test('should have expected MCP routes defined', () => {
-      expect(ROUTES.mcp).toBeDefined();
-      expect(ROUTES.mcp.capabilities).toBe('/mcp/capabilities');
-      expect(ROUTES.mcp.main).toBe('/mcp');
+    test('should have expected bearer-token REST routes defined', () => {
+      expect(ROUTES.rest).toBeDefined();
+      expect(ROUTES.rest.profile).toBe('/api/v1/me');
+      expect(ROUTES.rest.steps).toBe('/api/v1/steps');
     });
   });
 
@@ -92,7 +92,7 @@ describe('Route Contract Tests', () => {
       
       apiRoutes.forEach(({ route }) => {
         // Allow both /api/resource and /api/category/resource patterns
-        expect(route).toMatch(/^\/api\/[a-z-]+(?:\/[a-z-]+)*$/);
+        expect(route).toMatch(/^\/api\/[a-z0-9-]+(?:\/[a-z0-9-]+)*$/);
       });
     });
 
@@ -144,7 +144,7 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.auth).toBeDefined();
       expect(ROUTES.api).toBeDefined();  
       expect(ROUTES.pages).toBeDefined();
-      expect(ROUTES.mcp).toBeDefined();
+      expect(ROUTES.rest).toBeDefined();
       expect(ROUTES.admin).toBeDefined();
       
       // Should have multiple routes in each category
@@ -168,7 +168,7 @@ describe('Route Contract Tests', () => {
       // Check for common prefix conflicts
       expect(routesByPrefix.api).toBeDefined();
       expect(routesByPrefix.auth).toBeDefined();
-      expect(routesByPrefix.mcp).toBeDefined();
+      expect(routesByPrefix.mcp).toBeUndefined();
     });
   });
 

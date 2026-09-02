@@ -15,7 +15,7 @@ tests/
 │   │   ├── routes/                 # API endpoint logic
 │   │   └── middleware/             # Authentication, validation, security
 │   ├── utils/                      # Frontend JavaScript utilities
-│   └── mcp/                        # MCP server functionality
+│   └── routes/rest-api.test.js     # Bearer-token REST API behavior
 ├── integration/                    # Integration tests (component interaction)
 │   ├── api/                        # End-to-end API workflows
 │   ├── database/                   # Database relationship testing
@@ -37,7 +37,7 @@ tests/
 ### 1. Unit Tests (`npm run test:unit`)
 - **Database Operations**: SQLite connection, table creation, CRUD operations
 - **Input Validation**: Comprehensive security validation for all inputs
-- **MCP Server**: Token generation, validation, scope management
+- **REST API**: Token generation, validation, scope management
 - **Frontend Utilities**: Client-side JavaScript functions
 - **Coverage Target**: 70% minimum across statements, branches, functions, lines
 
@@ -49,13 +49,13 @@ tests/
 
 ### 3. End-to-End Tests (`npm run test:e2e`)
 - **User Journeys**: New user onboarding, step logging, leaderboard viewing
-- **Admin Workflows**: User management, challenge creation, MCP token management
+- **Admin Workflows**: User management, challenge creation, API token management
 - **Cross-browser Testing**: Chrome, Firefox, Safari compatibility
 - **Accessibility**: WCAG compliance and keyboard navigation
 
 ### 4. Production Smoke Tests (`npm run test:smoke`)
 - **Health Checks**: Application availability and database integrity
-- **Critical Paths**: Authentication, API endpoints, MCP integration
+- **Critical Paths**: Authentication, API endpoints, REST API
 - **Security Headers**: HTTPS enforcement and security configurations
 - **READ-ONLY**: Never modifies production data
 
@@ -73,11 +73,11 @@ tests/
 - **Data Integrity**: Unique constraints and foreign key validation
 - **Performance**: Query optimization and connection pooling
 
-### MCP Integration Testing
+### REST API Testing
 - **Token Security**: Cryptographically secure token generation
 - **Scope Management**: Permission-based access control
 - **Audit Logging**: Complete action tracking with IP addresses
-- **Protocol Compliance**: JSON-RPC 2.0 and stdio protocol standards
+- **HTTP Contract**: Bearer authentication and explicit REST create/replace semantics
 
 ## Test Commands
 

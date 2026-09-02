@@ -113,23 +113,6 @@ body > * {
     z-index: 1;
 }
 
-body.mcp-page {
-    color: #fff;
-}
-
-body.mcp-page .main-container,
-body.mcp-page .card,
-body.mcp-page .alert,
-body.mcp-page .tab-content {
-    color: #fff;
-    background: rgba(15, 23, 42, 0.42) !important;
-    border-color: rgba(255, 255, 255, 0.24) !important;
-}
-
-body.mcp-page .step-number {
-    background: var(--primary-gradient);
-}
-
 body.login-page h1 {
     background: var(--text-gradient);
     -webkit-background-clip: text;
@@ -248,8 +231,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
 #manageTeamsTable,
 #challengesTable,
 #archivesTable,
-#mcpTokensTable,
-#mcpAuditTable {
+#apiTokensTable,
+#apiAuditTable {
     max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-x: contain;
@@ -259,8 +242,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
 
 #usersTable table,
 #challengesTable table,
-#mcpTokensTable table,
-#mcpAuditTable table {
+#apiTokensTable table,
+#apiAuditTable table {
     min-width: 760px;
 }
 
@@ -325,8 +308,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     #manageTeamsTable::before,
     #challengesTable::before,
     #archivesTable::before,
-    #mcpTokensTable::before,
-    #mcpAuditTable::before {
+    #apiTokensTable::before,
+    #apiAuditTable::before {
         content: "Swipe table to see more →";
         display: block;
         padding: 7px 2px 2px;
@@ -476,7 +459,7 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
 
     body.admin-page #extrasView > div,
     body.admin-page #challengesView > div,
-    body.admin-page #mcpTokensView > div {
+    body.admin-page #apiTokensView > div {
         max-width: 100%;
         padding: 14px !important;
         margin-bottom: 18px !important;
@@ -486,8 +469,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable,
     body.admin-page #challengesTable,
     body.admin-page #archivesTable,
-    body.admin-page #mcpTokensTable,
-    body.admin-page #mcpAuditTable {
+    body.admin-page #apiTokensTable,
+    body.admin-page #apiAuditTable {
         overflow: visible;
         max-width: 100%;
     }
@@ -496,8 +479,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable::before,
     body.admin-page #challengesTable::before,
     body.admin-page #archivesTable::before,
-    body.admin-page #mcpTokensTable::before,
-    body.admin-page #mcpAuditTable::before {
+    body.admin-page #apiTokensTable::before,
+    body.admin-page #apiAuditTable::before {
         content: none;
     }
 
@@ -505,8 +488,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable table,
     body.admin-page #challengesTable table,
     body.admin-page #archivesTable table,
-    body.admin-page #mcpTokensTable table,
-    body.admin-page #mcpAuditTable table {
+    body.admin-page #apiTokensTable table,
+    body.admin-page #apiAuditTable table {
         display: block;
         min-width: 0 !important;
         margin-top: 10px;
@@ -518,8 +501,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable thead,
     body.admin-page #challengesTable thead,
     body.admin-page #archivesTable thead,
-    body.admin-page #mcpTokensTable thead,
-    body.admin-page #mcpAuditTable thead {
+    body.admin-page #apiTokensTable thead,
+    body.admin-page #apiAuditTable thead {
         display: none;
     }
 
@@ -527,8 +510,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable tbody,
     body.admin-page #challengesTable tbody,
     body.admin-page #archivesTable tbody,
-    body.admin-page #mcpTokensTable tbody,
-    body.admin-page #mcpAuditTable tbody {
+    body.admin-page #apiTokensTable tbody,
+    body.admin-page #apiAuditTable tbody {
         display: grid;
         gap: 10px;
     }
@@ -537,8 +520,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable tr,
     body.admin-page #challengesTable tr,
     body.admin-page #archivesTable tr,
-    body.admin-page #mcpTokensTable tr,
-    body.admin-page #mcpAuditTable tr {
+    body.admin-page #apiTokensTable tr,
+    body.admin-page #apiAuditTable tr {
         display: block;
         width: 100%;
         height: auto;
@@ -554,8 +537,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable td,
     body.admin-page #challengesTable td,
     body.admin-page #archivesTable td,
-    body.admin-page #mcpTokensTable td,
-    body.admin-page #mcpAuditTable td {
+    body.admin-page #apiTokensTable td,
+    body.admin-page #apiAuditTable td {
         display: grid;
         grid-template-columns: minmax(88px, 34%) minmax(0, 1fr);
         gap: 9px;
@@ -571,8 +554,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable td:last-child,
     body.admin-page #challengesTable td:last-child,
     body.admin-page #archivesTable td:last-child,
-    body.admin-page #mcpTokensTable td:last-child,
-    body.admin-page #mcpAuditTable td:last-child {
+    body.admin-page #apiTokensTable td:last-child,
+    body.admin-page #apiAuditTable td:last-child {
         border-bottom: 0;
     }
 
@@ -580,8 +563,8 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable td::before,
     body.admin-page #challengesTable td::before,
     body.admin-page #archivesTable td::before,
-    body.admin-page #mcpTokensTable td::before,
-    body.admin-page #mcpAuditTable td::before {
+    body.admin-page #apiTokensTable td::before,
+    body.admin-page #apiAuditTable td::before {
         color: var(--muted-ink);
         font-size: 11px;
         font-weight: 700;
@@ -624,7 +607,7 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable td:last-child,
     body.admin-page #challengesTable td:last-child,
     body.admin-page #archivesTable td:last-child,
-    body.admin-page #mcpTokensTable td:last-child {
+    body.admin-page #apiTokensTable td:last-child {
         display: flex;
         flex-wrap: wrap;
         gap: 7px;
@@ -635,7 +618,7 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable td:last-child::before,
     body.admin-page #challengesTable td:last-child::before,
     body.admin-page #archivesTable td:last-child::before,
-    body.admin-page #mcpTokensTable td:last-child::before {
+    body.admin-page #apiTokensTable td:last-child::before {
         flex: 0 0 88px;
     }
 
@@ -643,7 +626,7 @@ button:not(.delete-btn):not(.nav button):not(.action-btn):not(.batch-btn) {
     body.admin-page #manageTeamsTable td:last-child button,
     body.admin-page #challengesTable td:last-child button,
     body.admin-page #archivesTable td:last-child button,
-    body.admin-page #mcpTokensTable td:last-child button {
+    body.admin-page #apiTokensTable td:last-child button {
         margin: 0 !important;
         min-height: 42px;
     }

@@ -10,7 +10,6 @@ const { createSessionLifetimeMiddleware } = require('./middleware/sessionLifetim
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 let db = require('./database');
-const { mcpUtils, handleMCPRequest, getMCPCapabilities } = require('../mcp/mcp-server');
 const { isDevelopment, devLog } = require('./utils/dev');
 const {
   requireAuth,
@@ -28,14 +27,17 @@ const {
   chatImageGlobalLimiter,
   teamRenameLimiter,
   adminApiLimiter,
-  mcpApiLimiter,
-  mcpBurstLimiter
+  apiPreAuthLimiter,
+  apiTokenLimiter
 } = require('./middleware/rateLimiters');
 const { sendEmail } = require('./services/email');
 const { createGeminiChatProvider } = require('./services/chat-provider');
 const { createStepChatService } = require('./services/step-chat');
 const { createChatToolRegistry } = require('./services/chat-tools');
 const { createChatRouter } = require('./routes/chat');
+const { createRestApiRouter } = require('./routes/rest-api');
+const { createApiTokenAdminRouter } = require('./routes/api-token-admin');
+const { createApiTokenService } = require('./services/api-tokens');
 const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
 const { hashToken, generateSecureToken } = require('./utils/token');
 const { isLocalhostRequest } = require('./utils/local-request');
@@ -144,7 +146,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com"], // Allow inline styles and CDN
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"], // Allow inline scripts and CDN for MCP setup page
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"], // Allow existing inline scripts and Chart.js CDN
       imgSrc: ["'self'", "data:", "blob:", "https:"], // Allow local image previews plus charts/icons
       connectSrc: ["'self'"],
       fontSrc: ["'self'", "https://cdnjs.cloudflare.com"], // Allow font awesome fonts
@@ -537,17 +539,18 @@ const chatDb = {
   all: (...args) => db.all(...args),
   run: (...args) => db.run(...args)
 };
+const createTransactionConnection = () => new Promise((resolve, reject) => {
+  const transactionDb = new sqlite3.Database(db.filename, error => {
+    if (error) return reject(error);
+    transactionDb.configure('busyTimeout', 5000);
+    resolve(transactionDb);
+  });
+});
 const stepChatService = createStepChatService({
   db: chatDb,
   getIndividualLeaderboard: getIndividualLeaderboardWithRates,
   getTeamLeaderboard: getTeamLeaderboardWithRates,
-  createTransactionConnection: () => new Promise((resolve, reject) => {
-    const transactionDb = new sqlite3.Database(db.filename, error => {
-      if (error) return reject(error);
-      transactionDb.configure('busyTimeout', 5000);
-      resolve(transactionDb);
-    });
-  })
+  createTransactionConnection
 });
 const chatProvider = createGeminiChatProvider();
 const chatToolRegistry = createChatToolRegistry({ service: stepChatService });
@@ -564,6 +567,21 @@ app.use('/api/chat', createChatRouter({
   service: stepChatService,
   toolRegistry: chatToolRegistry,
   agentMode: process.env.CHAT_AGENT_MODE === 'tools' ? 'tools' : 'legacy'
+}));
+
+const apiTokenService = createApiTokenService({ db: chatDb });
+app.use('/api/v1', createRestApiRouter({
+  db: chatDb,
+  tokenService: apiTokenService,
+  preAuthLimiter: apiPreAuthLimiter,
+  tokenLimiter: apiTokenLimiter,
+  createTransactionConnection
+}));
+app.use('/api/admin/api-tokens', createApiTokenAdminRouter({
+  requireApiAdmin,
+  validateCSRFToken,
+  adminApiLimiter,
+  tokenService: apiTokenService
 }));
 
 // Health check endpoint with comprehensive database monitoring
@@ -1079,27 +1097,6 @@ app.get('/api/user', apiLimiter, requireApiAuth, (req, res) => {
   });
 });
 
-// API endpoint to get user's MCP tokens (for setup page)
-app.get('/api/user/mcp-tokens', apiLimiter, requireApiAuth, (req, res) => {
-  const userId = req.session.userId;
-  
-  db.all(`
-    SELECT id, token, name, permissions, expires_at, last_used_at, created_at 
-    FROM mcp_tokens 
-    WHERE user_id = ? AND expires_at > datetime('now')
-    ORDER BY created_at DESC
-  `, [userId], (err, tokens) => {
-    if (err) {
-      console.error('MCP tokens fetch error:', err);
-      return res.status(500).json({ error: 'Failed to fetch MCP tokens' });
-    }
-    
-    res.json({
-      tokens: tokens || []
-    });
-  });
-});
-
 // API endpoint to get daily steps for a specific user (individual leaderboard disclosure)
 app.get('/api/user/:userId/daily-steps', apiLimiter, requireApiAuth, (req, res) => {
   const requestedUserId = req.params.userId;
@@ -1444,270 +1441,6 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
     if (shouldClose && activeDb?.open) activeDb.close();
     res.status(500).json({ error: 'Failed to load leaderboard' });
   }
-});
-
-// MCP (Model Context Protocol) remote server
-
-// Remote MCP server endpoint - Streamable HTTP transport
-app.post('/mcp', mcpBurstLimiter, mcpApiLimiter, async (req, res) => {
-  try {
-    const ipAddress = req.ip;
-    const userAgent = req.get('User-Agent');
-    const authHeader = req.get('Authorization');
-    
-    // Set headers for Streamable HTTP remote MCP support
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    
-    const response = await handleMCPRequest(req.body, ipAddress, userAgent, authHeader);
-    res.json(response);
-  } catch (error) {
-    console.error('Remote MCP server error:', error);
-    res.status(500).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32603,
-        message: 'Internal error',
-        data: 'Server error processing MCP request'
-      },
-      id: req.body?.id || null
-    });
-  }
-});
-
-// Handle preflight OPTIONS requests for CORS
-app.options('/mcp', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  res.status(200).end();
-});
-
-// MCP Bridge Script Download (Public - no authentication required)
-app.get('/download/step_bridge.py', (req, res) => {
-  try {
-    const scriptPath = path.join(__dirname, '..', 'mcp', 'step_bridge.py');
-    
-    // Security: Set proper headers for script download
-    res.setHeader('Content-Type', 'text/x-python');
-    res.setHeader('Content-Disposition', 'attachment; filename="step_bridge.py"');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    
-    // Send the bridge script file
-    res.sendFile(scriptPath, (err) => {
-      if (err) {
-        console.error('Error serving bridge script:', err);
-        res.status(404).json({ error: 'Bridge script not found' });
-      }
-    });
-  } catch (error) {
-    console.error('Bridge script download error:', error);
-    res.status(500).json({ error: 'Failed to download bridge script' });
-  }
-});
-
-// MCP capabilities discovery endpoint (no authentication required)
-app.get('/mcp/capabilities', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.json(getMCPCapabilities());
-});
-
-// Admin routes for MCP token management
-
-// Get all MCP tokens (admin only)
-app.get('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, (req, res) => {
-  db.all(`
-    SELECT 
-      t.id,
-      t.token,
-      t.name,
-      t.permissions,
-      t.scopes,
-      t.expires_at,
-      t.last_used_at,
-      t.created_at,
-      u.email as user_email,
-      u.name as user_name
-    FROM mcp_tokens t
-    JOIN users u ON t.user_id = u.id
-    ORDER BY t.created_at DESC
-  `, (err, tokens) => {
-    if (err) {
-      console.error('Error fetching MCP tokens:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    res.json(tokens);
-  });
-});
-
-// Create new MCP token (admin only)
-app.post('/api/admin/mcp-tokens', adminApiLimiter, requireApiAdmin, validateCSRFToken, sanitizeUserInput, (req, res) => {
-  const { user_id, name, permissions = 'read_write', scopes = 'steps:read,steps:write,profile:read', expires_days = 30 } = req.body;
-
-  try {
-    // Validate inputs
-    if (!user_id || !name) {
-      return res.status(400).json({ error: 'User ID and name are required' });
-    }
-
-    if (!['read_only', 'read_write'].includes(permissions)) {
-      return res.status(400).json({ error: 'Invalid permissions. Must be read_only or read_write' });
-    }
-
-    const expiresDays = parseInt(expires_days);
-    if (isNaN(expiresDays) || expiresDays < 1 || expiresDays > 365) {
-      return res.status(400).json({ error: 'Expires days must be between 1 and 365' });
-    }
-
-    // Generate token and expiration
-    const token = mcpUtils.generateToken(user_id);
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + expiresDays);
-
-    // Validate scopes
-    const validScopes = ['steps:read', 'steps:write', 'profile:read', '*'];
-    const scopeList = scopes.split(',').map(s => s.trim());
-    const invalidScopes = scopeList.filter(scope => !validScopes.includes(scope));
-    
-    if (invalidScopes.length > 0) {
-      return res.status(400).json({ error: `Invalid scopes: ${invalidScopes.join(', ')}. Valid scopes: ${validScopes.join(', ')}` });
-    }
-
-    // Insert token
-    db.run(`
-      INSERT INTO mcp_tokens (token, user_id, name, permissions, scopes, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [token, user_id, name, permissions, scopes, expiresAt.toISOString()], function(err) {
-      if (err) {
-        console.error('Error creating MCP token:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      res.json({
-        message: 'MCP token created successfully',
-        token: {
-          id: this.lastID,
-          token,
-          name,
-          permissions,
-          scopes,
-          expires_at: expiresAt.toISOString()
-        }
-      });
-    });
-
-  } catch (error) {
-    console.error('MCP token creation error:', error);
-    res.status(400).json({ error: error.message });
-  }
-});
-
-// Revoke MCP token (admin only)
-app.delete('/api/admin/mcp-tokens/:id', adminApiLimiter, requireApiAdmin, validateCSRFToken, (req, res) => {
-  const tokenId = req.params.id;
-
-  db.run('DELETE FROM mcp_tokens WHERE id = ?', [tokenId], function(err) {
-    if (err) {
-      console.error('Error revoking MCP token:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-
-    if (this.changes === 0) {
-      return res.status(404).json({ error: 'Token not found' });
-    }
-
-    res.json({ message: 'MCP token revoked successfully' });
-  });
-});
-
-// Get MCP audit log (admin only)
-app.get('/api/admin/mcp-audit', adminApiLimiter, requireApiAdmin, (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 50;
-  const offset = (page - 1) * limit;
-
-  db.all(`
-    SELECT 
-      a.id,
-      a.action,
-      a.params,
-      a.old_value,
-      a.new_value,
-      a.was_overwrite,
-      a.ip_address,
-      a.success,
-      a.error_message,
-      a.created_at,
-      u.email as user_email,
-      u.name as user_name,
-      t.name as token_name
-    FROM mcp_audit_log a
-    JOIN users u ON a.user_id = u.id
-    JOIN mcp_tokens t ON a.token_id = t.id
-    ORDER BY a.created_at DESC
-    LIMIT ? OFFSET ?
-  `, [limit, offset], (err, logs) => {
-    if (err) {
-      console.error('Error fetching MCP audit log:', err);
-      return res.status(500).json({ error: 'Database error' });
-    }
-    
-    // Transform data to match frontend expectations
-    const transformedLogs = logs.map(log => {
-      // Create details string from available data
-      let details = '';
-      if (log.error_message) {
-        details = log.error_message;
-      } else if (log.params) {
-        try {
-          const params = JSON.parse(log.params);
-          details = Object.keys(params).map(key => `${key}: ${params[key]}`).join(', ');
-        } catch (e) {
-          details = log.params;
-        }
-      } else if (log.was_overwrite) {
-        details = 'Overwrite existing data';
-      }
-      
-      return {
-        id: log.id,
-        timestamp: log.created_at,
-        user_name: log.user_name,
-        user_email: log.user_email,
-        method: log.action,
-        status_code: log.success ? 200 : 500,
-        params: log.params,
-        old_value: log.old_value,
-        new_value: log.new_value,
-        was_overwrite: log.was_overwrite,
-        ip_address: log.ip_address,
-        error_message: log.error_message,
-        token_name: log.token_name,
-        details: details || '-'
-      };
-    });
-
-    // Get total count for pagination
-    db.get('SELECT COUNT(*) as total FROM mcp_audit_log', (err, countResult) => {
-      if (err) {
-        console.error('Error getting audit log count:', err);
-        return res.status(500).json({ error: 'Database error' });
-      }
-      
-      res.json({
-        logs: transformedLogs,
-        page,
-        limit,
-        total: countResult.total,
-        pages: Math.ceil(countResult.total / limit)
-      });
-    });
-  });
 });
 
 // Admin routes
@@ -3446,11 +3179,6 @@ app.get('/admin', requireAdmin, (req, res) => {
 // Redirect admin.html to protected route
 app.get('/admin.html', requireAdmin, (req, res) => {
   res.redirect('/admin');
-});
-
-// MCP Setup page (authenticated users)
-app.get('/mcp-setup', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'mcp-setup.html'));
 });
 
 // Database cleanup job for expired tokens (runs every hour in production)

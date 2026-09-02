@@ -1,5 +1,7 @@
 # Step Challenge App
 
+> **Current integration note (September 2026):** The unused MCP implementation, bridges, setup page, and MCP tokens were retired. Programmatic access now uses the scoped bearer-token REST API under `/api/v1`; see `docs/REST_API_GUIDE.md` and `docs/REST_API_MIGRATION_PLAN.md`. MCP sections below are retained only as historical context and must not be treated as current architecture.
+
 ## Overview
 Production web application for tracking daily steps in company-wide challenges (~150 users).
 
