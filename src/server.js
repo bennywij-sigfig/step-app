@@ -39,6 +39,7 @@ const { createChatRouter } = require('./routes/chat');
 const { isValidEmail, normalizeEmail, isValidDate } = require('./utils/validation');
 const { hashToken, generateSecureToken } = require('./utils/token');
 const { isLocalhostRequest } = require('./utils/local-request');
+const { createMagicLoginUrl, validatePublicBaseUrl } = require('./utils/public-url');
 const { normalizeTeamName, teamNameKey, TeamNameValidationError } = require('./utils/team-name');
 const {
   getCurrentChallengeDay,
@@ -68,6 +69,19 @@ function validateEnvironment() {
     if (!process.env.MAILGUN_API_KEY) {
       console.warn('⚠️  MAILGUN_API_KEY not set - email functionality will be disabled');
     }
+    if (!process.env.PUBLIC_BASE_URL) {
+      missing.push('PUBLIC_BASE_URL (canonical HTTPS origin for authentication links)');
+    }
+  }
+
+  if (process.env.PUBLIC_BASE_URL) {
+    try {
+      validatePublicBaseUrl(process.env.PUBLIC_BASE_URL, {
+        requireHttps: process.env.NODE_ENV === 'production'
+      });
+    } catch (error) {
+      missing.push(error.message);
+    }
   }
   
   // Check for development default secret
@@ -89,6 +103,9 @@ validateEnvironment();
 
 // Environment info (production-safe)
 const isProduction = process.env.NODE_ENV === 'production';
+const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL
+  ? validatePublicBaseUrl(process.env.PUBLIC_BASE_URL, { requireHttps: isProduction })
+  : null;
 const isLocalDevelopment = isDevelopment && process.env.NODE_ENV !== 'test';
 const LOCAL_SESSION_MAX_AGE = 365 * 24 * 60 * 60 * 1000;
 const SESSION_IDLE_MAX_AGE = isLocalDevelopment ? LOCAL_SESSION_MAX_AGE : 36 * 60 * 60 * 1000;
@@ -107,6 +124,16 @@ if (isDevelopment) {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+function buildMagicLoginUrl(req, token) {
+  const baseUrl = PUBLIC_BASE_URL || (isLocalhostRequest(req)
+    ? `${req.protocol}://${req.get('host')}`
+    : null);
+  if (!baseUrl) {
+    throw new Error('PUBLIC_BASE_URL is required for non-local magic links');
+  }
+  return createMagicLoginUrl(baseUrl, token);
+}
 
 // Trust proxy for fly.io (enables secure cookies behind HTTPS proxy)
 app.set('trust proxy', 1);
@@ -652,7 +679,7 @@ app.post('/auth/send-link', magicLinkLimiter, async (req, res) => {
     });
 
     // Send email. Raw login tokens are logged only for direct localhost use.
-    const loginUrl = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
+    const loginUrl = buildMagicLoginUrl(req, token);
     if (isDevelopment && isLocalhostRequest(req)) {
       console.log('🔗 Magic link (localhost only):', loginUrl);
     }
@@ -844,7 +871,7 @@ if (isDevelopment) {
       });
 
       // Return the magic link directly (development only)
-      const loginUrl = `${req.protocol}://${req.get('host')}/auth/login?token=${token}`;
+      const loginUrl = buildMagicLoginUrl(req, token);
       
       console.log('🔗 Development magic link generated:', loginUrl);
       

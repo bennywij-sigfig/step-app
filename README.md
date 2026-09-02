@@ -67,6 +67,7 @@ Required Fly secrets:
 - `MAILGUN_API_KEY`
 - `MAILGUN_DOMAIN`
 - `FROM_EMAIL`
+- `PUBLIC_BASE_URL` — canonical HTTPS origin used in magic links
 
 ## Layout
 

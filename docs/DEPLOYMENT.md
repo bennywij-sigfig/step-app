@@ -148,6 +148,7 @@ primary_region = 'ord'
 | `MAILGUN_API_KEY` | Yes | Email service | `key-abc123...` |
 | `MAILGUN_DOMAIN` | Yes | Email domain | `your-company.com` |
 | `FROM_EMAIL` | Yes | Sender email | `noreply@your-company.com` |
+| `PUBLIC_BASE_URL` | Yes | Canonical HTTPS origin for authentication links | `https://steps.your-company.com` |
 | `PORT` | No | Server port | `3000` (default) |
 
 ## Operational Procedures
