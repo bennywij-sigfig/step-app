@@ -21,6 +21,7 @@
     "test:security": "node tests/integration/security/security-regression.test.js",
     "test:trotter:redteam": "jest tests/unit/security/trotter-redteam.test.js tests/unit/services/chat-agent-contract.test.js tests/unit/routes/chat.test.js tests/unit/services/step-chat.test.js tests/unit/services/chat-intent.test.js --runInBand",
     "test:trotter:redteam:live": "node tests/security/trotter-live-redteam.js",
+    "test:trotter:viewport": "playwright test --config=tests/playwright.trotter.config.js",
     "test:security:prod": "NODE_ENV=production node tests/integration/security/security-regression.test.js",
     "test:critical": "jest tests/unit/server/startup-smoke-test.test.js tests/unit/imports/critical-dependencies.test.js tests/unit/api/csrf-token-generation.test.js tests/unit/contracts/route-contracts.test.js tests/unit/middleware/middleware-integrity.test.js",
     "test:regression:quick": "jest tests/integration/api/steps-api-regression.test.js --testNamePattern='(should accept valid step count|should require authentication|should validate CSRF token)'",

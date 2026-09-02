@@ -19,7 +19,8 @@
         imageObjectUrl: null,
         imageUploadEnabled: false,
         imageBusy: false,
-        themeColorBeforeChat: null
+        themeColorBeforeChat: null,
+        chatLayoutHeight: 0
     };
 
     const formatNumber = value => Number(value || 0).toLocaleString();
@@ -774,22 +775,36 @@
         return active.matches('textarea, input:not([type="button"]):not([type="checkbox"]):not([type="file"]), select, [contenteditable="true"]');
     }
 
+    function captureChatLayoutHeight() {
+        const viewport = window.visualViewport;
+        state.chatLayoutHeight = Math.max(
+            document.documentElement.clientHeight || 0,
+            window.innerHeight || 0,
+            (viewport?.height || 0) + (viewport?.offsetTop || 0)
+        );
+    }
+
     function resetVisualViewport() {
         const overlay = document.getElementById('stepChatOverlay');
         if (!overlay) return;
-        overlay.style.removeProperty('--chat-visual-height');
-        overlay.style.removeProperty('--chat-visual-top');
+        overlay.style.removeProperty('--chat-viewport-top');
+        overlay.style.removeProperty('--chat-keyboard-inset');
     }
 
     function syncVisualViewport() {
         const overlay = document.getElementById('stepChatOverlay');
         const viewport = window.visualViewport;
-        if (!overlay || !viewport || !isChatEditorFocused(overlay)) {
-            resetVisualViewport();
-            return;
-        }
-        overlay.style.setProperty('--chat-visual-height', `${Math.round(viewport.height || window.innerHeight)}px`);
-        overlay.style.setProperty('--chat-visual-top', `${Math.round(viewport.offsetTop || 0)}px`);
+        if (!overlay || !viewport || !isChatEditorFocused(overlay)) return;
+
+        // Never move or resize the fixed overlay itself. iOS Safari can paint
+        // a moved fixed layer in one place while leaving its touch hit region
+        // elsewhere after keyboard dismissal. Keep that shell at inset: 0 and
+        // fit its children into the visual viewport using ordinary padding.
+        const layoutHeight = state.chatLayoutHeight || window.innerHeight || viewport.height;
+        const visualTop = Math.max(0, Math.round(viewport.offsetTop || 0));
+        const keyboardInset = Math.max(0, Math.round(layoutHeight - visualTop - viewport.height));
+        overlay.style.setProperty('--chat-viewport-top', `${visualTop}px`);
+        overlay.style.setProperty('--chat-keyboard-inset', `${keyboardInset}px`);
     }
 
     function setChatBrowserColor(open) {
@@ -807,6 +822,7 @@
     function openChat() {
         const overlay = document.getElementById('stepChatOverlay');
         resetVisualViewport();
+        captureChatLayoutHeight();
         overlay.hidden = false;
         document.body.style.overflow = 'hidden';
         setChatBrowserColor(true);
@@ -852,9 +868,15 @@
         resetVisualViewport();
         window.visualViewport?.addEventListener('resize', syncVisualViewport);
         window.visualViewport?.addEventListener('scroll', syncVisualViewport);
-        window.addEventListener('orientationchange', resetVisualViewport);
+        window.addEventListener('orientationchange', () => {
+            resetVisualViewport();
+            window.requestAnimationFrame(captureChatLayoutHeight);
+        });
         window.addEventListener('beforeunload', () => {
             if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
+        });
+        input.addEventListener('pointerdown', () => {
+            if (document.activeElement !== input) captureChatLayoutHeight();
         });
         input.addEventListener('input', resizeComposerInput);
         input.addEventListener('paste', event => {
@@ -878,7 +900,6 @@
                 transcript.scrollTop = transcript.scrollHeight;
             }, 50);
         });
-        input.addEventListener('blur', resetVisualViewport);
 
         const storedTone = sessionStorage.getItem(TONE_STORAGE_KEY);
         if (['encouraging', 'neutral', 'droll', 'sarcastic', 'annoying'].includes(storedTone)) toneSelect.value = storedTone;
@@ -930,6 +951,11 @@
             if (event.target === overlay) {
                 closeAbout();
                 closeChat();
+            } else if (!isChatEditorFocused(overlay)) {
+                // Reset only after the control's click has been delivered.
+                // Doing this synchronously on textarea blur can move the
+                // target between touchstart and click on iOS.
+                resetVisualViewport();
             }
         });
         document.addEventListener('click', event => {
