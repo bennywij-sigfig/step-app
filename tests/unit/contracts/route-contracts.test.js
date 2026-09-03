@@ -54,6 +54,7 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.api).toBeDefined();
       expect(ROUTES.api.csrfToken).toBe('/api/csrf-token');
       expect(ROUTES.api.steps).toBe('/api/steps');
+      expect(ROUTES.api.chartBenchmarks).toBe('/api/chart-benchmarks');
       expect(ROUTES.api.leaderboard).toBe('/api/leaderboard');
       expect(ROUTES.api.teamLeaderboard).toBe('/api/team-leaderboard');
       expect(ROUTES.api.champions).toBe('/api/champions');

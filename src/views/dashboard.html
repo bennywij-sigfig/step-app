@@ -605,21 +605,52 @@
 
         .steps-chart-summary {
             display: flex;
+            align-items: flex-start;
             justify-content: space-between;
-            gap: 12px;
+            gap: 8px 12px;
             margin: 0 2px 10px;
             color: var(--muted-ink, #526174);
             font-size: 12px;
         }
 
+        .steps-chart-legend {
+            text-align: right;
+        }
+
+        .chart-summary-separator {
+            opacity: 0.45;
+        }
+
+        .chart-benchmark-toggle {
+            color: inherit;
+            font-weight: 400;
+            cursor: pointer;
+        }
+
+        .chart-benchmark-toggle:hover,
+        .chart-benchmark-toggle:focus-visible,
+        .chart-benchmark-toggle[aria-pressed="true"] {
+            color: var(--ink, #172033);
+        }
+
         .steps-chart {
-            display: grid;
-            grid-template-columns: repeat(var(--bar-count), minmax(4px, 1fr));
-            align-items: end;
             height: 126px;
-            gap: clamp(2px, 0.45vw, 5px);
             padding: 10px 2px 22px;
+        }
+
+        .steps-chart-plot {
+            position: relative;
+            height: 100%;
             border-bottom: 1px solid var(--line, rgba(15, 61, 76, 0.14));
+        }
+
+        .steps-chart-bars {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: repeat(var(--bar-count), minmax(2px, 1fr));
+            align-items: end;
+            gap: clamp(1px, 0.35vw, 5px);
         }
 
         .step-bar {
@@ -686,6 +717,30 @@
             opacity: 1;
         }
 
+        .step-bar.future {
+            background: transparent !important;
+            border: 1px solid color-mix(in srgb, var(--muted-ink, #526174) 25%, transparent);
+            opacity: 0.75;
+        }
+
+        .chart-benchmark {
+            position: absolute;
+            left: 0;
+            right: 0;
+            z-index: 1;
+            border-top: 1px dashed color-mix(in srgb, var(--primary-color) 52%, var(--muted-ink, #526174));
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .chart-benchmark.team-average {
+            border-color: color-mix(in srgb, #9a7351 58%, var(--muted-ink, #526174));
+        }
+
+        .chart-benchmark.visible {
+            opacity: 0.72;
+        }
+
         .steps-chart-empty {
             margin: 34px 0;
             color: var(--muted-ink, #526174);
@@ -695,7 +750,10 @@
         @media (max-width: 480px) {
             .steps-chart {
                 height: 112px;
-                gap: 2px;
+            }
+
+            .steps-chart-bars {
+                gap: 1px;
             }
 
             .step-bar::before {

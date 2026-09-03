@@ -1230,7 +1230,7 @@ app.get('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
   const userId = req.session.userId;
   
   db.all(
-    `SELECT date, count FROM steps WHERE user_id = ? ORDER BY date DESC`,
+    `SELECT date, count, challenge_id FROM steps WHERE user_id = ? ORDER BY date DESC`,
     [userId],
     (err, rows) => {
       if (err) {
@@ -1240,6 +1240,71 @@ app.get('/api/steps', apiLimiter, requireApiAuth, (req, res) => {
       res.json(rows);
     }
   );
+});
+
+// Chart benchmarks use the same "per reported day" average as the leaderboards.
+// The leading team is intentionally included regardless of reporting threshold.
+app.get('/api/chart-benchmarks', apiLimiter, requireApiAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const activeChallenge = await getActiveChallenge(db);
+    let startDate;
+    let endDate;
+
+    if (activeChallenge) {
+      startDate = activeChallenge.start_date;
+      endDate = activeChallenge.end_date;
+    } else {
+      const latestEntry = await dbGetAsync(
+        'SELECT MAX(date) AS latest_date FROM steps WHERE user_id = ?',
+        [userId]
+      );
+      if (!latestEntry?.latest_date) {
+        return res.json({ start_date: null, end_date: null, user_daily_average: 0, leading_team: null });
+      }
+      endDate = latestEntry.latest_date;
+      const rangeStart = new Date(`${endDate}T00:00:00Z`);
+      rangeStart.setUTCDate(rangeStart.getUTCDate() - 29);
+      startDate = rangeStart.toISOString().slice(0, 10);
+    }
+
+    const challengeClause = activeChallenge ? 'AND s.challenge_id = ?' : '';
+    const rangeParams = activeChallenge
+      ? [startDate, endDate, activeChallenge.id]
+      : [startDate, endDate];
+    const userAverage = await dbGetAsync(
+      `SELECT CASE WHEN COUNT(s.id) > 0 THEN SUM(s.count) * 1.0 / COUNT(s.id) ELSE 0 END AS daily_average
+       FROM steps s
+       WHERE s.user_id = ? AND s.date BETWEEN ? AND ? ${challengeClause}`,
+      [userId, ...rangeParams]
+    );
+    const leadingTeam = await dbGetAsync(
+      `SELECT t.id AS team_id, t.name AS team,
+              SUM(s.count) * 1.0 / COUNT(s.id) AS daily_average
+       FROM teams t
+       JOIN users u ON u.team_id = t.id AND u.archived_at IS NULL
+       JOIN steps s ON s.user_id = u.id
+       WHERE s.date BETWEEN ? AND ? ${challengeClause}
+       GROUP BY t.id, t.name
+       ORDER BY daily_average DESC, t.name ASC
+       LIMIT 1`,
+      rangeParams
+    );
+
+    res.json({
+      start_date: startDate,
+      end_date: endDate,
+      user_daily_average: Math.round(userAverage?.daily_average || 0),
+      leading_team: leadingTeam ? {
+        team_id: leadingTeam.team_id,
+        team: leadingTeam.team,
+        daily_average: Math.round(leadingTeam.daily_average || 0)
+      } : null
+    });
+  } catch (error) {
+    console.error('Error fetching chart benchmarks:', error);
+    res.status(500).json({ error: 'Failed to load chart benchmarks' });
+  }
 });
 
 // Download user's own step data as CSV (protected - only own steps)

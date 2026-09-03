@@ -42,12 +42,24 @@ describe('dashboard design contract', () => {
     expect(dashboard).not.toContain("max-height 0.3s");
   });
 
-  test('recent chart shows up to 30 elapsed dates with concise summary metadata', () => {
+  test('chart renders the full challenge calendar with zero and future days plus benchmarks', () => {
+    expect(dashboard).toContain('startDate = currentUser.current_challenge.start_date');
+    expect(dashboard).toContain('endDate = currentUser.current_challenge.end_date');
     expect(dashboard).toContain('shiftDate(endDate, -29)');
-    expect(dashboard).toContain("if (endDate < challenge.start_date)");
+    expect(dashboard).toContain('hasEntry: stepsByDate.has(date)');
+    expect(dashboard).toContain("day.isFuture ? ' future' : ''");
+    expect(dashboard).toContain("fetch('/api/chart-benchmarks')");
+    expect(dashboard).toContain("className: 'user-average'");
+    expect(dashboard).toContain("className: 'team-average'");
+    expect(dashboard).toContain("label: 'Leading team avg'");
     expect(dashboard).toContain('steps-chart-summary');
-    expect(dashboard).toContain('logged ·');
     expect(dashboard).toContain("showAxisLabel ? ' axis-label' : ''");
+    expect(html).toMatch(/\.chart-benchmark\s*\{[\s\S]*?border-top: 1px dashed/);
+    expect(html).toMatch(/\.chart-benchmark\s*\{[\s\S]*?opacity: 0/);
+    expect(html).toMatch(/\.chart-benchmark-toggle\s*\{[\s\S]*?font-weight: 400/);
+    expect(dashboard).toContain("toggle.addEventListener('pointerenter', showLine)");
+    expect(dashboard).toContain("toggle.addEventListener('click'");
+    expect(dashboard).not.toContain('<span>${line.label}</span>');
   });
 
   test('uses wider desktop layouts while retaining the compact mobile flow', () => {

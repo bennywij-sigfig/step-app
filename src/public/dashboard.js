@@ -459,10 +459,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Load user's steps
+        // Load user's steps and chart benchmarks together so the chart can compare
+        // the participant with the leading team without waiting for leaderboard UI.
         async function loadSteps() {
             try {
-                const response = await fetch('/api/steps');
+                const [response, benchmarkResponse] = await Promise.all([
+                    fetch('/api/steps'),
+                    fetch('/api/chart-benchmarks').catch(() => null)
+                ]);
                 
                 if (response.status === 429) {
                     const data = await response.json();
@@ -473,6 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 const steps = await response.json();
+                const benchmarks = benchmarkResponse?.ok ? await benchmarkResponse.json() : null;
                 
                 const stepsList = document.getElementById('stepsList');
                 if (steps.length === 0) {
@@ -487,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Update chart
-                renderStepsChart(steps);
+                renderStepsChart(steps, benchmarks);
                 
                 // Set date selector to today (with challenge end date as ceiling if applicable)
                 setTodayDate(currentUser?.current_challenge);
@@ -499,14 +504,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
 
-        // Render at most 30 elapsed dates. Future challenge dates made the old
-        // chart look empty and compressed useful data into narrow bars.
-        function renderStepsChart(steps) {
+        // Render the active challenge's complete calendar so elapsed and upcoming
+        // days are visible. Without a challenge, show 30 calendar days ending at
+        // the user's most recent entry; absent dates are represented as zero.
+        function renderStepsChart(steps, benchmarks = null) {
             const chartContainer = document.getElementById('stepsChart');
-            if (steps.length === 0) {
-                chartContainer.innerHTML = '<p class="steps-chart-empty">No step data to display</p>';
-                return;
-            }
 
             const parseDate = value => new Date(`${value}T00:00:00Z`);
             const dateString = value => value.toISOString().slice(0, 10);
@@ -519,38 +521,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 month: 'short', day: 'numeric', timeZone: 'UTC'
             });
 
-            const stepsByDate = new Map(steps.map(step => [step.date, Number(step.count) || 0]));
+            const relevantSteps = currentUser?.current_challenge
+                ? steps.filter(step => Number(step.challenge_id) === Number(currentUser.current_challenge.id))
+                : steps;
+            const stepsByDate = new Map(relevantSteps.map(step => [step.date, Number(step.count) || 0]));
             const latestSupportedDate = getLatestSupportedDate();
-            let endDate = latestSupportedDate;
-            let startDate = shiftDate(endDate, -29);
+            let startDate;
+            let endDate;
 
             if (currentUser?.current_challenge) {
-                const challenge = currentUser.current_challenge;
-                endDate = challenge.end_date < latestSupportedDate ? challenge.end_date : latestSupportedDate;
-                if (endDate < challenge.start_date) {
-                    chartContainer.innerHTML = '<p class="steps-chart-empty">The challenge has not started yet</p>';
+                startDate = currentUser.current_challenge.start_date;
+                endDate = currentUser.current_challenge.end_date;
+            } else {
+                endDate = benchmarks?.end_date || steps[0]?.date;
+                if (!endDate) {
+                    chartContainer.innerHTML = '<p class="steps-chart-empty">No step data to display</p>';
                     return;
                 }
-                startDate = shiftDate(endDate, -29);
-                if (startDate < challenge.start_date) startDate = challenge.start_date;
+                startDate = benchmarks?.start_date || shiftDate(endDate, -29);
             }
 
             const days = [];
             for (let date = startDate; date <= endDate; date = shiftDate(date, 1)) {
-                days.push({ date, steps: stepsByDate.get(date) || 0 });
+                days.push({
+                    date,
+                    steps: stepsByDate.get(date) || 0,
+                    hasEntry: stepsByDate.has(date),
+                    isFuture: date > latestSupportedDate
+                });
             }
 
-            const loggedDays = days.filter(day => day.steps > 0);
+            const loggedDays = days.filter(day => day.hasEntry);
             const total = loggedDays.reduce((sum, day) => sum + day.steps, 0);
-            const average = loggedDays.length ? Math.round(total / loggedDays.length) : 0;
-            const maxSteps = Math.max(...days.map(day => day.steps), 1);
+            const userAverage = Number.isFinite(Number(benchmarks?.user_daily_average))
+                ? Number(benchmarks.user_daily_average)
+                : (loggedDays.length ? Math.round(total / loggedDays.length) : 0);
+            const teamAverage = Number(benchmarks?.leading_team?.daily_average) || 0;
+            const maxSteps = Math.max(...days.map(day => day.steps), userAverage, teamAverage, 1);
             const bars = days.map((day, index) => {
                 const hasData = day.steps > 0;
                 const dayOfMonth = Number(day.date.slice(-2));
                 const showAxisLabel = index === 0 || index === days.length - 1 || dayOfMonth % 5 === 0;
                 const heightPercent = hasData ? Math.max(6, (day.steps / maxSteps) * 100) : 3;
-                const detail = hasData ? `${day.steps.toLocaleString()} steps` : 'No steps logged';
-                return `<div class="step-bar${hasData ? '' : ' no-data'}${showAxisLabel ? ' axis-label' : ''}"
+                const detail = day.isFuture
+                    ? 'Upcoming challenge day'
+                    : (day.hasEntry ? `${day.steps.toLocaleString()} steps` : 'No steps logged');
+                return `<div class="step-bar${hasData ? '' : ' no-data'}${day.isFuture ? ' future' : ''}${showAxisLabel ? ' axis-label' : ''}"
                     style="height: ${heightPercent}%"
                     data-day="${dayOfMonth}"
                     data-steps="${detail}"
@@ -558,18 +574,72 @@ document.addEventListener('DOMContentLoaded', function() {
                     aria-label="${formatShortDate(day.date)}: ${detail}"></div>`;
             }).join('');
 
+            const benchmarksToRender = [
+                userAverage > 0 ? {
+                    className: 'user-average',
+                    average: userAverage,
+                    label: 'Your avg',
+                    value: Math.round(userAverage).toLocaleString()
+                } : null,
+                teamAverage > 0 ? {
+                    className: 'team-average',
+                    average: teamAverage,
+                    label: 'Leading team avg',
+                    value: Math.round(teamAverage).toLocaleString()
+                } : null
+            ].filter(Boolean);
+            const benchmarkLines = benchmarksToRender.map(line => `
+                <div class="chart-benchmark ${line.className}" data-benchmark="${line.className}"
+                    style="bottom: ${(line.average / maxSteps) * 100}%" aria-hidden="true"></div>`).join('');
+            const benchmarkLegend = benchmarksToRender.map(line => `
+                <span class="chart-benchmark-toggle ${line.className}" role="button" tabindex="0"
+                    data-benchmark="${line.className}" aria-pressed="false"
+                    aria-label="Show ${line.label} line at ${line.value} steps per day">${line.label} ${line.value}</span>`
+            ).join(' <span class="chart-summary-separator">·</span> ');
+
             const dateRange = startDate === endDate
                 ? formatShortDate(startDate)
                 : `${formatShortDate(startDate)}–${formatShortDate(endDate)}`;
-            const activitySummary = loggedDays.length
-                ? `${loggedDays.length} logged · ${average.toLocaleString()} avg`
-                : 'No days logged';
+            const loggedSummary = loggedDays.length ? `${loggedDays.length} logged` : 'No days logged yet';
             chartContainer.innerHTML = `
                 <div class="steps-chart-summary">
                     <span>${dateRange}</span>
-                    <span>${activitySummary}</span>
+                    <span class="steps-chart-legend">
+                        <span>${loggedSummary}</span>
+                        ${benchmarkLegend ? ' <span class="chart-summary-separator">·</span> ' + benchmarkLegend : ''}
+                    </span>
                 </div>
-                <div class="steps-chart" style="--bar-count: ${days.length}">${bars}</div>`;
+                <div class="steps-chart">
+                    <div class="steps-chart-plot">
+                        <div class="steps-chart-bars" style="--bar-count: ${days.length}">${bars}</div>
+                        ${benchmarkLines}
+                    </div>
+                </div>`;
+
+            chartContainer.querySelectorAll('.chart-benchmark-toggle').forEach(toggle => {
+                const line = chartContainer.querySelector(`.chart-benchmark[data-benchmark="${toggle.dataset.benchmark}"]`);
+                const showLine = () => line?.classList.add('visible');
+                const hideLine = () => {
+                    if (toggle.dataset.pinned !== 'true') line?.classList.remove('visible');
+                };
+                toggle.addEventListener('pointerenter', showLine);
+                toggle.addEventListener('pointerleave', hideLine);
+                toggle.addEventListener('focus', showLine);
+                toggle.addEventListener('blur', hideLine);
+                const togglePinnedLine = () => {
+                    const pinned = toggle.dataset.pinned !== 'true';
+                    toggle.dataset.pinned = String(pinned);
+                    toggle.setAttribute('aria-pressed', String(pinned));
+                    line?.classList.toggle('visible', pinned);
+                };
+                toggle.addEventListener('click', togglePinnedLine);
+                toggle.addEventListener('keydown', event => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        togglePinnedLine();
+                    }
+                });
+            });
         }
         
         // Load leaderboard

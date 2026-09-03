@@ -24,6 +24,7 @@ const ROUTES = {
   api: {
     csrfToken: '/api/csrf-token',
     steps: '/api/steps',
+    chartBenchmarks: '/api/chart-benchmarks',
     leaderboard: '/api/leaderboard',
     teamLeaderboard: '/api/team-leaderboard',
     champions: '/api/champions',
