@@ -97,6 +97,7 @@ describe('Champions Pantheon frontend', () => {
     expect(script).toContain("<details class=\"team-podium-card\" ${index === 0 ? 'open' : ''}>");
     expect(styles).toMatch(/\.team-podium-card > summary::before\s*\{[\s\S]*?content: "▶"/);
     expect(styles).toMatch(/\.team-podium-card\[open\] > summary::before\s*\{\s*transform: rotate\(90deg\)/);
+    expect(styles).toMatch(/\.team-podium-card\s*\{\s*overflow: hidden/);
   });
 
   test('lets mouse and touch pointers directly rotate the trophy foot', () => {

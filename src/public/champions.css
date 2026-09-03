@@ -232,6 +232,7 @@ section:not(.hero) { margin: 0 0 110px; }
     border-radius: 18px;
     background: rgba(255,255,255,.035);
 }
+.team-podium-card { overflow: hidden; }
 .team-podium-card[open] { border-color: var(--line); background: rgba(247,200,93,.045); }
 .team-podium-card > summary {
     display: grid;
