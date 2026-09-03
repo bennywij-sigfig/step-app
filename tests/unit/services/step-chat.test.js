@@ -239,6 +239,49 @@ describe('Step Chat deterministic write service', () => {
     expect(result).toMatchObject({ has_entry: true, name: 'Team A', ranked: true, rank: 1 });
   });
 
+  test('uses useful provisional standings when nobody qualifies as ranked yet', async () => {
+    const provisionalService = createStepChatService({
+      db,
+      getIndividualLeaderboard: async () => ({
+        ranked: [],
+        unranked: [
+          { id: 2, name: 'Target', total_steps: 12000, days_logged: 1, steps_per_day_reported: 12000, personal_reporting_rate: 10 },
+          { id: 1, name: 'Tester', total_steps: 11000, days_logged: 2, steps_per_day_reported: 5500, personal_reporting_rate: 20 }
+        ]
+      }),
+      getTeamLeaderboard: async () => ({
+        ranked: [],
+        unranked: [
+          { team: 'Team B', team_steps_per_day_reported: 9000, team_entries: 1 },
+          { team: 'Team A', team_steps_per_day_reported: 5500, team_entries: 2 }
+        ]
+      })
+    });
+
+    const individual = await provisionalService.executeIntent(1, {
+      intent: 'challenge_outlook', leaderboard: 'individual', as_of_date: '2025-08-25', tone: 'neutral'
+    });
+    expect(individual).toMatchObject({
+      ranked: false, provisional_rank: 2, provisional_count: 2,
+      leader: { name: 'Target', average: 12000 }, leader_is_provisional: true,
+      gap_to_leader: 6500
+    });
+
+    const team = await provisionalService.executeIntent(1, {
+      intent: 'challenge_outlook', leaderboard: 'team', as_of_date: '2025-08-25', tone: 'neutral'
+    });
+    expect(team).toMatchObject({
+      ranked: false, provisional_rank: 2, provisional_count: 2,
+      leader: { name: 'Team B', average: 9000 }, leader_is_provisional: true,
+      gap_to_leader: 3500
+    });
+
+    const overtake = await provisionalService.calculateOvertakeLeader(1, 1, '2025-08-25');
+    expect(overtake).toMatchObject({
+      kind: 'overtake', target: { name: 'Target', average: 12000 }, target_is_provisional: true
+    });
+  });
+
   test('asks deterministic follow-ups for incomplete or invalid step requests', async () => {
     await expect(service.executeIntent(1, { intent: 'help', reason: 'missing_date', tone: 'neutral' }))
       .resolves.toEqual({

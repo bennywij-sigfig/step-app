@@ -108,15 +108,22 @@ function createChatRouter({
   function narrationFacts(result) {
     if (result.kind === 'leaderboard') {
       const averageField = result.leaderboard === 'team' ? 'team_steps_per_day_reported' : 'steps_per_day_reported';
+      const provisionalRows = result.unranked.filter(row =>
+        result.leaderboard !== 'team' || Number(row.team_entries) > 0
+      );
+      const isProvisional = result.ranked.length === 0 && provisionalRows.length > 0;
+      const rows = isProvisional ? provisionalRows : result.ranked;
       return {
         kind: result.kind,
         leaderboard: result.leaderboard,
         challenge: result.challenge ? { name: result.challenge.name, end_date: result.challenge.end_date } : null,
-        ranked: result.ranked.slice(0, 10).map((row, index) => ({
-          rank: index + 1,
+        standings_basis: isProvisional ? 'provisional_current_average' : 'official_ranked',
+        standings: rows.slice(0, 10).map((row, index) => ({
+          position: index + 1,
           name: result.leaderboard === 'team' ? row.team : row.name,
           average: Math.round(Number(row[averageField]) || 0)
         })),
+        ranked_count: result.ranked.length,
         unranked_count: result.unranked.length
       };
     }

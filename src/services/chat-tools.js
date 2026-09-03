@@ -42,12 +42,12 @@ const declarations = [
   },
   {
     name: 'get_individual_leaderboard',
-    description: 'Get the current individual leaderboard.',
+    description: 'Get current individual standings. Ranked entries are official; if none are ranked, the first unranked entry with logged activity is the provisional leader by current average.',
     parameters: { type: 'object', properties: {} }
   },
   {
     name: 'get_team_leaderboard',
-    description: 'Get the current team leaderboard.',
+    description: 'Get current team standings. Ranked entries are official; if none are ranked, the first unranked entry with logged activity is the provisional leader by current average.',
     parameters: { type: 'object', properties: {} }
   },
   {
@@ -78,7 +78,7 @@ const declarations = [
   },
   {
     name: 'calculate_overtake_leader',
-    description: 'Calculate the authenticated user’s pace needed to overtake the current individual leader. Resolves the leader authoritatively; do not look up the leaderboard first.',
+    description: 'Calculate the authenticated user’s pace needed to overtake the current individual leader, falling back to the provisional leader when nobody is ranked. Resolves the leader authoritatively; do not look up the leaderboard first.',
     parameters: {
       type: 'object',
       properties: {

@@ -53,6 +53,9 @@ describe('dashboard design contract', () => {
     expect(dashboard).toContain("className: 'team-average'");
     expect(dashboard).toContain("label: 'Leading team avg'");
     expect(dashboard).toContain('steps-chart-summary');
+    expect(dashboard).not.toContain('loggedSummary');
+    expect(dashboard).not.toContain('dateRange');
+    expect(html).toMatch(/\.steps-chart-legend\s*\{[\s\S]*?white-space: nowrap/);
     expect(dashboard).toContain("showAxisLabel ? ' axis-label' : ''");
     expect(html).toMatch(/\.chart-benchmark\s*\{[\s\S]*?border-top: 1px dashed/);
     expect(html).toMatch(/\.chart-benchmark\s*\{[\s\S]*?opacity: 0/);

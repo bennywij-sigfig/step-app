@@ -500,8 +500,15 @@
 
     function renderLeaderboard(result, tone, reply = null) {
         const label = result.leaderboard === 'team' ? 'team' : 'individual';
-        const message = createMessage('assistant', reply || `${toneLead(tone, 'leaderboard')} Top ranked ${label}s:`);
-        const rows = result.ranked.slice(0, 10);
+        const provisionalRows = result.unranked.filter(row =>
+            result.leaderboard !== 'team' || Number(row.team_entries) > 0
+        );
+        const isProvisional = !result.ranked.length && provisionalRows.length > 0;
+        const heading = isProvisional
+            ? `Provisional ${label} standings (no ranked entries yet):`
+            : `Top ranked ${label}s:`;
+        const message = createMessage('assistant', reply || `${toneLead(tone, 'leaderboard')} ${heading}`);
+        const rows = (isProvisional ? provisionalRows : result.ranked).slice(0, 10);
         addList(message, rows.map((row, index) => {
             const name = result.leaderboard === 'team' ? row.team : row.name;
             const average = result.leaderboard === 'team' ? row.team_steps_per_day_reported : row.steps_per_day_reported;
@@ -509,7 +516,7 @@
         }));
         if (!rows.length) {
             const empty = document.createElement('p');
-            empty.textContent = 'No ranked entries yet.';
+            empty.textContent = 'No entries yet.';
             message.appendChild(empty);
         }
     }
@@ -567,10 +574,11 @@
             const feasibility = result.feasible_under_daily_limit
                 ? ''
                 : ' That exceeds the app’s 70,000-step daily limit, so this projection is not achievable in the selected time.';
-            const text = `${toneLead(tone, 'overtake')} To finish above ${result.target.name}’s current ${formatNumber(Math.round(result.target.average))}-step average, average at least ${formatNumber(result.required_daily_average)} steps for ${result.days} day${result.days === 1 ? '' : 's'} (${formatNumber(result.required_total)} additional steps total).${feasibility} Assumption: ${result.assumption}`;
+            const provisional = result.target_is_provisional ? ' Nobody is ranked yet, so this target is provisional.' : '';
+            const text = `${toneLead(tone, 'overtake')} To finish above ${result.target.name}’s current ${formatNumber(Math.round(result.target.average))}-step average, average at least ${formatNumber(result.required_daily_average)} steps for ${result.days} day${result.days === 1 ? '' : 's'} (${formatNumber(result.required_total)} additional steps total).${provisional}${feasibility} Assumption: ${result.assumption}`;
             const message = createMessage('assistant', reply || text);
             appendVerifiedFacts(message, [
-                `Target: ${result.target.name} at ${formatNumber(Math.round(result.target.average))} steps/day`,
+                `Target: ${result.target.name} at ${formatNumber(Math.round(result.target.average))} steps/day${result.target_is_provisional ? ' (provisional)' : ''}`,
                 `Required pace: ${formatNumber(result.required_daily_average)} steps/day for ${result.days} day${result.days === 1 ? '' : 's'}`,
                 `Additional steps: ${formatNumber(result.required_total)}`,
                 `Within daily limit: ${result.feasible_under_daily_limit ? 'yes' : 'no'}`
@@ -622,6 +630,11 @@
                 snapshot = `${subject} ${result.leaderboard === 'team' ? 'is' : 'are'} currently in first at ${formatNumber(Math.round(result.average))} steps/day. That is the best available answer to “will I win,” although the future remains annoyingly editable.`;
             } else if (result.ranked) {
                 snapshot = `${subject} ${result.leaderboard === 'team' ? 'is' : 'are'} currently #${result.rank} of ${result.ranked_count} ranked ${result.leaderboard === 'team' ? 'teams' : 'participants'}, ${formatNumber(Math.round(result.gap_to_leader))} steps/day behind ${result.leader?.name || 'the leader'}. No verdict yet.`;
+            } else if (result.provisional_rank) {
+                const leaderText = result.provisional_rank === 1
+                    ? 'the highest current average'
+                    : `${formatNumber(Math.round(result.gap_to_leader))} steps/day behind ${result.leader?.name || 'the provisional leader'}`;
+                snapshot = `${subject} ${result.leaderboard === 'team' ? 'is' : 'are'} provisionally #${result.provisional_rank} of ${result.provisional_count}, with ${leaderText}. Nobody qualifies as ranked yet.`;
             } else {
                 snapshot = `${subject} ${result.leaderboard === 'team' ? 'is' : 'are'} not ranked yet. ${result.leaderboard === 'individual' ? `Your reporting rate is ${formatNumber(result.reporting_rate)}%. ` : ''}The competition cannot properly fear incomplete paperwork.`;
             }
@@ -629,10 +642,13 @@
             const message = createMessage('assistant', reply || `${toneLead(tone, 'outlook')} ${snapshot}${remaining}`);
             const rankSummary = result.rank
                 ? `Verified: #${result.rank} of ${result.ranked_count}`
-                : `Verified: ${result.ranked ? 'ranked' : 'not ranked'}`;
+                : result.provisional_rank
+                    ? `Verified: provisional #${result.provisional_rank} of ${result.provisional_count}`
+                    : `Verified: ${result.ranked ? 'ranked' : 'not ranked'}`;
             appendVerifiedFacts(message, [
                 `Ranked: ${result.ranked ? 'yes' : 'no'}`,
                 ...(result.rank ? [`Rank: ${result.rank} of ${result.ranked_count}`] : []),
+                ...(result.provisional_rank ? [`Provisional position: ${result.provisional_rank} of ${result.provisional_count}`] : []),
                 `Current average: ${formatNumber(Math.round(result.average || 0))} steps/day`,
                 `Challenge days remaining: ${result.remaining_days}`
             ], { collapsed: Boolean(reply), summary: rankSummary });

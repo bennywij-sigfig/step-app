@@ -144,6 +144,8 @@ describe('chat provider prompt boundary', () => {
     expect(toolPrompt).toContain('deterministic tool must decide challenge-date eligibility');
     expect(toolPrompt).toContain("plainly explain that you can only rename the authenticated user's own current team");
     expect(toolPrompt).toContain('A null challenge means there is no active challenge');
+    expect(toolPrompt).toContain('first active unranked entry as the provisional leader');
+    expect(toolPrompt).toContain('Do not refuse, lecture about ranking, or dump both full leaderboards');
 
     for (const prompt of [toolPrompt, composePrompt]) {
       expect(prompt).toContain("unless they explicitly ask what Trotter can do");

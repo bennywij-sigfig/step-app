@@ -597,18 +597,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     aria-label="Show ${line.label} line at ${line.value} steps per day">${line.label} ${line.value}</span>`
             ).join(' <span class="chart-summary-separator">·</span> ');
 
-            const dateRange = startDate === endDate
-                ? formatShortDate(startDate)
-                : `${formatShortDate(startDate)}–${formatShortDate(endDate)}`;
-            const loggedSummary = loggedDays.length ? `${loggedDays.length} logged` : 'No days logged yet';
             chartContainer.innerHTML = `
-                <div class="steps-chart-summary">
-                    <span>${dateRange}</span>
-                    <span class="steps-chart-legend">
-                        <span>${loggedSummary}</span>
-                        ${benchmarkLegend ? ' <span class="chart-summary-separator">·</span> ' + benchmarkLegend : ''}
-                    </span>
-                </div>
+                ${benchmarkLegend ? `<div class="steps-chart-summary">
+                    <span class="steps-chart-legend">${benchmarkLegend}</span>
+                </div>` : ''}
                 <div class="steps-chart">
                     <div class="steps-chart-plot">
                         <div class="steps-chart-bars" style="--bar-count: ${days.length}">${bars}</div>

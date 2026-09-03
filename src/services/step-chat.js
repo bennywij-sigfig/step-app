@@ -531,14 +531,22 @@ function createStepChatService({
       const allRows = [...ranked, ...leaderboard.unranked];
       const mine = allRows.find(row => row.team === user.team);
       const rankIndex = ranked.findIndex(row => row.team === user.team);
-      const leader = ranked[0] || null;
+      const provisionalRows = ranked.length === 0
+        ? leaderboard.unranked.filter(row => Number(row.team_entries) > 0)
+        : [];
+      const provisionalIndex = provisionalRows.findIndex(row => row.team === user.team);
+      const leader = ranked[0] || provisionalRows[0] || null;
+      const leaderIsProvisional = !ranked.length && Boolean(leader);
       const myAverage = Number(mine?.team_steps_per_day_reported) || 0;
       return {
         kind: 'outlook', leaderboard: 'team', status, remaining_days: remainingDays, ...timingFacts,
         has_entry: Boolean(mine), name: user.team, ranked: rankIndex >= 0,
         rank: rankIndex >= 0 ? rankIndex + 1 : null, ranked_count: ranked.length,
+        provisional_rank: provisionalIndex >= 0 ? provisionalIndex + 1 : null,
+        provisional_count: provisionalRows.length,
         average: myAverage,
         leader: leader ? { name: leader.team, average: Number(leader.team_steps_per_day_reported) || 0 } : null,
+        leader_is_provisional: leaderIsProvisional,
         gap_to_leader: leader ? Math.max(0, (Number(leader.team_steps_per_day_reported) || 0) - myAverage) : 0
       };
     }
@@ -546,15 +554,21 @@ function createStepChatService({
     const allRows = [...ranked, ...leaderboard.unranked];
     const mine = allRows.find(row => Number(row.id) === Number(userId));
     const rankIndex = ranked.findIndex(row => Number(row.id) === Number(userId));
-    const leader = ranked[0] || null;
+    const provisionalRows = ranked.length === 0 ? leaderboard.unranked : [];
+    const provisionalIndex = provisionalRows.findIndex(row => Number(row.id) === Number(userId));
+    const leader = ranked[0] || provisionalRows[0] || null;
+    const leaderIsProvisional = !ranked.length && Boolean(leader);
     const myAverage = Number(mine?.steps_per_day_reported) || 0;
     return {
       kind: 'outlook', leaderboard: 'individual', status, remaining_days: remainingDays, ...timingFacts,
       has_entry: Boolean(mine), ranked: rankIndex >= 0,
       rank: rankIndex >= 0 ? rankIndex + 1 : null, ranked_count: ranked.length,
+      provisional_rank: provisionalIndex >= 0 ? provisionalIndex + 1 : null,
+      provisional_count: provisionalRows.length,
       average: myAverage,
       reporting_rate: Number(mine?.personal_reporting_rate) || 0,
       leader: leader ? { name: leader.name, average: Number(leader.steps_per_day_reported) || 0 } : null,
+      leader_is_provisional: leaderIsProvisional,
       gap_to_leader: leader ? Math.max(0, (Number(leader.steps_per_day_reported) || 0) - myAverage) : 0
     };
   }
@@ -610,14 +624,22 @@ function createStepChatService({
 
   async function calculateOvertakeLeader(userId, requestedDays, asOfDate = null) {
     const leaderboard = await individualLeaderboard();
-    const leader = leaderboard.ranked[0];
+    const leader = leaderboard.ranked[0] || leaderboard.unranked[0];
+    const leaderIsProvisional = leaderboard.ranked.length === 0 && Boolean(leader);
     if (!leader) {
-      return { kind: 'clarification', message: 'There is no ranked individual leader to overtake yet.', candidates: [] };
+      return { kind: 'clarification', message: 'There is no individual leader to overtake yet.', candidates: [] };
     }
     if (Number(leader.id) === Number(userId)) {
-      return { kind: 'clarification', message: 'You are already the current individual leader.', candidates: [] };
+      return {
+        kind: 'clarification',
+        message: leaderIsProvisional
+          ? 'You already have the highest current average, provisionally; no one is ranked yet.'
+          : 'You are already the current individual leader.',
+        candidates: []
+      };
     }
-    return calculateOvertakeFromLeaderboard(userId, leader, leaderboard, requestedDays, asOfDate);
+    const result = await calculateOvertakeFromLeaderboard(userId, leader, leaderboard, requestedDays, asOfDate);
+    return { ...result, target_is_provisional: leaderIsProvisional };
   }
 
   function helpResponse(reason = 'general') {
