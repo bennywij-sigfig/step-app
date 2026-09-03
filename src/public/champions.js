@@ -68,6 +68,7 @@
         const onwardFraction = routePercent / 100;
         let firstLegShare = 0.5;
         let linearWaypoints = null;
+        let linearOnwardEndpoint = null;
         let lastProgress = 0;
         let started = false;
 
@@ -80,17 +81,20 @@
                     y: rect.top + rect.height / 2 - routeRect.top
                 };
             });
+            const onwardLeg = linearRoute.querySelector('.route-leg.onward').getBoundingClientRect();
+            const isVertical = onwardLeg.height > onwardLeg.width;
+            linearOnwardEndpoint = {
+                x: (isVertical ? onwardLeg.left + onwardLeg.width / 2 : onwardLeg.left + onwardLeg.width * onwardFraction) - routeRect.left,
+                y: (isVertical ? onwardLeg.top + onwardLeg.height * onwardFraction : onwardLeg.top + onwardLeg.height / 2) - routeRect.top
+            };
         }
 
         function paintLinearRoute(progress, measuredFirstLegShare = firstLegShare) {
             firstLegShare = measuredFirstLegShare;
             lastProgress = progress;
             if (!linearWaypoints || linearWaypoints.length !== 3) measureLinearWaypoints();
-            const [delhi, singapore, sanFrancisco] = linearWaypoints;
-            const finalPoint = {
-                x: singapore.x + (sanFrancisco.x - singapore.x) * onwardFraction,
-                y: singapore.y + (sanFrancisco.y - singapore.y) * onwardFraction
-            };
+            const [delhi, singapore] = linearWaypoints;
+            const finalPoint = linearOnwardEndpoint;
             const onFirstLeg = progress <= firstLegShare;
             const start = onFirstLeg ? delhi : singapore;
             const end = onFirstLeg ? singapore : finalPoint;
@@ -307,7 +311,7 @@
         const routePercent = Math.max(0, Math.min(100, data.journey.second_leg_progress_percent));
         byId('routeGraphic').setAttribute('aria-label', `About ${number(data.journey.estimated_km)} kilometers: Delhi to Singapore, then ${number(routePercent)} percent of the way toward San Francisco. Drag the globe or use the left and right arrow keys to rotate it.`);
         byId('journeySummary').textContent = `About ${number(data.journey.estimated_km)} km together—Delhi to Singapore, then nearly a quarter of the way to San Francisco.`;
-        byId('distanceMethod').textContent = `This playful estimate uses ${number(data.journey.steps_per_mile_assumption)} steps per mile and fixed great-circle distances between the three cities. It is an illustration, not a claim that everyone shares the same stride.`;
+        byId('distanceMethod').textContent = `We assume ${data.journey.steps_per_mile_assumption} steps per mile and use fixed great-circle distances between the cities.`;
 
         byId('championsLoading').hidden = true;
         byId('championsError').hidden = true;

@@ -53,6 +53,8 @@ describe('Champions Pantheon frontend', () => {
     expect(script).toContain('function prepareJourneyAnimation(routePercent)');
     expect(script).toContain('window.PantheonGlobe?.create');
     expect(script).toContain("linearRoute.querySelectorAll('.city-dot')");
+    expect(script).toContain("linearRoute.querySelector('.route-leg.onward').getBoundingClientRect()");
+    expect(script).toContain('onwardLeg.width * onwardFraction');
     expect(script).toContain('(now - startedAt) / duration');
     expect(script).not.toContain('Math.pow(1 - linearProgress');
     expect(script).toContain('observer.observe(globe)');
@@ -68,6 +70,8 @@ describe('Champions Pantheon frontend', () => {
     expect(styles).toContain('.route-globe.no-canvas .route-globe-fallback');
     expect(styles).toContain('.route-globe.is-dragging');
     expect(styles).toMatch(/\.route\s*\{[\s\S]*?grid-template-columns/);
+    expect(script).toContain('We assume ${data.journey.steps_per_mile_assumption} steps per mile and use fixed great-circle distances between the cities.');
+    expect(script).not.toContain('This playful estimate uses');
   });
 
   test('ends with an ornate Pacific-time countdown to the 2026 challenge close', () => {
