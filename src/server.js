@@ -1072,9 +1072,9 @@ app.get('/auth/logout', (req, res) => {
   });
 });
 
-// Dashboard (protected)
-app.get('/dashboard', requireAuth, (req, res) => {
-  devLog('Dashboard accessed by user:', req.session.userId);
+// Dashboard and directly addressable dashboard views (protected)
+app.get(['/dashboard', '/individuals', '/teams'], requireAuth, (req, res) => {
+  devLog('Dashboard accessed by user:', req.session.userId, req.path);
   res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
 });
 

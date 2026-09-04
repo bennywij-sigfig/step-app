@@ -93,6 +93,15 @@ describe('dashboard design contract', () => {
     expect(dashboard).not.toContain('setTimeout(() => showDashboardView');
   });
 
+  test('keeps each dashboard view directly addressable and follows browser history', () => {
+    expect(dashboard).toContain("'/individuals': { viewId: 'leaderboardView'");
+    expect(dashboard).toContain("'/teams': { viewId: 'teamLeaderboardView'");
+    expect(dashboard).toContain("window.history.pushState({}, '', pathname)");
+    expect(dashboard).toContain("window.addEventListener('popstate'");
+    expect(dashboard).toContain('showDashboardRoute(window.location.pathname)');
+    expect(dashboard).toContain("tab.setAttribute('aria-current', 'page')");
+  });
+
   test('prefetches hidden leaderboards only after visible step content loads', () => {
     expect(dashboard).toContain('await loadSteps()');
     expect(dashboard).toContain('Promise.allSettled([loadIndividualForNavigation(), loadTeamsForNavigation()])');

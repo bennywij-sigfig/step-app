@@ -225,12 +225,14 @@ describe('Authentication Flow Integration Tests', () => {
       expect(rolledCookie).toBeDefined();
     });
 
-    test('should require authentication for protected routes', async () => {
-      const response = await request(app)
-        .get('/dashboard')
-        .expect(302); // Redirect to login
+    test('should require authentication for protected dashboard routes', async () => {
+      for (const route of ['/dashboard', '/individuals', '/teams']) {
+        const response = await request(app)
+          .get(route)
+          .expect(302); // Redirect to login
 
-      expect(response.headers.location).toContain('/');
+        expect(response.headers.location).toContain('/');
+      }
     });
 
     test('should provide CSRF token to authenticated users', async () => {

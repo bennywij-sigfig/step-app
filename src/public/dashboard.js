@@ -352,6 +352,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // compositor animation, so there is no fade-out delay before content appears.
         const dashboardViews = ['myStepsView', 'leaderboardView', 'teamLeaderboardView'];
         const dashboardTabs = ['myStepsBtn', 'leaderboardBtn', 'teamLeaderboardBtn'];
+        const dashboardRoutes = {
+            '/dashboard': { viewId: 'myStepsView', tabId: 'myStepsBtn' },
+            '/individuals': { viewId: 'leaderboardView', tabId: 'leaderboardBtn' },
+            '/teams': { viewId: 'teamLeaderboardView', tabId: 'teamLeaderboardBtn' }
+        };
         const navigationLoads = new Map();
 
         function loadForNavigation(key, loader) {
@@ -382,7 +387,13 @@ document.addEventListener('DOMContentLoaded', function() {
         function showDashboardView(viewId, tabId, refresh = null) {
             const view = document.getElementById(viewId);
             dashboardViews.forEach(id => document.getElementById(id).classList.toggle('hidden', id !== viewId));
-            dashboardTabs.forEach(id => document.getElementById(id).classList.toggle('active', id === tabId));
+            dashboardTabs.forEach(id => {
+                const tab = document.getElementById(id);
+                const active = id === tabId;
+                tab.classList.toggle('active', active);
+                if (active) tab.setAttribute('aria-current', 'page');
+                else tab.removeAttribute('aria-current');
+            });
 
             const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
             if (!reduceMotion && typeof view.animate === 'function') {
@@ -394,17 +405,30 @@ document.addEventListener('DOMContentLoaded', function() {
             if (refresh) refresh();
         }
 
+        function showDashboardRoute(pathname, updateHistory = false) {
+            const route = dashboardRoutes[pathname] || dashboardRoutes['/dashboard'];
+            const refresh = route.tabId === 'leaderboardBtn'
+                ? loadIndividualForNavigation
+                : route.tabId === 'teamLeaderboardBtn' ? loadTeamsForNavigation : null;
+            if (updateHistory && window.location.pathname !== pathname) {
+                window.history.pushState({}, '', pathname);
+            }
+            showDashboardView(route.viewId, route.tabId, refresh);
+        }
+
         document.getElementById('myStepsBtn').addEventListener('click', () => {
-            showDashboardView('myStepsView', 'myStepsBtn');
+            showDashboardRoute('/dashboard', true);
         });
 
         document.getElementById('leaderboardBtn').addEventListener('click', () => {
-            showDashboardView('leaderboardView', 'leaderboardBtn', loadIndividualForNavigation);
+            showDashboardRoute('/individuals', true);
         });
 
         document.getElementById('teamLeaderboardBtn').addEventListener('click', () => {
-            showDashboardView('teamLeaderboardView', 'teamLeaderboardBtn', loadTeamsForNavigation);
+            showDashboardRoute('/teams', true);
         });
+        window.addEventListener('popstate', () => showDashboardRoute(window.location.pathname));
+        showDashboardRoute(window.location.pathname);
         
         // CSV Download functionality
         document.getElementById('csvDownloadBtn').addEventListener('click', async () => {

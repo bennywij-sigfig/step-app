@@ -55,6 +55,10 @@
         let activePointerId = null;
         let dragStartX = 0;
         let dragStartLongitude = 0;
+        let lastPointerX = 0;
+        let lastPointerTime = 0;
+        let longitudeVelocity = 0;
+        let inertiaFrame = null;
 
         function routeState(progress) {
             if (progress <= firstLegShare) {
@@ -285,17 +289,60 @@
             onProgress?.(routeProgress, firstLegShare);
         }
 
+        function stopInertia() {
+            if (inertiaFrame !== null) cancelAnimationFrame(inertiaFrame);
+            inertiaFrame = null;
+        }
+
+        function startInertia() {
+            stopInertia();
+            if (reduceMotion.matches || Math.abs(longitudeVelocity) < .004) return;
+            longitudeVelocity = Math.max(-.7, Math.min(.7, longitudeVelocity));
+            let previousTime = performance.now();
+            let lastDrawTime = 0;
+            const coast = now => {
+                const elapsed = Math.min(40, now - previousTime);
+                previousTime = now;
+                manualLongitude += longitudeVelocity * elapsed;
+                // Time-based drag keeps the coast consistent on 60 Hz and 120 Hz screens.
+                longitudeVelocity *= Math.exp(-.0042 * elapsed);
+                if (now - lastDrawTime >= 30 || Math.abs(longitudeVelocity) < .004) {
+                    draw();
+                    lastDrawTime = now;
+                }
+                if (Math.abs(longitudeVelocity) < .004) {
+                    inertiaFrame = null;
+                    manualLongitude = ((manualLongitude + 180) % 360 + 360) % 360 - 180;
+                    return;
+                }
+                inertiaFrame = requestAnimationFrame(coast);
+            };
+            inertiaFrame = requestAnimationFrame(coast);
+        }
+
         container.addEventListener('pointerdown', event => {
             if (activePointerId !== null || (event.pointerType === 'mouse' && event.button !== 0)) return;
+            stopInertia();
             activePointerId = event.pointerId;
             dragStartX = event.clientX;
             dragStartLongitude = manualLongitude;
+            lastPointerX = event.clientX;
+            lastPointerTime = performance.now();
+            longitudeVelocity = 0;
             container.setPointerCapture?.(event.pointerId);
             container.classList.add('is-dragging');
         });
         container.addEventListener('pointermove', event => {
             if (event.pointerId !== activePointerId) return;
+            const now = performance.now();
+            const elapsed = now - lastPointerTime;
             manualLongitude = dragStartLongitude - (event.clientX - dragStartX) * .22;
+            if (elapsed > 0) {
+                const currentVelocity = -(event.clientX - lastPointerX) * .22 / elapsed;
+                longitudeVelocity = longitudeVelocity * .55 + currentVelocity * .45;
+            }
+            lastPointerX = event.clientX;
+            lastPointerTime = now;
             draw();
         });
         const finishDrag = event => {
@@ -304,6 +351,8 @@
             activePointerId = null;
             if (container.hasPointerCapture?.(pointerId)) container.releasePointerCapture(pointerId);
             container.classList.remove('is-dragging');
+            if (event.type === 'pointerup' && performance.now() - lastPointerTime < 90) startInertia();
+            else longitudeVelocity = 0;
         };
         container.addEventListener('pointerup', finishDrag);
         container.addEventListener('pointercancel', finishDrag);
@@ -311,6 +360,7 @@
         container.addEventListener('keydown', event => {
             if (!['ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
             event.preventDefault();
+            stopInertia();
             manualLongitude = event.key === 'Home'
                 ? 0
                 : manualLongitude + (event.key === 'ArrowLeft' ? -8 : 8);
@@ -322,7 +372,10 @@
         } else {
             window.addEventListener('resize', resize, { passive: true });
         }
-        reduceMotion.addEventListener?.('change', draw);
+        reduceMotion.addEventListener?.('change', () => {
+            if (reduceMotion.matches) stopInertia();
+            draw();
+        });
         container.classList.add('has-canvas');
         resize();
 

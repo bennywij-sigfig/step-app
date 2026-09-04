@@ -57,7 +57,7 @@ describe('Trotter standalone mobile layout contract', () => {
   });
 
   test('uses versioned chat assets and responsive desktop/mobile shells', () => {
-    expect(page).toContain('/step-chat.css?v=20260902-standalone-v4');
+    expect(page).toContain('/step-chat.css?v=20260904-about-height-v1');
     expect(page).toContain('/step-chat.js?v=20260902-standalone-v3');
     expect(css).toContain('width: min(920px, 100%);');
     expect(css).toContain('height: min(780px, calc(var(--chat-visible-height, 100dvh) - clamp(24px, 6vw, 56px)));');
@@ -67,5 +67,6 @@ describe('Trotter standalone mobile layout contract', () => {
     expect(css).not.toContain('grid-template-columns: max-content minmax(92px, 105px) 58px 58px;');
     expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?\.chat-panel-header\s*\{[\s\S]*?gap: 4px/);
     expect(css).toContain('.chat-header-action { width: 58px; min-width: 58px;');
+    expect(css).toContain('max-height: min(390px, 68dvh);');
   });
 });

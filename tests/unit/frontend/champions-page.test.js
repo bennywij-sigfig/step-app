@@ -63,6 +63,10 @@ describe('Champions Pantheon frontend', () => {
     expect(globe).toContain('const firstLegShare = totalDistance ? firstDistance / totalDistance : 1');
     expect(globe).toContain("container.addEventListener('pointerdown'");
     expect(globe).toContain("container.addEventListener('pointermove'");
+    expect(globe).toContain('function startInertia()');
+    expect(globe).toContain('longitudeVelocity *= Math.exp(-.0042 * elapsed)');
+    expect(globe).toContain("event.type === 'pointerup'");
+    expect(globe).toContain('if (reduceMotion.matches');
     expect(globe).toContain("container.addEventListener('keydown'");
     expect(land).toContain('Natural Earth 1:110m land polygons (public domain)');
     expect(land.length).toBeGreaterThan(50000);
