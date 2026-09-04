@@ -27,7 +27,7 @@ describe('team rename and identity UI contract', () => {
     expect(dashboard).toContain('team.team_id');
     expect(html).toContain('var(--team-accent) 5%');
     expect(html).not.toContain('.team-identified .leaderboard-name::before');
-    expect(dashboard).toContain('members · reporting');
+    expect(dashboard).toContain('members · reporting · steps/day');
   });
 
   test('always renders verified outlook facts without reparsing the user’s wording', () => {

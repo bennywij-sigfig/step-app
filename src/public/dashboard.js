@@ -687,8 +687,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </span>
                             </div>
                             <div class="leaderboard-metrics">
-                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${formatDayCount(user.days_logged)}</div>
+                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span></div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} steps / ${formatDayCount(user.days_logged)}</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -716,8 +716,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </span>
                             </div>
                             <div class="leaderboard-metrics">
-                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${formatDayCount(user.days_logged)}</div>
+                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span></div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} steps / ${formatDayCount(user.days_logged)}</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -740,8 +740,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </span>
                             </div>
                             <div class="leaderboard-metrics">
-                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} total · ${formatDayCount(user.days_logged)}</div>
+                                <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span></div>
+                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} steps / ${formatDayCount(user.days_logged)}</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -988,8 +988,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </span>
                             </div>
                             <div class="leaderboard-metrics">
-                                <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total steps</div>
+                                <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span></div>
+                                <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -1014,8 +1014,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </span>
                             </div>
                             <div class="leaderboard-metrics">
-                                <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total steps</div>
+                                <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span></div>
+                                <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total</div>
                             </div>
                         </div>`;
                     }).join('');
@@ -1041,8 +1041,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </span>
                                 </div>
                                 <div class="leaderboard-metrics">
-                                    <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
-                                    <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total steps</div>
+                                    <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span></div>
+                                    <div class="leaderboard-detail">${team.total_steps.toLocaleString()} total</div>
                                 </div>
                             </div>`;
                         }).join('');
@@ -1052,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const hasTeamRows = Array.isArray(data)
                     ? data.length > 0
                     : Boolean(data.data?.ranked?.length || data.data?.unranked?.length);
-                if (hasTeamRows) html += '<div class="leaderboard-footer">members · reporting</div>';
+                if (hasTeamRows) html += '<div class="leaderboard-footer">members · reporting · steps/day</div>';
                 teamLeaderboard.innerHTML = html;
                 attachDisclosureListeners(teamLeaderboard);
                 return true;
@@ -1135,8 +1135,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             : ''}
                     </div>
                     <div class="member-stats">
-                        <div><strong>${Math.round(member.steps_per_day_reported).toLocaleString()}</strong> steps/day</div>
-                        <div class="leaderboard-detail">${member.total_steps.toLocaleString()} total · ${formatDayCount(member.days_logged)}</div>
+                        <div><strong>${Math.round(member.steps_per_day_reported).toLocaleString()}</strong></div>
+                        <div class="leaderboard-detail">${member.total_steps.toLocaleString()} steps / ${formatDayCount(member.days_logged)}</div>
                     </div>
                 </div>
             `).join('');

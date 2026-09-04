@@ -136,6 +136,14 @@ describe('dashboard design contract', () => {
     expect(memberFormatter).not.toMatch(/👥|style=/);
   });
 
+  test('keeps leaderboard metric labels concise', () => {
+    expect(dashboard).toContain('${user.total_steps.toLocaleString()} steps / ${formatDayCount(user.days_logged)}');
+    expect(dashboard).toContain('${team.total_steps.toLocaleString()} total');
+    expect(dashboard).toContain('members · reporting · steps/day');
+    expect(dashboard).not.toContain('</span> steps/day</div>');
+    expect(dashboard).not.toContain(' total steps</div>');
+  });
+
   test('formats reported day counts with singular and plural grammar', () => {
     const dayFormatter = dashboard.match(/function formatDayCount[\s\S]*?\n\}/)?.[0] || '';
     expect(dayFormatter).toContain("count === 1 ? '' : 's'");
