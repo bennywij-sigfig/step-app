@@ -26,6 +26,17 @@ describe('dashboard design contract', () => {
     expect(html).toMatch(/\.user-data-list,\s*\.team-members-list\s*\{/);
   });
 
+  test('keeps long leaderboard names in a two-line truncating identity column', () => {
+    const identityRule = html.match(/\.leaderboard-identity\s*\{[\s\S]*?\}/)?.[0] || '';
+    const nameRule = html.match(/\.leaderboard-name\s*\{[\s\S]*?\}/)?.[0] || '';
+
+    expect(identityRule).toContain('grid-template-columns: 42px 34px minmax(0, 1fr)');
+    expect(nameRule).toContain('text-overflow: ellipsis');
+    expect(nameRule).toContain('white-space: nowrap');
+    expect(dashboard).toContain('<span class="leaderboard-label">');
+    expect(dashboard).toContain('<span class="leaderboard-supporting">');
+  });
+
   test('attaches disclosure handlers only within the freshly rendered leaderboard', () => {
     expect(dashboard).toContain('attachDisclosureListeners(leaderboardDiv)');
     expect(dashboard).toContain('attachDisclosureListeners(teamLeaderboard)');

@@ -678,9 +678,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="leaderboard-identity">
                                 <button type="button" class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" aria-expanded="false" aria-label="Show daily steps for ${escapeHtml(user.name)}"></button>
                                 <span class="rank">#${index + 1}</span>
-                                <span class="leaderboard-name">${escapeHtml(user.name)}</span>
-                                ${user.team ? `<span class="leaderboard-meta">${escapeHtml(user.team)}</span>` : ''}
-                                ${formatReportingRate(user.personal_reporting_rate)}
+                                <span class="leaderboard-label">
+                                    <span class="leaderboard-name">${escapeHtml(user.name)}</span>
+                                    <span class="leaderboard-supporting">
+                                        ${user.team ? `<span class="leaderboard-meta">${escapeHtml(user.team)}</span>` : ''}
+                                        ${formatReportingRate(user.personal_reporting_rate)}
+                                    </span>
+                                </span>
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
@@ -703,9 +707,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="leaderboard-identity">
                                 <button type="button" class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" aria-expanded="false" aria-label="Show daily steps for ${escapeHtml(user.name)}"></button>
                                 <span class="rank" aria-hidden="true"></span>
-                                <span class="leaderboard-name">${escapeHtml(user.name)}</span>
-                                ${user.team ? `<span class="leaderboard-meta">${escapeHtml(user.team)}</span>` : ''}
-                                ${formatReportingRate(user.personal_reporting_rate)}
+                                <span class="leaderboard-label">
+                                    <span class="leaderboard-name">${escapeHtml(user.name)}</span>
+                                    <span class="leaderboard-supporting">
+                                        ${user.team ? `<span class="leaderboard-meta">${escapeHtml(user.team)}</span>` : ''}
+                                        ${formatReportingRate(user.personal_reporting_rate)}
+                                    </span>
+                                </span>
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
@@ -726,8 +734,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="leaderboard-identity">
                                 <button type="button" class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" aria-expanded="false" aria-label="Show daily steps for ${escapeHtml(user.name)}"></button>
                                 <span class="rank">#${index + 1}</span>
-                                <span class="leaderboard-name">${escapeHtml(user.name)}</span>
-                                ${user.team ? `<span class="leaderboard-meta">${escapeHtml(user.team)}</span>` : ''}
+                                <span class="leaderboard-label">
+                                    <span class="leaderboard-name">${escapeHtml(user.name)}</span>
+                                    ${user.team ? `<span class="leaderboard-supporting"><span class="leaderboard-meta">${escapeHtml(user.team)}</span></span>` : ''}
+                                </span>
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span> steps/day</div>
@@ -972,8 +982,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="leaderboard-identity">
                                 <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" data-team-id="${Number(team.team_id)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                 <span class="rank">#${index + 1}</span>
-                                <span class="leaderboard-name">${escapeHtml(team.team)}</span>
-                                ${formatTeamSummary(team.member_count, team.team_reporting_rate)}
+                                <span class="leaderboard-label">
+                                    <span class="leaderboard-name">${escapeHtml(team.team)}</span>
+                                    <span class="leaderboard-supporting">${formatTeamSummary(team.member_count, team.team_reporting_rate)}</span>
+                                </span>
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
@@ -996,8 +1008,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="leaderboard-identity">
                                 <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" data-team-id="${Number(team.team_id)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                 <span class="rank" aria-hidden="true"></span>
-                                <span class="leaderboard-name">${escapeHtml(team.team)}</span>
-                                ${formatTeamSummary(team.member_count, team.team_reporting_rate)}
+                                <span class="leaderboard-label">
+                                    <span class="leaderboard-name">${escapeHtml(team.team)}</span>
+                                    <span class="leaderboard-supporting">${formatTeamSummary(team.member_count, team.team_reporting_rate)}</span>
+                                </span>
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>
@@ -1021,8 +1035,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <div class="leaderboard-identity">
                                     <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" data-team-id="${Number(team.team_id)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                     <span class="rank">#${index + 1}</span>
-                                    <span class="leaderboard-name">${escapeHtml(team.team)}</span>
-                                    ${formatMemberCount(team.member_count)}
+                                    <span class="leaderboard-label">
+                                        <span class="leaderboard-name">${escapeHtml(team.team)}</span>
+                                        <span class="leaderboard-supporting">${formatMemberCount(team.member_count)}</span>
+                                    </span>
                                 </div>
                                 <div class="leaderboard-metrics">
                                     <div><span class="leaderboard-average">${Math.round(team.team_steps_per_day_reported).toLocaleString()}</span> steps/day</div>

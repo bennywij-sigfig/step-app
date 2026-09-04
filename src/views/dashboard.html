@@ -392,18 +392,57 @@
         }
 
         .leaderboard-identity {
-            display: flex;
+            display: grid;
+            grid-template-columns: 42px 34px minmax(0, 1fr);
             flex: 1 1 auto;
             min-width: 0;
             align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
+            column-gap: 8px;
+        }
+
+        /* Keep identity text in its own flexible column. The two text lines
+           truncate independently so primary metrics always retain their space. */
+        .leaderboard-label {
+            display: flex;
+            min-width: 0;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+            padding: 2px 0;
         }
 
         .leaderboard-name {
+            display: block;
             min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+            color: var(--ink, #172033);
             font-weight: 600;
-            overflow-wrap: anywhere;
+            line-height: 1.25;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .leaderboard-supporting {
+            display: flex;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+            align-items: baseline;
+            gap: 10px;
+            white-space: nowrap;
+        }
+
+        .leaderboard-supporting .leaderboard-meta {
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .leaderboard-supporting .reporting-meta,
+        .leaderboard-supporting .team-summary,
+        .leaderboard-supporting .team-meta {
+            flex: 0 0 auto;
         }
 
         .leaderboard-meta,
@@ -774,19 +813,15 @@
                 min-height: 40px;
             }
             .leaderboard-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 2px;
+                gap: 8px;
                 min-height: 42px;
             }
             .leaderboard-item > div:first-child {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                width: 100%;
+                width: auto;
             }
             .leaderboard-item > div:last-child {
-                width: 100%;
+                width: auto;
+                margin-left: 0;
                 text-align: right;
             }
         }
@@ -1075,14 +1110,18 @@
 
         .member-info {
             display: flex;
+            min-width: 0;
             align-items: center;
-            gap: 8px;
+            gap: 4px 8px;
             flex-wrap: wrap;
         }
 
         .member-name {
-            font-weight: 500;
+            min-width: 0;
             color: #333;
+            font-weight: 500;
+            line-height: 1.25;
+            overflow-wrap: anywhere;
         }
 
         .member-reporting {
