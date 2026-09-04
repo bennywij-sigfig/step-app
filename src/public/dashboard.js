@@ -13,6 +13,17 @@ function formatDayCount(count) {
     return `${count} day${count === 1 ? '' : 's'}`;
 }
 
+function formatStepRateDetail(totalSteps, daysLogged) {
+    const total = Number(totalSteps).toLocaleString();
+    const days = Number(daysLogged);
+    const fullLabel = `${total} steps / ${formatDayCount(days)}`;
+
+    return `<div class="leaderboard-detail">
+        <span class="rate-detail-full">${fullLabel}</span>
+        <span class="rate-detail-compact" aria-label="${fullLabel}">${total}/${days}</span>
+    </div>`;
+}
+
 // Team disclosure functionality - must be global
 let expandedTeams = new Set(); // Track expanded state
 
@@ -486,7 +497,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     stepsList.innerHTML = steps.map(step => 
                         `<div class="step-item">
                             <span>${formatCompactDate(step.date)}</span>
-                            <span><strong>${step.count.toLocaleString()} steps</strong></span>
+                            <span><strong>${step.count.toLocaleString()}</strong></span>
                         </div>`
                     ).join('');
                 }
@@ -688,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span></div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} steps / ${formatDayCount(user.days_logged)}</div>
+                                ${formatStepRateDetail(user.total_steps, user.days_logged)}
                             </div>
                         </div>`;
                     }).join('');
@@ -717,7 +728,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span></div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} steps / ${formatDayCount(user.days_logged)}</div>
+                                ${formatStepRateDetail(user.total_steps, user.days_logged)}
                             </div>
                         </div>`;
                     }).join('');
@@ -741,7 +752,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div class="leaderboard-metrics">
                                 <div><span class="leaderboard-average">${Math.round(user.steps_per_day_reported).toLocaleString()}</span></div>
-                                <div class="leaderboard-detail">${user.total_steps.toLocaleString()} steps / ${formatDayCount(user.days_logged)}</div>
+                                ${formatStepRateDetail(user.total_steps, user.days_logged)}
                             </div>
                         </div>`;
                     }).join('');
@@ -1136,7 +1147,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                     <div class="member-stats">
                         <div><strong>${Math.round(member.steps_per_day_reported).toLocaleString()}</strong></div>
-                        <div class="leaderboard-detail">${member.total_steps.toLocaleString()} steps / ${formatDayCount(member.days_logged)}</div>
+                        ${formatStepRateDetail(member.total_steps, member.days_logged)}
                     </div>
                 </div>
             `).join('');

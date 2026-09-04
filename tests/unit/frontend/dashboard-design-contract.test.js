@@ -35,6 +35,7 @@ describe('dashboard design contract', () => {
     expect(nameRule).toContain('white-space: nowrap');
     expect(dashboard).toContain('<span class="leaderboard-label">');
     expect(dashboard).toContain('<span class="leaderboard-supporting">');
+    expect(html).toMatch(/@media \(max-width: 480px\)[\s\S]*?grid-template-columns: 34px 30px minmax\(0, 1fr\)/);
   });
 
   test('attaches disclosure handlers only within the freshly rendered leaderboard', () => {
@@ -136,18 +137,23 @@ describe('dashboard design contract', () => {
     expect(memberFormatter).not.toMatch(/👥|style=/);
   });
 
-  test('keeps leaderboard metric labels concise', () => {
-    expect(dashboard).toContain('${user.total_steps.toLocaleString()} steps / ${formatDayCount(user.days_logged)}');
+  test('keeps step and leaderboard metric labels concise', () => {
+    expect(dashboard).toContain('<span><strong>${step.count.toLocaleString()}</strong></span>');
+    expect(dashboard).toContain('const fullLabel = `${total} steps / ${formatDayCount(days)}`');
+    expect(dashboard).toContain('<span class="rate-detail-compact" aria-label="${fullLabel}">${total}/${days}</span>');
+    expect(dashboard.match(/formatStepRateDetail\([^)]*\.total_steps[^)]*\.days_logged\)/g)).toHaveLength(4);
     expect(dashboard).toContain('${team.total_steps.toLocaleString()} total');
     expect(dashboard).toContain('members · reporting · steps/day');
+    expect(dashboard).not.toContain('${step.count.toLocaleString()} steps</strong>');
     expect(dashboard).not.toContain('</span> steps/day</div>');
     expect(dashboard).not.toContain(' total steps</div>');
+    expect(html).toMatch(/@media \(max-width: 480px\)[\s\S]*?\.rate-detail-full\s*\{\s*display: none/);
+    expect(html).toMatch(/@media \(max-width: 480px\)[\s\S]*?\.rate-detail-compact\s*\{\s*display: inline/);
   });
 
   test('formats reported day counts with singular and plural grammar', () => {
     const dayFormatter = dashboard.match(/function formatDayCount[\s\S]*?\n\}/)?.[0] || '';
     expect(dayFormatter).toContain("count === 1 ? '' : 's'");
     expect(dashboard).not.toMatch(/days_logged\} days/);
-    expect(dashboard.match(/formatDayCount\([^)]*\.days_logged\)/g)).toHaveLength(4);
   });
 });

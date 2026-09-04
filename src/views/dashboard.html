@@ -456,8 +456,14 @@
 
         .reporting-meta,
         .team-meta,
-        .team-summary {
+        .team-summary,
+        .rate-detail-full,
+        .rate-detail-compact {
             white-space: nowrap;
+        }
+
+        .rate-detail-compact {
+            display: none;
         }
 
         .team-summary {
@@ -788,6 +794,26 @@
         }
 
         @media (max-width: 480px) {
+            /* The 42px disclosure target extends over the narrower first
+               track, keeping it easy to tap while pulling all three columns
+               closer together. The rank track still accommodates #100–#999. */
+            .leaderboard-identity {
+                grid-template-columns: 34px 30px minmax(0, 1fr);
+                column-gap: 2px;
+            }
+
+            .rank {
+                font-size: 11px;
+            }
+
+            .rate-detail-full {
+                display: none;
+            }
+
+            .rate-detail-compact {
+                display: inline;
+            }
+
             .steps-chart {
                 height: 112px;
             }
