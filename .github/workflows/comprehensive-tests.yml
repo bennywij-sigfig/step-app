@@ -53,7 +53,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --no-audit
       
     - name: Run all unit tests with coverage
       run: npm run test:unit
@@ -81,7 +81,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --no-audit
       
     - name: Run integration tests with stability improvements
       run: |
@@ -109,7 +109,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --no-audit
       
     # Browser journeys require manual magic-link authentication.
     - name: Report E2E test policy
@@ -130,10 +130,30 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --no-audit
       
     - name: Full security audit
-      run: npm audit --audit-level moderate
+      run: |
+        set +e
+        AUDIT_OUTPUT=$(timeout 300s npm audit --audit-level moderate 2>&1)
+        AUDIT_STATUS=$?
+        set -e
+        echo "$AUDIT_OUTPUT"
+
+        if [ "$AUDIT_STATUS" -eq 0 ]; then
+          exit 0
+        fi
+
+        if [ "$AUDIT_STATUS" -eq 124 ] || echo "$AUDIT_OUTPUT" | grep -Eqi \
+          '503 Service Unavailable|audit endpoint returned an error|EAI_AGAIN|ENOTFOUND|ECONNRESET|ETIMEDOUT|FETCH_ERROR'; then
+          echo "::warning::npm audit service was unavailable; security tests will continue"
+          echo "- ⚠️ npm audit service unavailable; no audit result was returned" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        fi
+
+        # Vulnerability findings and non-network audit errors remain blocking.
+        exit "$AUDIT_STATUS"
+      timeout-minutes: 6
       
     - name: Run security regression tests (production only)
       run: |
@@ -145,21 +165,6 @@ jobs:
         fi
       env:
         NODE_ENV: test
-        
-    - name: Check for vulnerabilities
-      run: |
-        AUDIT_OUTPUT=$(npm audit --audit-level high --json)
-        HIGH_VULN_COUNT=$(echo "$AUDIT_OUTPUT" | jq -r '.metadata.vulnerabilities.high // 0')
-        CRITICAL_VULN_COUNT=$(echo "$AUDIT_OUTPUT" | jq -r '.metadata.vulnerabilities.critical // 0')
-        
-        if [ "$HIGH_VULN_COUNT" -gt 0 ] || [ "$CRITICAL_VULN_COUNT" -gt 0 ]; then
-          echo "High or critical severity vulnerabilities found!"
-          echo "High: $HIGH_VULN_COUNT, Critical: $CRITICAL_VULN_COUNT"
-          npm audit --audit-level high
-          exit 1
-        else
-          echo "No high or critical vulnerabilities found ✅"
-        fi
 
   code-quality:
     name: Code Quality & Coverage
@@ -176,7 +181,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --no-audit
       
     - name: Run unit tests with coverage (no threshold enforcement)
       run: npm run test:coverage -- --passWithNoTests || echo "Coverage informational only"
@@ -205,7 +210,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --no-audit
       
     - name: Run production smoke tests
       run: npm run test:smoke
