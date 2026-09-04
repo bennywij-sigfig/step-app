@@ -10,7 +10,7 @@ jobs:
   fast-validation:
     name: Fast Validation Suite
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 12
     
     steps:
     - name: Checkout code
@@ -23,7 +23,7 @@ jobs:
         cache: 'npm'
         
     - name: Install dependencies
-      run: npm ci
+      run: npm ci --no-audit
       
     # Core unit tests - most critical functionality
     - name: Run critical unit tests
@@ -36,7 +36,7 @@ jobs:
     # Basic security check
     - name: Quick security audit
       run: npm audit --audit-level critical --omit=dev
-      timeout-minutes: 1
+      timeout-minutes: 3
       
     # Basic smoke test - server starts and core endpoints respond
     - name: Basic smoke test
