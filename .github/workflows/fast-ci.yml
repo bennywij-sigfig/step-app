@@ -35,7 +35,20 @@ jobs:
       
     # Basic security check
     - name: Quick security audit
-      run: npm audit --audit-level critical --omit=dev
+      run: |
+        set +e
+        timeout 150s npm audit --audit-level critical --omit=dev
+        AUDIT_STATUS=$?
+        set -e
+
+        if [ "$AUDIT_STATUS" -eq 124 ]; then
+          echo "::warning::npm audit service timed out; critical tests and smoke checks will continue"
+          exit 0
+        fi
+
+        # Preserve npm audit's failure status when vulnerabilities or other
+        # actionable audit errors are reported.
+        exit "$AUDIT_STATUS"
       timeout-minutes: 3
       
     # Basic smoke test - server starts and core endpoints respond
