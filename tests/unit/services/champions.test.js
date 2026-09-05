@@ -80,7 +80,11 @@ describe('featured champions archive service', () => {
     });
     for (const team of result.team_standings) {
       const timeline = result.race.teams.find(candidate => candidate.name === team.name);
-      expect(timeline.days.at(-1).weighted_average).toBeCloseTo(team.average_steps, 8);
+      expect(timeline.days.at(-1).cumulative_average).toBeCloseTo(team.average_steps, 8);
+    }
+    for (const person of result.participant_standings) {
+      const timeline = result.race.people.find(candidate => candidate.id === person.id);
+      expect(timeline.days.at(-1).cumulative_average).toBeCloseTo(person.average_steps, 8);
     }
     expect(result.provenance).toMatchObject({
       archive_id: 2,
@@ -116,15 +120,15 @@ describe('featured champions archive service', () => {
 
     expect(timeline.dates).toEqual(['2025-08-01', '2025-08-02', '2025-08-03']);
     expect(timeline.people.find(person => person.name === 'one').days).toEqual([
-      { steps: 100, cumulative: 100, reported: true },
-      { steps: 300, cumulative: 400, reported: true },
-      { steps: 0, cumulative: 400, reported: false }
+      { steps: 100, cumulative: 100, reported: true, cumulative_reports: 1, cumulative_average: 100 },
+      { steps: 300, cumulative: 400, reported: true, cumulative_reports: 2, cumulative_average: 200 },
+      { steps: 0, cumulative: 400, reported: false, cumulative_reports: 2, cumulative_average: 200 }
     ]);
     expect(timeline.teams[0]).toMatchObject({ name: 'A', member_count: 2 });
     expect(timeline.teams[0].days).toEqual([
-      { steps: 400, cumulative: 400, reports: 2, average: 200, cumulative_reports: 2, weighted_average: 200 },
-      { steps: 300, cumulative: 700, reports: 1, average: 300, cumulative_reports: 3, weighted_average: 700 / 3 },
-      { steps: 0, cumulative: 700, reports: 0, average: 0, cumulative_reports: 3, weighted_average: 700 / 3 }
+      { steps: 400, cumulative: 400, reports: 2, average: 200, cumulative_reports: 2, cumulative_average: 200 },
+      { steps: 300, cumulative: 700, reports: 1, average: 300, cumulative_reports: 3, cumulative_average: 700 / 3 },
+      { steps: 0, cumulative: 700, reports: 0, average: 0, cumulative_reports: 3, cumulative_average: 700 / 3 }
     ]);
   });
 

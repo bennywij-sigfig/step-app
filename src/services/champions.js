@@ -172,13 +172,21 @@ function buildRaceTimeline(rows, startDate, endDate) {
 
   const personSeries = [...people.values()].map(person => {
     let cumulative = 0;
+    let cumulativeReports = 0;
     return {
       id: person.id,
       name: person.name,
       team: person.team,
       days: person.steps.map((steps, index) => {
         cumulative += steps;
-        return { steps, cumulative, reported: person.reported[index] };
+        if (person.reported[index]) cumulativeReports += 1;
+        return {
+          steps,
+          cumulative,
+          reported: person.reported[index],
+          cumulative_reports: cumulativeReports,
+          cumulative_average: cumulativeReports > 0 ? cumulative / cumulativeReports : 0
+        };
       })
     };
   });
@@ -215,7 +223,7 @@ function buildRaceTimeline(rows, startDate, endDate) {
           reports: team.reports[index],
           average: team.reports[index] > 0 ? steps / team.reports[index] : 0,
           cumulative_reports: cumulativeReports,
-          weighted_average: cumulativeReports > 0 ? cumulative / cumulativeReports : 0
+          cumulative_average: cumulativeReports > 0 ? cumulative / cumulativeReports : 0
         };
       })
     };

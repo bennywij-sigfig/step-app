@@ -48,15 +48,16 @@ describe('Champions Pantheon frontend', () => {
     }
     expect(page).toContain('data-race-metric="cumulative"');
     expect(page).toContain('data-race-metric="average"');
-    expect(page).toContain('data-race-metric="weighted"');
-    expect(page).toContain('Running weighted avg');
+    expect(page).toContain('data-race-metric="cumulativeAverage"');
+    expect(page).toContain('Cumulative daily avg');
     expect(page).toContain('class="active" data-race-group="teams"');
     expect(script).toContain('function renderRaceOracle(data)');
     expect(page).toContain('id="raceChart"');
     expect(page).toContain('id="raceLegend"');
     expect(script).toContain("state = { group: 'teams', metric: 'cumulative'");
-    expect(script).toContain("if (state.metric === 'weighted') return day.weighted_average");
-    expect(script).toContain("if (!teamMode && state.metric === 'weighted') state.metric = 'average'");
+    expect(script).toContain("if (state.metric === 'cumulativeAverage') return day.cumulative_average");
+    expect(script).not.toContain('weighted.disabled');
+    expect(script).toContain("'CUMULATIVE STEPS ÷ REPORTED DAYS TO DATE'");
     expect(script).toContain('function animateTo(target, duration = 500');
     expect(script).toContain('state.raf = requestAnimationFrame(frame)');
     expect(script).toContain('clipPath id="raceReveal"');

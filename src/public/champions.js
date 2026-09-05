@@ -264,17 +264,12 @@
         function valuesFor(entry) {
             return entry.days.map(day => {
                 if (state.metric === 'cumulative') return day.cumulative;
-                if (state.metric === 'weighted') return day.weighted_average;
+                if (state.metric === 'cumulativeAverage') return day.cumulative_average;
                 return state.group === 'teams' ? day.average : day.steps;
             });
         }
 
         function syncControlState() {
-            const weighted = document.querySelector('[data-race-metric="weighted"]');
-            const teamMode = state.group === 'teams';
-            weighted.disabled = !teamMode;
-            weighted.setAttribute('aria-disabled', String(!teamMode));
-            if (!teamMode && state.metric === 'weighted') state.metric = 'average';
             document.querySelectorAll('[data-race-group]').forEach(button => {
                 const active = button.dataset.raceGroup === state.group;
                 button.classList.toggle('active', active);
@@ -299,7 +294,7 @@
         function renderChart() {
             const ranked = race[state.group].map(entry => {
                 const values = valuesFor(entry);
-                const score = state.metric === 'cumulative' || state.metric === 'weighted'
+                const score = state.metric === 'cumulative' || state.metric === 'cumulativeAverage'
                     ? values.at(-1)
                     : values.reduce((sum, value) => sum + value, 0) / values.length;
                 return { entry, values, score };
@@ -328,7 +323,7 @@
                 </g>`;
             }).join('');
             chart.innerHTML = `
-                <title id="raceChartTitle">${state.metric === 'cumulative' ? 'Cumulative steps' : state.metric === 'weighted' ? 'Running weighted team average' : 'Daily average steps'} by ${state.group === 'teams' ? 'team' : 'person'}</title>
+                <title id="raceChartTitle">${state.metric === 'cumulative' ? 'Cumulative steps' : state.metric === 'cumulativeAverage' ? 'Cumulative daily average' : 'Daily average steps'} by ${state.group === 'teams' ? 'team' : 'person'}</title>
                 <desc id="raceChartDescription">Ten leading trajectories across the fifteen calendar days of the challenge.</desc>
                 <defs><clipPath id="raceReveal"><rect id="raceRevealRect" x="${plot.left - 8}" y="0" width="8" height="455"/></clipPath></defs>
                 <g class="race-grid">${grid}</g><g class="race-x-axis">${xLabels}<text x="523" y="493" text-anchor="middle">AUGUST · MMXXV</text></g>
@@ -354,7 +349,7 @@
             );
             const selectionBasis = state.metric === 'cumulative'
                 ? 'final distance'
-                : state.metric === 'weighted' ? 'final weighted average' : 'average daily pace';
+                : state.metric === 'cumulativeAverage' ? 'final cumulative daily average' : 'average daily pace';
             byId('raceFootnote').textContent = `Tracing ${state.series.length} ${state.group === 'people' ? `leading mortals of ${ranked.length}` : `legions of ${ranked.length}`}. Lines are selected by ${selectionBasis} so the cosmos remains legible.`;
             state.shownDay = -1;
             state.legendOrder = '';
@@ -454,8 +449,10 @@
             });
             byId('raceMetricLabel').textContent = state.metric === 'cumulative'
                 ? 'CUMULATIVE STEPS THROUGH THIS DAY'
-                : state.metric === 'weighted'
-                    ? 'CUMULATIVE STEPS ÷ REPORTED MEMBER-DAYS TO DATE'
+                : state.metric === 'cumulativeAverage'
+                    ? state.group === 'teams'
+                        ? 'CUMULATIVE STEPS ÷ REPORTED MEMBER-DAYS TO DATE'
+                        : 'CUMULATIVE STEPS ÷ REPORTED DAYS TO DATE'
                     : state.group === 'teams' ? 'AVERAGE STEPS PER REPORTER THAT DAY' : 'STEPS RECORDED THAT DAY';
         }
 

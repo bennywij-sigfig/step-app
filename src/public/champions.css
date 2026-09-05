@@ -304,7 +304,6 @@ section:not(.hero) { margin: 0 0 110px; }
 .race-toggle { display: flex; padding: 3px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 999px; background: rgba(0, 0, 0, .22); }
 .race-toggle button, .race-play { min-height: 38px; padding: 8px 14px; color: var(--muted); border: 0; border-radius: 999px; background: transparent; font: 750 11px/1 inherit; cursor: pointer; }
 .race-toggle button.active { color: #171008; background: var(--gold); box-shadow: 0 0 20px rgba(247, 200, 93, .2); }
-.race-toggle button:disabled { color: #686270; background: transparent; box-shadow: none; cursor: not-allowed; opacity: .55; text-decoration: line-through; text-decoration-thickness: 1px; }
 .race-play { margin-left: auto; color: var(--gold); border: 1px solid rgba(247, 200, 93, .4); }
 .race-play:hover, .race-play:focus-visible { background: rgba(247, 200, 93, .1); }
 .race-play.is-playing { color: var(--ivory); border-color: rgba(255, 247, 220, .35); }
