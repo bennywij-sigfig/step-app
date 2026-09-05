@@ -245,7 +245,7 @@
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const colors = ['#ffd967', '#ff7b54', '#7ce7ff', '#bc8cff', '#76e6a2', '#ff9dcc', '#a9d56c', '#efbfff', '#70a7ff', '#e9a74a', '#85d5ca', '#f28e8e'];
         const plot = { left: 76, right: 970, top: 30, bottom: 430 };
-        const state = { group: 'people', metric: 'cumulative', progress: 0, raf: null, playing: false, series: [], hidden: new Set(), maximum: 1, shownDay: -1, legendOrder: '', deferRanking: false, endpointNodes: [], legendValueNodes: [] };
+        const state = { group: 'teams', metric: 'cumulative', progress: 0, raf: null, playing: false, series: [], hidden: new Set(), maximum: 1, shownDay: -1, legendOrder: '', deferRanking: false, endpointNodes: [], legendValueNodes: [] };
         const xAt = progress => plot.left + (plot.right - plot.left) * progress / (race.dates.length - 1);
         const yAt = value => plot.bottom - (plot.bottom - plot.top) * value / state.maximum;
         const compact = value => value >= 1000000 ? `${number(value / 1000000, 1)}m` : value >= 1000 ? `${number(value / 1000)}k` : number(value);
@@ -262,9 +262,29 @@
         `).join('');
 
         function valuesFor(entry) {
-            return entry.days.map(day => state.metric === 'cumulative'
-                ? day.cumulative
-                : state.group === 'teams' ? day.average : day.steps);
+            return entry.days.map(day => {
+                if (state.metric === 'cumulative') return day.cumulative;
+                if (state.metric === 'weighted') return day.weighted_average;
+                return state.group === 'teams' ? day.average : day.steps;
+            });
+        }
+
+        function syncControlState() {
+            const weighted = document.querySelector('[data-race-metric="weighted"]');
+            const teamMode = state.group === 'teams';
+            weighted.disabled = !teamMode;
+            weighted.setAttribute('aria-disabled', String(!teamMode));
+            if (!teamMode && state.metric === 'weighted') state.metric = 'average';
+            document.querySelectorAll('[data-race-group]').forEach(button => {
+                const active = button.dataset.raceGroup === state.group;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
+            document.querySelectorAll('[data-race-metric]').forEach(button => {
+                const active = button.dataset.raceMetric === state.metric;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
         }
 
         function stop() {
@@ -279,7 +299,7 @@
         function renderChart() {
             const ranked = race[state.group].map(entry => {
                 const values = valuesFor(entry);
-                const score = state.metric === 'cumulative'
+                const score = state.metric === 'cumulative' || state.metric === 'weighted'
                     ? values.at(-1)
                     : values.reduce((sum, value) => sum + value, 0) / values.length;
                 return { entry, values, score };
@@ -308,7 +328,7 @@
                 </g>`;
             }).join('');
             chart.innerHTML = `
-                <title id="raceChartTitle">${state.metric === 'cumulative' ? 'Cumulative' : 'Daily average'} steps by ${state.group === 'teams' ? 'team' : 'person'}</title>
+                <title id="raceChartTitle">${state.metric === 'cumulative' ? 'Cumulative steps' : state.metric === 'weighted' ? 'Running weighted team average' : 'Daily average steps'} by ${state.group === 'teams' ? 'team' : 'person'}</title>
                 <desc id="raceChartDescription">Ten leading trajectories across the fifteen calendar days of the challenge.</desc>
                 <defs><clipPath id="raceReveal"><rect id="raceRevealRect" x="${plot.left - 8}" y="0" width="8" height="455"/></clipPath></defs>
                 <g class="race-grid">${grid}</g><g class="race-x-axis">${xLabels}<text x="523" y="493" text-anchor="middle">AUGUST · MMXXV</text></g>
@@ -332,7 +352,10 @@
             state.legendValueNodes = state.series.map((series, index) =>
                 byId('raceLegend').querySelector(`[data-legend-value="${index}"]`)
             );
-            byId('raceFootnote').textContent = `Tracing ${state.series.length} ${state.group === 'people' ? `leading mortals of ${ranked.length}` : `legions of ${ranked.length}`}. Lines are selected by ${state.metric === 'cumulative' ? 'final distance' : 'average daily pace'} so the cosmos remains legible.`;
+            const selectionBasis = state.metric === 'cumulative'
+                ? 'final distance'
+                : state.metric === 'weighted' ? 'final weighted average' : 'average daily pace';
+            byId('raceFootnote').textContent = `Tracing ${state.series.length} ${state.group === 'people' ? `leading mortals of ${ranked.length}` : `legions of ${ranked.length}`}. Lines are selected by ${selectionBasis} so the cosmos remains legible.`;
             state.shownDay = -1;
             state.legendOrder = '';
             paintProgress(state.progress);
@@ -431,7 +454,9 @@
             });
             byId('raceMetricLabel').textContent = state.metric === 'cumulative'
                 ? 'CUMULATIVE STEPS THROUGH THIS DAY'
-                : state.group === 'teams' ? 'AVERAGE STEPS PER REPORTER THAT DAY' : 'STEPS RECORDED THAT DAY';
+                : state.metric === 'weighted'
+                    ? 'CUMULATIVE STEPS ÷ REPORTED MEMBER-DAYS TO DATE'
+                    : state.group === 'teams' ? 'AVERAGE STEPS PER REPORTER THAT DAY' : 'STEPS RECORDED THAT DAY';
         }
 
         function animateTo(target, duration = 500, onComplete) {
@@ -487,11 +512,7 @@
                 const key = attribute === 'raceGroup' ? 'group' : 'metric';
                 state[key] = button.dataset[attribute];
                 state.hidden.clear();
-                document.querySelectorAll(attribute === 'raceGroup' ? '[data-race-group]' : '[data-race-metric]').forEach(peer => {
-                    const active = peer === button;
-                    peer.classList.toggle('active', active);
-                    peer.setAttribute('aria-pressed', String(active));
-                });
+                syncControlState();
                 renderChart();
             });
         });
@@ -504,6 +525,7 @@
             renderChart();
         });
         byId('racePlay').addEventListener('click', play);
+        syncControlState();
         renderChart();
     }
 

@@ -304,6 +304,7 @@ section:not(.hero) { margin: 0 0 110px; }
 .race-toggle { display: flex; padding: 3px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 999px; background: rgba(0, 0, 0, .22); }
 .race-toggle button, .race-play { min-height: 38px; padding: 8px 14px; color: var(--muted); border: 0; border-radius: 999px; background: transparent; font: 750 11px/1 inherit; cursor: pointer; }
 .race-toggle button.active { color: #171008; background: var(--gold); box-shadow: 0 0 20px rgba(247, 200, 93, .2); }
+.race-toggle button:disabled { color: #686270; background: transparent; box-shadow: none; cursor: not-allowed; opacity: .55; text-decoration: line-through; text-decoration-thickness: 1px; }
 .race-play { margin-left: auto; color: var(--gold); border: 1px solid rgba(247, 200, 93, .4); }
 .race-play:hover, .race-play:focus-visible { background: rgba(247, 200, 93, .1); }
 .race-play.is-playing { color: var(--ivory); border-color: rgba(255, 247, 220, .35); }
@@ -581,7 +582,8 @@ td strong, tr.podium-row td { color: var(--ivory); }
     .race-day-sigil strong { font-size: 34px; }
     .race-controls { align-items: stretch; }
     .race-toggle { flex: 1 1 auto; }
-    .race-toggle button { flex: 1; padding-inline: 9px; }
+    .race-metric-toggle { flex-basis: 100%; }
+    .race-toggle button { flex: 1; padding-inline: 7px; }
     .race-play { width: 100%; margin-left: 0; }
     .race-calendar { grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 1px; padding: 6px 0; overflow-x: visible; }
     .race-calendar button { min-width: 0; padding: 8px 0; border-radius: 5px; }

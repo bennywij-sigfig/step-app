@@ -202,16 +202,20 @@ function buildRaceTimeline(rows, startDate, endDate) {
 
   const teamSeries = [...teams.values()].map(team => {
     let cumulative = 0;
+    let cumulativeReports = 0;
     return {
       name: team.name,
       member_count: team.member_count,
       days: team.steps.map((steps, index) => {
         cumulative += steps;
+        cumulativeReports += team.reports[index];
         return {
           steps,
           cumulative,
           reports: team.reports[index],
-          average: team.reports[index] > 0 ? steps / team.reports[index] : 0
+          average: team.reports[index] > 0 ? steps / team.reports[index] : 0,
+          cumulative_reports: cumulativeReports,
+          weighted_average: cumulativeReports > 0 ? cumulative / cumulativeReports : 0
         };
       })
     };

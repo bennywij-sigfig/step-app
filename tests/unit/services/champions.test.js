@@ -78,6 +78,10 @@ describe('featured champions archive service', () => {
       people: expect.any(Array),
       teams: expect.any(Array)
     });
+    for (const team of result.team_standings) {
+      const timeline = result.race.teams.find(candidate => candidate.name === team.name);
+      expect(timeline.days.at(-1).weighted_average).toBeCloseTo(team.average_steps, 8);
+    }
     expect(result.provenance).toMatchObject({
       archive_id: 2,
       excluded_test_records: 1,
@@ -107,20 +111,20 @@ describe('featured champions archive service', () => {
     const timeline = buildRaceTimeline([
       archiveRow(1, 'one', 'A', 1, 100),
       archiveRow(2, 'two', 'A', 1, 300),
-      archiveRow(1, 'one', 'A', 2, 200)
+      archiveRow(1, 'one', 'A', 2, 300)
     ], '2025-08-01', '2025-08-03');
 
     expect(timeline.dates).toEqual(['2025-08-01', '2025-08-02', '2025-08-03']);
     expect(timeline.people.find(person => person.name === 'one').days).toEqual([
       { steps: 100, cumulative: 100, reported: true },
-      { steps: 200, cumulative: 300, reported: true },
-      { steps: 0, cumulative: 300, reported: false }
+      { steps: 300, cumulative: 400, reported: true },
+      { steps: 0, cumulative: 400, reported: false }
     ]);
     expect(timeline.teams[0]).toMatchObject({ name: 'A', member_count: 2 });
     expect(timeline.teams[0].days).toEqual([
-      { steps: 400, cumulative: 400, reports: 2, average: 200 },
-      { steps: 200, cumulative: 600, reports: 1, average: 200 },
-      { steps: 0, cumulative: 600, reports: 0, average: 0 }
+      { steps: 400, cumulative: 400, reports: 2, average: 200, cumulative_reports: 2, weighted_average: 200 },
+      { steps: 300, cumulative: 700, reports: 1, average: 300, cumulative_reports: 3, weighted_average: 700 / 3 },
+      { steps: 0, cumulative: 700, reports: 0, average: 0, cumulative_reports: 3, weighted_average: 700 / 3 }
     ]);
   });
 

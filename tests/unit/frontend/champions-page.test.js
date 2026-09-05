@@ -46,13 +46,17 @@ describe('Champions Pantheon frontend', () => {
     for (const id of ['raceOracle', 'raceCalendar', 'raceArena', 'racePlay', 'raceDayNumber']) {
       expect(page).toContain(`id="${id}"`);
     }
-    expect(page).toContain('Cumulative odyssey');
-    expect(page).toContain('Daily pace / avg');
+    expect(page).toContain('data-race-metric="cumulative"');
+    expect(page).toContain('data-race-metric="average"');
+    expect(page).toContain('data-race-metric="weighted"');
+    expect(page).toContain('Running weighted avg');
+    expect(page).toContain('class="active" data-race-group="teams"');
     expect(script).toContain('function renderRaceOracle(data)');
     expect(page).toContain('id="raceChart"');
     expect(page).toContain('id="raceLegend"');
-    expect(script).toContain("state = { group: 'people', metric: 'cumulative'");
-    expect(script).toContain("state.group === 'teams' ? day.average : day.steps");
+    expect(script).toContain("state = { group: 'teams', metric: 'cumulative'");
+    expect(script).toContain("if (state.metric === 'weighted') return day.weighted_average");
+    expect(script).toContain("if (!teamMode && state.metric === 'weighted') state.metric = 'average'");
     expect(script).toContain('function animateTo(target, duration = 500');
     expect(script).toContain('state.raf = requestAnimationFrame(frame)');
     expect(script).toContain('clipPath id="raceReveal"');
