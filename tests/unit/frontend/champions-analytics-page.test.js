@@ -78,6 +78,19 @@ describe('Excessive Step Analytics lab', () => {
     expect(styles).toContain('.quadrant-label');
   });
 
+  test('defers all three animated reveals until visible and replays them after toggles', () => {
+    expect(script).toContain('function queueHeatmapReveal(heatmap)');
+    expect(script).toContain('function queueSvgReveal(element)');
+    expect(script).toContain('observer.observe(heatmap)');
+    expect(script).toContain('observer.observe(element)');
+    expect(script).toContain('queueSvgReveal(byId(\'rankBumpChart\'))');
+    expect(script).toContain('queueSvgReveal(byId(\'constellationChart\'))');
+    expect(styles).toContain('@keyframes tapestry-flip');
+    expect(styles).toContain('.heatmap.is-flipping .heat-cell');
+    expect(styles).toContain('.constellation-chart.is-revealed .star');
+    expect(styles).toContain('.constellation-chart.is-awaiting-reveal .star');
+  });
+
   test('contains all three excessive experiments and responsive contained scrollers', () => {
     expect(page).toContain('THE WOVEN TAPESTRY OF FOOTFALLS');
     expect(page).toContain('THE GREAT JOSTLING');

@@ -36,7 +36,82 @@
         });
     }
 
+    function playHeatmapReveal(heatmap) {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            heatmap.classList.remove('is-preparing', 'is-flipping');
+            return;
+        }
+        heatmap.classList.remove('is-flipping');
+        heatmap.classList.add('is-preparing');
+        requestAnimationFrame(() => {
+            // Restart the animation even when a toggle is changed repeatedly.
+            void heatmap.offsetWidth;
+            heatmap.classList.remove('is-preparing');
+            heatmap.classList.add('is-flipping');
+        });
+    }
+
+    function queueHeatmapReveal(heatmap) {
+        if (heatmap.dataset.revealed === 'true') {
+            playHeatmapReveal(heatmap);
+            return;
+        }
+        heatmap.classList.add('is-preparing');
+        if (!('IntersectionObserver' in window)) {
+            heatmap.dataset.revealed = 'true';
+            playHeatmapReveal(heatmap);
+            return;
+        }
+        if (heatmap.dataset.revealObserved === 'true') return;
+        heatmap.dataset.revealObserved = 'true';
+        const observer = new IntersectionObserver(entries => {
+            if (!entries.some(entry => entry.isIntersecting)) return;
+            observer.disconnect();
+            heatmap.dataset.revealed = 'true';
+            playHeatmapReveal(heatmap);
+        }, { threshold: .12 });
+        observer.observe(heatmap);
+    }
+
+    function queueSvgReveal(element) {
+        function play() {
+            element.classList.remove('is-revealed');
+            element.classList.add('is-awaiting-reveal');
+            requestAnimationFrame(() => {
+                void element.getBoundingClientRect();
+                element.classList.remove('is-awaiting-reveal');
+                element.classList.add('is-revealed');
+            });
+        }
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            element.classList.remove('is-awaiting-reveal');
+            element.classList.add('is-revealed');
+            return;
+        }
+        if (element.dataset.revealed === 'true') {
+            play();
+            return;
+        }
+        element.classList.add('is-awaiting-reveal');
+        if (!('IntersectionObserver' in window)) {
+            element.dataset.revealed = 'true';
+            play();
+            return;
+        }
+        if (element.dataset.revealObserved === 'true') return;
+        element.dataset.revealObserved = 'true';
+        const observer = new IntersectionObserver(entries => {
+            if (!entries.some(entry => entry.isIntersecting)) return;
+            observer.disconnect();
+            element.dataset.revealed = 'true';
+            play();
+        }, { threshold: .16 });
+        observer.observe(element);
+    }
+
     function renderHeatmap(data, group = 'teams') {
+        const heatmap = byId('stepHeatmap');
+        heatmap.classList.remove('is-flipping');
         const entities = [...data.race[group]].sort((left, right) =>
             right.days.at(-1).cumulative - left.days.at(-1).cumulative || String(left.name).localeCompare(String(right.name))
         );
@@ -49,7 +124,7 @@
             return band === -1 ? 6 : band + 1;
         };
         const header = `<div class="heatmap-head">SUBJECT</div>${data.race.dates.map(day => `<div class="heatmap-head">${Number(day.slice(-2))}</div>`).join('')}`;
-        const rows = entities.map(entity => {
+        const rows = entities.map((entity, rowIndex) => {
             const name = displayName(entity.name);
             const reportedDays = entity.days.filter(day => group === 'teams' ? day.reports > 0 : day.reported);
             const subjectAverage = reportedDays.length
@@ -63,11 +138,13 @@
                 const difference = subjectAverage > 0 ? ((day.steps / subjectAverage) - 1) * 100 : 0;
                 const note = !reported ? 'A hollow tile marks a missing report.'
                     : `${number(Math.abs(difference))}% ${difference >= 0 ? 'above' : 'below'} this row’s average day.`;
-                return `<button type="button" class="heat-cell heat-${heatLevel(day.steps)} ${reported ? '' : 'missing'}" data-heat-name="${escapeHtml(name)}" data-heat-date="${date(data.race.dates[index])}" data-heat-detail="${detail}" data-heat-note="${note}" aria-label="${escapeHtml(name)}, ${date(data.race.dates[index])}: ${detail}. ${note}"></button>`;
+                const flipDelay = rowIndex * 14 + index * 22;
+                return `<button type="button" class="heat-cell heat-${heatLevel(day.steps)} ${reported ? '' : 'missing'}" style="--flip-delay:${flipDelay}ms" data-heat-name="${escapeHtml(name)}" data-heat-date="${date(data.race.dates[index])}" data-heat-detail="${detail}" data-heat-note="${note}" aria-label="${escapeHtml(name)}, ${date(data.race.dates[index])}: ${detail}. ${note}"></button>`;
             }).join('');
             return `<div class="heatmap-label" title="${escapeHtml(name)}">${escapeHtml(name)}</div>${cells}`;
         }).join('');
-        byId('stepHeatmap').innerHTML = header + rows;
+        heatmap.innerHTML = header + rows;
+        queueHeatmapReveal(heatmap);
     }
 
     function prepareHeatmapTooltip() {
@@ -183,7 +260,7 @@
             <g class="bump-grid">${dayGrid}${rankLabels}</g>${series}
             <text class="axis-label" x="470" y="613" text-anchor="middle">AUGUST 2025 · CHALLENGE DAY</text>`;
         byId('bumpLegend').innerHTML = selected.map((entry, index) => `<span style="--series-color:${palette[index % palette.length]}">${escapeHtml(displayName(entry.name))}</span>`).join('');
-        requestAnimationFrame(() => byId('rankBumpChart').classList.add('is-revealed'));
+        queueSvgReveal(byId('rankBumpChart'));
     }
 
     function weightedStats(observations, reportingRate) {
@@ -281,6 +358,7 @@
             ${quadrants}<g class="constellation-grid">${grid}</g>${marks}
             <text class="axis-label" x="555" y="632" text-anchor="middle">AVERAGE STEPS PER REPORTED DAY →</text>
             <text class="axis-label" x="18" y="310" text-anchor="middle" transform="rotate(-90 18 310)">CONSISTENCY SCORE →</text>`;
+        queueSvgReveal(byId('constellationChart'));
     }
 
     function render(data) {

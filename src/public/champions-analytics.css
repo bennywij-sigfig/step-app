@@ -49,7 +49,14 @@ h1 em { color: transparent; background: linear-gradient(90deg, var(--cyan), var(
 .heat-cell.heat-4 { background: #35b9a7; border-color: #71dac2; }
 .heat-cell.heat-5 { background: #9bdc71; border-color: #caf398; }
 .heat-cell.heat-6 { background: #ffe169; border-color: #fff0ad; box-shadow: inset 0 0 8px rgba(255,255,255,.35), 0 0 8px rgba(255,225,105,.18); }
+.heatmap.is-preparing .heat-cell { opacity: 0; transform: perspective(180px) rotateY(-88deg) rotateX(12deg) scale(.72); }
+.heatmap.is-flipping .heat-cell { animation: tapestry-flip 540ms cubic-bezier(.2,.75,.2,1) backwards; animation-delay: var(--flip-delay, 0ms); }
 .heat-cell:hover, .heat-cell:focus-visible, .heat-cell.is-pinned { z-index: 4; outline: 2px solid var(--paper); outline-offset: 1px; transform: scale(1.18); filter: brightness(1.18); }
+@keyframes tapestry-flip {
+    0% { opacity: 0; transform: perspective(180px) rotateY(-88deg) rotateX(12deg) scale(.72); filter: brightness(.45); }
+    58% { opacity: 1; transform: perspective(180px) rotateY(9deg) rotateX(-2deg) scale(1.08); filter: brightness(1.35); }
+    100% { opacity: 1; transform: perspective(180px) rotateY(0) rotateX(0) scale(1); filter: none; }
+}
 .heat-cell.missing { border-style: dashed; border-color: #3c4151; background: repeating-linear-gradient(135deg, #151927 0 3px, #080a12 3px 6px); box-shadow: none; }
 .heat-tooltip { position: fixed; z-index: 50; width: min(250px, calc(100vw - 24px)); padding: 13px 15px; color: var(--paper); border: 1px solid rgba(112,229,255,.4); border-radius: 10px; background: rgba(7,9,19,.96); box-shadow: 0 16px 45px rgba(0,0,0,.5), 0 0 24px rgba(112,229,255,.08); pointer-events: none; }
 .heat-tooltip strong, .heat-tooltip span { display: block; }
@@ -77,7 +84,9 @@ h1 em { color: transparent; background: linear-gradient(90deg, var(--cyan), var(
 .median-line { stroke: rgba(245,240,219,.5); stroke-width: 1.5; stroke-dasharray: 7 7; vector-effect: non-scaling-stroke; }
 .median-label { fill: rgba(245,240,219,.68); font-size: 9px; font-weight: 850; letter-spacing: .09em; paint-order: stroke; stroke: #080a13; stroke-width: 4px; }
 .quadrant-label { fill: rgba(245,240,219,.42); font-size: 14px; font-weight: 900; letter-spacing: .12em; paint-order: stroke; stroke: #080a13; stroke-width: 5px; }
-.star { fill: var(--star-color); fill-opacity: .58; stroke: var(--paper); stroke-opacity: .45; stroke-width: 1; cursor: help; transform-box: fill-box; transform-origin: center; animation: star-arrives 650ms cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--star-index) * 18ms); }
+.star { fill: var(--star-color); fill-opacity: .58; stroke: var(--paper); stroke-opacity: .45; stroke-width: 1; cursor: help; transform-box: fill-box; transform-origin: center; }
+.constellation-chart.is-awaiting-reveal .star { opacity: 0; transform: scale(0); }
+.constellation-chart.is-revealed .star { animation: star-arrives 650ms cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--star-index) * 18ms); }
 .team-nebula .star { fill-opacity: .16; stroke: var(--star-color); stroke-width: 3; stroke-dasharray: 3 4; filter: drop-shadow(0 0 12px var(--star-color)); }
 .team-nebula:hover .star, .team-nebula:focus .star { fill-opacity: .34; stroke-width: 5; }
 .star-group:hover .star, .star-group:focus .star { fill-opacity: 1; stroke: #fff; stroke-width: 3; filter: drop-shadow(0 0 9px var(--star-color)); transform: scale(1.25); }
@@ -113,6 +122,7 @@ footer { display: flex; justify-content: space-between; gap: 20px; padding: 28px
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     .bump-line { stroke-dashoffset: 0; }
-    .is-revealed .bump-line, .star { animation: none; }
+    .heatmap.is-preparing .heat-cell { opacity: 1; transform: none; }
+    .heatmap.is-flipping .heat-cell, .is-revealed .bump-line, .star { animation: none; }
     .heat-cell, .star { transition: none; }
 }
