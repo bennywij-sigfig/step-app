@@ -24,7 +24,9 @@ describe('Excessive Step Analytics lab', () => {
     expect(page).toContain('data-heatmap-group="teams"');
     expect(page).toContain('data-heatmap-group="people"');
     expect(script).toContain('function renderHeatmap(data');
-    expect(script).toContain('class="heat-cell heat-${heatLevel(day.steps)}');
+    expect(script).toContain('class="heat-cell heat-${heatLevel(heatValue)}');
+    expect(script).toContain("const valueForDay = day => group === 'teams' ? day.average : day.steps");
+    expect(script).toContain('avg steps/reporter');
     expect(script).toContain('const thresholds = [.12, .3, .5, .7, .87]');
     expect(page).toContain('id="heatTooltip"');
     expect(script).toContain('function prepareHeatmapTooltip()');

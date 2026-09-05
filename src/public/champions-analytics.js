@@ -115,7 +115,8 @@
         const entities = [...data.race[group]].sort((left, right) =>
             right.days.at(-1).cumulative - left.days.at(-1).cumulative || String(left.name).localeCompare(String(right.name))
         );
-        const values = entities.flatMap(entity => entity.days.map(day => day.steps)).filter(Boolean).sort((a, b) => a - b);
+        const valueForDay = day => group === 'teams' ? day.average : day.steps;
+        const values = entities.flatMap(entity => entity.days.map(valueForDay)).filter(Boolean).sort((a, b) => a - b);
         const thresholds = [.12, .3, .5, .7, .87].map(percentile =>
             values[Math.min(values.length - 1, Math.floor(values.length * percentile))] || 0
         );
@@ -128,18 +129,19 @@
             const name = displayName(entity.name);
             const reportedDays = entity.days.filter(day => group === 'teams' ? day.reports > 0 : day.reported);
             const subjectAverage = reportedDays.length
-                ? reportedDays.reduce((sum, day) => sum + day.steps, 0) / reportedDays.length
+                ? reportedDays.reduce((sum, day) => sum + valueForDay(day), 0) / reportedDays.length
                 : 0;
             const cells = entity.days.map((day, index) => {
                 const reported = group === 'teams' ? day.reports > 0 : day.reported;
+                const heatValue = valueForDay(day);
                 const detail = group === 'teams'
-                    ? `${number(day.steps)} steps · ${day.reports} reporter${day.reports === 1 ? '' : 's'}`
+                    ? `${number(day.average)} avg steps/reporter · ${number(day.steps)} total · ${day.reports} reporter${day.reports === 1 ? '' : 's'}`
                     : reported ? `${number(day.steps)} steps` : 'No report';
-                const difference = subjectAverage > 0 ? ((day.steps / subjectAverage) - 1) * 100 : 0;
+                const difference = subjectAverage > 0 ? ((heatValue / subjectAverage) - 1) * 100 : 0;
                 const note = !reported ? 'A hollow tile marks a missing report.'
                     : `${number(Math.abs(difference))}% ${difference >= 0 ? 'above' : 'below'} this row’s average day.`;
                 const flipDelay = rowIndex * 14 + index * 22;
-                return `<button type="button" class="heat-cell heat-${heatLevel(day.steps)} ${reported ? '' : 'missing'}" style="--flip-delay:${flipDelay}ms" data-heat-name="${escapeHtml(name)}" data-heat-date="${date(data.race.dates[index])}" data-heat-detail="${detail}" data-heat-note="${note}" aria-label="${escapeHtml(name)}, ${date(data.race.dates[index])}: ${detail}. ${note}"></button>`;
+                return `<button type="button" class="heat-cell heat-${heatLevel(heatValue)} ${reported ? '' : 'missing'}" style="--flip-delay:${flipDelay}ms" data-heat-name="${escapeHtml(name)}" data-heat-date="${date(data.race.dates[index])}" data-heat-detail="${detail}" data-heat-note="${note}" aria-label="${escapeHtml(name)}, ${date(data.race.dates[index])}: ${detail}. ${note}"></button>`;
             }).join('');
             return `<div class="heatmap-label" title="${escapeHtml(name)}">${escapeHtml(name)}</div>${cells}`;
         }).join('');
