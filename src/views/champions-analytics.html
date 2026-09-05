@@ -42,9 +42,10 @@
                         <button type="button" data-heatmap-group="people" aria-pressed="false">Everyone</button>
                     </div>
                 </div>
-                <div class="heatmap-shell" tabindex="0" aria-label="Scrollable daily step heatmap">
+                <div class="heatmap-shell" id="heatmapShell" tabindex="0" aria-label="Scrollable daily step heatmap">
                     <div class="heatmap" id="stepHeatmap"></div>
                 </div>
+                <div class="heat-tooltip" id="heatTooltip" role="status" hidden></div>
                 <div class="heat-legend"><span>less mortal effort</span><i></i><i></i><i></i><i></i><i></i><span>mythic calves</span></div>
             </section>
 
@@ -54,7 +55,7 @@
                     <div>
                         <p class="kicker">THE GREAT JOSTLING</p>
                         <h2 id="bumpTitle">Rank is temporary. Crossing lines are forever.</h2>
-                        <p>Every overtake, reversal, and brief administrative coup—based on cumulative steps at the end of each day.</p>
+                        <p>Every overtake, reversal, and brief administrative coup—ranked by cumulative daily average at the end of each day, just like the final scoreboard.</p>
                     </div>
                     <div class="lab-toggle" role="group" aria-label="Rank chart subjects">
                         <button type="button" class="active" data-bump-group="teams" aria-pressed="true">Teams</button>
@@ -76,7 +77,12 @@
                     <div>
                         <p class="kicker">THE CALF CONSTELLATION</p>
                         <h2 id="constellationTitle">Intensity meets consistency in deep space</h2>
-                        <p>Farther right means a higher daily average. Higher means steadier output. Larger stars walked farther. Hover, tap, or focus to identify celestial pedestrians.</p>
+                        <p>Farther right means a higher daily average. Higher means steadier output. Median lines divide the cosmic temperaments.</p>
+                    </div>
+                    <div class="lab-toggle" role="group" aria-label="Constellation subjects">
+                        <button type="button" class="active" data-constellation-group="people" aria-pressed="true">Mortals</button>
+                        <button type="button" data-constellation-group="teams" aria-pressed="false">Legions</button>
+                        <button type="button" data-constellation-group="both" aria-pressed="false">Both</button>
                     </div>
                 </div>
                 <div class="chart-shell constellation-shell">
@@ -85,9 +91,14 @@
                         <desc id="constellationSvgDesc">A scatter plot comparing average daily steps, consistency, and total steps for every participant.</desc>
                     </svg>
                 </div>
-                <div class="quadrant-key" aria-hidden="true">
-                    <span>STEADY PILGRIMS</span><span>RELENTLESS TITANS</span><span>CHAOS WALKERS</span><span>WEEKEND COMETS</span>
+                <div class="constellation-legend" aria-label="Constellation symbol key">
+                    <span><i class="person-symbol"></i> Individual star</span>
+                    <span><i class="team-symbol"></i> Team nebula</span>
                 </div>
+                <details class="formula-note">
+                    <summary>What does “consistency” mean?</summary>
+                    <p><strong>Consistency = 100 ÷ (1 + coefficient of variation) × reporting rate.</strong> The coefficient of variation is daily step standard deviation divided by daily mean. Individuals use their reported daily steps. Teams use daily steps per reporter, weighted by that day’s reporter count. A perfectly steady, perfectly reported challenge scores 100.</p>
+                </details>
             </section>
 
             <section class="lab-disclaimer">
