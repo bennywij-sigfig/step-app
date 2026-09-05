@@ -144,6 +144,82 @@ function buildDailyStats(rows) {
   return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
+function buildRaceTimeline(rows, startDate, endDate) {
+  const dates = [];
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+  for (let instant = start; Number.isFinite(instant) && instant <= end; instant += 86400000) {
+    dates.push(new Date(instant).toISOString().slice(0, 10));
+  }
+
+  const dateIndex = new Map(dates.map((date, index) => [date, index]));
+  const people = new Map();
+  for (const row of rows) {
+    const index = dateIndex.get(row.date);
+    if (index === undefined) continue;
+    const key = String(row.user_id);
+    const person = people.get(key) || {
+      id: row.user_id,
+      name: row.user_name,
+      team: row.user_team || null,
+      steps: Array(dates.length).fill(0),
+      reported: Array(dates.length).fill(false)
+    };
+    person.steps[index] += Number(row.count) || 0;
+    person.reported[index] = true;
+    people.set(key, person);
+  }
+
+  const personSeries = [...people.values()].map(person => {
+    let cumulative = 0;
+    return {
+      id: person.id,
+      name: person.name,
+      team: person.team,
+      days: person.steps.map((steps, index) => {
+        cumulative += steps;
+        return { steps, cumulative, reported: person.reported[index] };
+      })
+    };
+  });
+
+  const teams = new Map();
+  for (const person of personSeries) {
+    if (!person.team) continue;
+    const team = teams.get(person.team) || {
+      name: person.team,
+      member_count: 0,
+      steps: Array(dates.length).fill(0),
+      reports: Array(dates.length).fill(0)
+    };
+    team.member_count += 1;
+    person.days.forEach((day, index) => {
+      team.steps[index] += day.steps;
+      if (day.reported) team.reports[index] += 1;
+    });
+    teams.set(person.team, team);
+  }
+
+  const teamSeries = [...teams.values()].map(team => {
+    let cumulative = 0;
+    return {
+      name: team.name,
+      member_count: team.member_count,
+      days: team.steps.map((steps, index) => {
+        cumulative += steps;
+        return {
+          steps,
+          cumulative,
+          reports: team.reports[index],
+          average: team.reports[index] > 0 ? steps / team.reports[index] : 0
+        };
+      })
+    };
+  });
+
+  return { dates, people: personSeries, teams: teamSeries };
+}
+
 async function getFeaturedChampions(database) {
   const archive = await get(database, `
     SELECT *
@@ -177,6 +253,7 @@ async function getFeaturedChampions(database) {
   const participants = buildParticipants(rows, totalDays, threshold);
   const teams = buildTeams(participants, totalDays, threshold);
   const daily = buildDailyStats(rows);
+  const race = buildRaceTimeline(rows, archive.challenge_start_date, archive.challenge_end_date);
   const totalSteps = rows.reduce((sum, row) => sum + (Number(row.count) || 0), 0);
   const totalDistanceKm = (totalSteps / STEPS_PER_MILE) * KM_PER_MILE;
   const firstLegProgressKm = Math.min(totalDistanceKm, ROUTE.delhiToSingaporeKm);
@@ -240,6 +317,7 @@ async function getFeaturedChampions(database) {
         ? ((biggestDay.total_steps / averageCollectiveDay) - 1) * 100
         : 0
     },
+    race,
     team_standings: teams,
     participant_standings: participants,
     provenance: {
@@ -256,6 +334,7 @@ module.exports = {
   challengeDays,
   buildParticipants,
   buildTeams,
+  buildRaceTimeline,
   FEATURED_CHALLENGE,
   CLUB_200K_MIN_STEPS
 };

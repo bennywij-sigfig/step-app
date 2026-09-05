@@ -233,6 +233,280 @@
         `).join('');
     }
 
+    function renderRaceOracle(data) {
+        const race = data.race;
+        if (!race?.dates?.length) {
+            byId('raceOracle').hidden = true;
+            return;
+        }
+
+        const chart = byId('raceChart');
+        const calendar = byId('raceCalendar');
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const colors = ['#ffd967', '#ff7b54', '#7ce7ff', '#bc8cff', '#76e6a2', '#ff9dcc', '#a9d56c', '#efbfff', '#70a7ff', '#e9a74a', '#85d5ca', '#f28e8e'];
+        const plot = { left: 76, right: 970, top: 30, bottom: 430 };
+        const state = { group: 'people', metric: 'cumulative', progress: 0, raf: null, playing: false, series: [], hidden: new Set(), maximum: 1, shownDay: -1, legendOrder: '', deferRanking: false, endpointNodes: [], legendValueNodes: [] };
+        const xAt = progress => plot.left + (plot.right - plot.left) * progress / (race.dates.length - 1);
+        const yAt = value => plot.bottom - (plot.bottom - plot.top) * value / state.maximum;
+        const compact = value => value >= 1000000 ? `${number(value / 1000000, 1)}m` : value >= 1000 ? `${number(value / 1000)}k` : number(value);
+        const initials = value => {
+            const words = displayName(value).trim().split(/\s+/).filter(Boolean);
+            return (words.length > 1 ? words.map(word => word[0]) : [words[0]?.slice(0, 2) || '?'])
+                .join('').slice(0, 3).toUpperCase();
+        };
+        calendar.innerHTML = race.dates.map((value, index) => `
+            <button type="button" data-race-day="${index}" aria-label="Show ${date(value)}">
+                <span>${new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, { weekday: 'short', timeZone: 'UTC' }).slice(0, 1)}</span>
+                <strong>${Number(value.slice(-2))}</strong>
+            </button>
+        `).join('');
+
+        function valuesFor(entry) {
+            return entry.days.map(day => state.metric === 'cumulative'
+                ? day.cumulative
+                : state.group === 'teams' ? day.average : day.steps);
+        }
+
+        function stop() {
+            if (state.raf) cancelAnimationFrame(state.raf);
+            state.raf = null;
+            state.playing = false;
+            byId('racePlay').classList.remove('is-playing');
+            byId('racePlay').innerHTML = '<span aria-hidden="true">▶</span> Unleash time';
+            byId('racePlay').setAttribute('aria-label', 'Play the calendar animation');
+        }
+
+        function renderChart() {
+            const ranked = race[state.group].map(entry => {
+                const values = valuesFor(entry);
+                const score = state.metric === 'cumulative'
+                    ? values.at(-1)
+                    : values.reduce((sum, value) => sum + value, 0) / values.length;
+                return { entry, values, score };
+            }).sort((left, right) => right.score - left.score || String(left.entry.name).localeCompare(String(right.entry.name)));
+            state.series = ranked.slice(0, state.group === 'teams' ? 12 : 10);
+            const rawMaximum = Math.max(1, ...state.series.flatMap(series => series.values));
+            const magnitude = 10 ** Math.floor(Math.log10(rawMaximum));
+            state.maximum = Math.ceil(rawMaximum / magnitude * 1.08) * magnitude;
+
+            const grid = Array.from({ length: 5 }, (_, index) => {
+                const value = state.maximum * (4 - index) / 4;
+                const y = plot.top + (plot.bottom - plot.top) * index / 4;
+                return `<line x1="${plot.left}" y1="${y}" x2="${plot.right}" y2="${y}"/><text x="${plot.left - 13}" y="${y + 4}" text-anchor="end">${compact(value)}</text>`;
+            }).join('');
+            const paths = state.series.map((series, index) => {
+                const points = series.values.map((value, day) => `${xAt(day)},${yAt(value)}`).join(' ');
+                return `<polyline class="race-line ${index < 3 ? 'race-line-hero' : ''} ${state.hidden.has(index) ? 'is-hidden' : ''}" data-race-series="${index}" points="${points}" style="--line-color:${colors[index]}" vector-effect="non-scaling-stroke"/>`;
+            }).join('');
+            const xLabels = race.dates.map((value, index) => `<text x="${xAt(index)}" y="466" text-anchor="middle">${Number(value.slice(-2))}</text>`).join('');
+            const endpoints = state.series.map((series, index) => {
+                const name = displayName(series.entry.name);
+                return `<g class="race-endpoint" data-race-endpoint="${index}" style="--line-color:${colors[index]}" tabindex="0" role="img" aria-label="${escapeHtml(name)}">
+                    <title>${escapeHtml(name)}</title><line class="race-label-leader"/><circle class="race-dot" r="${index < 3 ? 6 : 4}"/>
+                    <text class="race-endpoint-label race-endpoint-full">${escapeHtml(name)}</text>
+                    <text class="race-endpoint-label race-endpoint-short">${escapeHtml(initials(name))}</text>
+                </g>`;
+            }).join('');
+            chart.innerHTML = `
+                <title id="raceChartTitle">${state.metric === 'cumulative' ? 'Cumulative' : 'Daily average'} steps by ${state.group === 'teams' ? 'team' : 'person'}</title>
+                <desc id="raceChartDescription">Ten leading trajectories across the fifteen calendar days of the challenge.</desc>
+                <defs><clipPath id="raceReveal"><rect id="raceRevealRect" x="${plot.left - 8}" y="0" width="8" height="455"/></clipPath></defs>
+                <g class="race-grid">${grid}</g><g class="race-x-axis">${xLabels}<text x="523" y="493" text-anchor="middle">AUGUST · MMXXV</text></g>
+                <g clip-path="url(#raceReveal)">${paths}</g>
+                <line id="raceNeedle" class="race-needle" x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${plot.bottom}"/>
+                <g id="raceDots">${endpoints}</g>`;
+            state.endpointNodes = state.series.map((series, index) => {
+                const group = chart.querySelector(`[data-race-endpoint="${index}"]`);
+                return {
+                    group,
+                    leader: group.querySelector('.race-label-leader'),
+                    dot: group.querySelector('.race-dot'),
+                    labels: group.querySelectorAll('.race-endpoint-label')
+                };
+            });
+            byId('raceLegend').innerHTML = state.series.map((series, index) => `
+                <button type="button" class="race-legend-item ${state.hidden.has(index) ? 'is-hidden' : ''}" data-series-toggle="${index}" aria-pressed="${!state.hidden.has(index)}" aria-label="Toggle ${escapeHtml(displayName(series.entry.name))} trajectory">
+                    <em data-legend-rank>—</em><i style="--line-color:${colors[index]}"></i><span>${escapeHtml(displayName(series.entry.name))}</span><strong data-legend-value="${index}">0</strong>
+                </button>
+            `).join('');
+            state.legendValueNodes = state.series.map((series, index) =>
+                byId('raceLegend').querySelector(`[data-legend-value="${index}"]`)
+            );
+            byId('raceFootnote').textContent = `Tracing ${state.series.length} ${state.group === 'people' ? `leading mortals of ${ranked.length}` : `legions of ${ranked.length}`}. Lines are selected by ${state.metric === 'cumulative' ? 'final distance' : 'average daily pace'} so the cosmos remains legible.`;
+            state.shownDay = -1;
+            state.legendOrder = '';
+            paintProgress(state.progress);
+        }
+
+        function updateLegendRanking(samples) {
+            const ranked = [...samples].sort((left, right) =>
+                right.value - left.value || String(left.series.entry.name).localeCompare(String(right.series.entry.name))
+            );
+            const signature = ranked.map(sample => sample.index).join(',');
+            if (signature === state.legendOrder) return;
+            state.legendOrder = signature;
+            const legend = byId('raceLegend');
+            const buttons = new Map([...legend.querySelectorAll('[data-series-toggle]')].map(button => [
+                Number(button.dataset.seriesToggle), button
+            ]));
+            const previousPositions = new Map([...buttons].map(([index, button]) => [index, button.getBoundingClientRect()]));
+            ranked.forEach((sample, rank) => {
+                const button = buttons.get(sample.index);
+                button.querySelector('[data-legend-rank]').textContent = String(rank + 1);
+                legend.appendChild(button);
+            });
+            if (reduceMotion) return;
+            ranked.forEach(sample => {
+                const button = buttons.get(sample.index);
+                const previous = previousPositions.get(sample.index);
+                const current = button.getBoundingClientRect();
+                const x = previous.left - current.left;
+                const y = previous.top - current.top;
+                if (Math.abs(x) < 1 && Math.abs(y) < 1) return;
+                button.animate?.([
+                    { transform: `translate(${x}px, ${y}px)`, zIndex: 2 },
+                    { transform: 'translate(0, 0)', zIndex: 2 }
+                ], { duration: 480, easing: 'cubic-bezier(.2, .8, .2, 1)' });
+            });
+        }
+
+        function paintProgress(progress) {
+            state.progress = Math.max(0, Math.min(race.dates.length - 1, progress));
+            const lower = Math.floor(state.progress);
+            const upper = Math.min(race.dates.length - 1, lower + 1);
+            const fraction = state.progress - lower;
+            const x = xAt(state.progress);
+            byId('raceRevealRect').setAttribute('width', String(x - plot.left + 16));
+            const needle = byId('raceNeedle');
+            needle.setAttribute('x1', x); needle.setAttribute('x2', x);
+            const samples = state.series.map((series, index) => {
+                const value = series.values[lower] + (series.values[upper] - series.values[lower]) * fraction;
+                return { series, index, value, actualY: yAt(value), labelY: yAt(value) };
+            });
+            const visibleSamples = samples.filter(sample => !state.hidden.has(sample.index));
+            const labelsByHeight = [...visibleSamples].sort((left, right) => left.actualY - right.actualY);
+            labelsByHeight.forEach((sample, index) => {
+                sample.labelY = Math.max(sample.actualY, index ? labelsByHeight[index - 1].labelY + 17 : plot.top + 7);
+            });
+            const bottomOverflow = Math.max(0, labelsByHeight.at(-1).labelY - (plot.bottom - 5));
+            labelsByHeight.forEach(sample => { sample.labelY -= bottomOverflow; });
+            const topOverflow = Math.max(0, plot.top + 7 - labelsByHeight[0].labelY);
+            labelsByHeight.forEach(sample => { sample.labelY += topOverflow; });
+            const direction = x > 790 ? -1 : 1;
+            const labelX = x + direction * 13;
+            const anchor = direction < 0 ? 'end' : 'start';
+            samples.forEach(sample => {
+                const nodes = state.endpointNodes[sample.index];
+                const visible = !state.hidden.has(sample.index);
+                nodes.group.classList.toggle('is-hidden', !visible);
+                if (!visible) return;
+                nodes.leader.setAttribute('x1', x); nodes.leader.setAttribute('y1', sample.actualY);
+                nodes.leader.setAttribute('x2', labelX - direction * 3); nodes.leader.setAttribute('y2', sample.labelY);
+                nodes.dot.setAttribute('cx', x); nodes.dot.setAttribute('cy', sample.actualY);
+                nodes.labels.forEach(label => {
+                    label.setAttribute('x', labelX);
+                    label.setAttribute('y', sample.labelY + 3);
+                    label.setAttribute('text-anchor', anchor);
+                });
+            });
+            samples.forEach(sample => {
+                state.legendValueNodes[sample.index].textContent = number(sample.value);
+            });
+
+            const day = Math.round(state.progress);
+            if (day === state.shownDay) return;
+            state.shownDay = day;
+            if (!state.deferRanking) updateLegendRanking(samples.map(sample => ({
+                ...sample,
+                value: sample.series.values[day]
+            })));
+            calendar.querySelectorAll('button').forEach((button, index) => {
+                const active = index === day;
+                button.classList.toggle('active', active);
+                button.setAttribute('aria-pressed', String(active));
+            });
+            byId('raceDayNumber').textContent = String(day + 1).padStart(2, '0');
+            byId('raceDate').textContent = new Date(`${race.dates[day]}T00:00:00Z`).toLocaleDateString(undefined, {
+                month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+            });
+            byId('raceMetricLabel').textContent = state.metric === 'cumulative'
+                ? 'CUMULATIVE STEPS THROUGH THIS DAY'
+                : state.group === 'teams' ? 'AVERAGE STEPS PER REPORTER THAT DAY' : 'STEPS RECORDED THAT DAY';
+        }
+
+        function animateTo(target, duration = 500, onComplete) {
+            if (state.raf) cancelAnimationFrame(state.raf);
+            if (reduceMotion) {
+                paintProgress(target);
+                onComplete?.();
+                return;
+            }
+            const origin = state.progress;
+            const startedAt = performance.now();
+            const frame = now => {
+                const elapsed = Math.min(1, (now - startedAt) / duration);
+                const eased = elapsed < .5 ? 2 * elapsed * elapsed : 1 - Math.pow(-2 * elapsed + 2, 2) / 2;
+                paintProgress(origin + (target - origin) * eased);
+                if (elapsed < 1) state.raf = requestAnimationFrame(frame);
+                else { state.raf = null; onComplete?.(); }
+            };
+            state.raf = requestAnimationFrame(frame);
+        }
+
+        function play() {
+            if (state.playing) {
+                stop();
+                return;
+            }
+            if (state.progress >= race.dates.length - 1) paintProgress(0);
+            state.playing = true;
+            byId('racePlay').classList.add('is-playing');
+            byId('racePlay').innerHTML = '<span aria-hidden="true">Ⅱ</span> Arrest time';
+            byId('racePlay').setAttribute('aria-label', 'Pause the calendar animation');
+            const remaining = race.dates.length - 1 - state.progress;
+            animateTo(race.dates.length - 1, reduceMotion ? 0 : remaining * 720, stop);
+        }
+
+        calendar.addEventListener('click', event => {
+            const button = event.target.closest('[data-race-day]');
+            if (!button) return;
+            stop();
+            const target = Number(button.dataset.raceDay);
+            state.deferRanking = true;
+            animateTo(target, 500, () => {
+                state.deferRanking = false;
+                state.legendOrder = '';
+                state.shownDay = -1;
+                paintProgress(target);
+            });
+        });
+        document.querySelectorAll('[data-race-group], [data-race-metric]').forEach(button => {
+            button.addEventListener('click', () => {
+                stop();
+                const attribute = button.hasAttribute('data-race-group') ? 'raceGroup' : 'raceMetric';
+                const key = attribute === 'raceGroup' ? 'group' : 'metric';
+                state[key] = button.dataset[attribute];
+                state.hidden.clear();
+                document.querySelectorAll(attribute === 'raceGroup' ? '[data-race-group]' : '[data-race-metric]').forEach(peer => {
+                    const active = peer === button;
+                    peer.classList.toggle('active', active);
+                    peer.setAttribute('aria-pressed', String(active));
+                });
+                renderChart();
+            });
+        });
+        byId('raceLegend').addEventListener('click', event => {
+            const button = event.target.closest('[data-series-toggle]');
+            if (!button) return;
+            const index = Number(button.dataset.seriesToggle);
+            if (state.hidden.has(index)) state.hidden.delete(index);
+            else if (state.hidden.size < state.series.length - 1) state.hidden.add(index);
+            renderChart();
+        });
+        byId('racePlay').addEventListener('click', play);
+        renderChart();
+    }
+
     function renderChampionCards(data) {
         const team = data.podiums.teams[0];
         const person = data.podiums.individuals[0];
@@ -301,6 +575,7 @@
         renderChampionCards(data);
         renderTeamPodium(data.podiums.teams);
         renderIndividualPodium(data.podiums.individuals);
+        renderRaceOracle(data);
         renderClub200K(data);
         renderSupportingStats(data);
         renderStandings(data);

@@ -1,4 +1,4 @@
-const { getFeaturedChampions, challengeDays, buildParticipants } = require('../../../src/services/champions');
+const { getFeaturedChampions, challengeDays, buildParticipants, buildRaceTimeline } = require('../../../src/services/champions');
 
 function archiveRow(userId, name, team, day, count) {
   return {
@@ -73,6 +73,11 @@ describe('featured champions archive service', () => {
       expected_reports: 90,
       perfect_reporters: 5
     });
+    expect(result.race).toMatchObject({
+      dates: expect.arrayContaining(['2025-08-01', '2025-08-15']),
+      people: expect.any(Array),
+      teams: expect.any(Array)
+    });
     expect(result.provenance).toMatchObject({
       archive_id: 2,
       excluded_test_records: 1,
@@ -96,6 +101,27 @@ describe('featured champions archive service', () => {
       days_reported: 15,
       reporting_rate: 100
     });
+  });
+
+  test('builds day-by-day cumulative person and team race series', () => {
+    const timeline = buildRaceTimeline([
+      archiveRow(1, 'one', 'A', 1, 100),
+      archiveRow(2, 'two', 'A', 1, 300),
+      archiveRow(1, 'one', 'A', 2, 200)
+    ], '2025-08-01', '2025-08-03');
+
+    expect(timeline.dates).toEqual(['2025-08-01', '2025-08-02', '2025-08-03']);
+    expect(timeline.people.find(person => person.name === 'one').days).toEqual([
+      { steps: 100, cumulative: 100, reported: true },
+      { steps: 200, cumulative: 300, reported: true },
+      { steps: 0, cumulative: 300, reported: false }
+    ]);
+    expect(timeline.teams[0]).toMatchObject({ name: 'A', member_count: 2 });
+    expect(timeline.teams[0].days).toEqual([
+      { steps: 400, cumulative: 400, reports: 2, average: 200 },
+      { steps: 200, cumulative: 600, reports: 1, average: 200 },
+      { steps: 0, cumulative: 600, reports: 0, average: 0 }
+    ]);
   });
 
   test('assigns shared places to exact average ties', () => {

@@ -77,6 +77,45 @@
                 <div id="individualPodium" class="individual-podium"></div>
             </section>
 
+            <section class="race-oracle" id="raceOracle" aria-labelledby="raceOracleTitle">
+                <div class="race-oracle-heading">
+                    <div>
+                        <p class="eyebrow">THE CHRONOMANCER'S SCOREBOARD</p>
+                        <h2 id="raceOracleTitle">Fifteen days. One glorious stampede.</h2>
+                        <p>Rewind the calendar and watch the standings materialize one heroic day at a time.</p>
+                    </div>
+                    <div class="race-day-sigil" aria-live="polite">
+                        <span>DAY</span><strong id="raceDayNumber">01</strong><i>OF 15</i>
+                    </div>
+                </div>
+
+                <div class="race-controls" aria-label="Scoreboard controls">
+                    <div class="race-toggle" role="group" aria-label="Competitors">
+                        <button type="button" class="active" data-race-group="people" aria-pressed="true">Mortals</button>
+                        <button type="button" data-race-group="teams" aria-pressed="false">Legions</button>
+                    </div>
+                    <div class="race-toggle" role="group" aria-label="Measurement">
+                        <button type="button" class="active" data-race-metric="cumulative" aria-pressed="true">Cumulative odyssey</button>
+                        <button type="button" data-race-metric="average" aria-pressed="false">Daily pace / avg</button>
+                    </div>
+                    <button type="button" class="race-play" id="racePlay" aria-label="Play the calendar animation"><span aria-hidden="true">▶</span> Unleash time</button>
+                </div>
+
+                <div class="race-calendar" id="raceCalendar" role="group" aria-label="Choose a challenge day"></div>
+                <div class="race-date-display">
+                    <p id="raceDate">August 1, 2025</p>
+                    <span id="raceMetricLabel">CUMULATIVE STEPS THROUGH THIS DAY</span>
+                </div>
+                <div class="race-arena" id="raceArena">
+                    <svg id="raceChart" class="race-chart" viewBox="0 0 1000 500" role="img" aria-labelledby="raceChartTitle raceChartDescription">
+                        <title id="raceChartTitle">Challenge steps over time</title>
+                        <desc id="raceChartDescription">An animated line chart of challenge performance by calendar day.</desc>
+                    </svg>
+                    <div class="race-legend" id="raceLegend" aria-label="Chart legend"></div>
+                </div>
+                <p class="race-footnote" id="raceFootnote">The brightest trajectories are named below. Time itself is draggable, more or less.</p>
+            </section>
+
             <section class="club-200k" aria-labelledby="club200KTitle">
                 <div class="club-200k-header">
                     <div class="club-200k-mark" aria-hidden="true">

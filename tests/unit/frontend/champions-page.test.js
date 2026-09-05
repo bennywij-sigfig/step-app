@@ -42,6 +42,42 @@ describe('Champions Pantheon frontend', () => {
     expect(styles).toContain('min-height: var(--podium-height, 190px)');
   });
 
+  test('animates a calendar race across people, teams, totals, and daily pace', () => {
+    for (const id of ['raceOracle', 'raceCalendar', 'raceArena', 'racePlay', 'raceDayNumber']) {
+      expect(page).toContain(`id="${id}"`);
+    }
+    expect(page).toContain('Cumulative odyssey');
+    expect(page).toContain('Daily pace / avg');
+    expect(script).toContain('function renderRaceOracle(data)');
+    expect(page).toContain('id="raceChart"');
+    expect(page).toContain('id="raceLegend"');
+    expect(script).toContain("state = { group: 'people', metric: 'cumulative'");
+    expect(script).toContain("state.group === 'teams' ? day.average : day.steps");
+    expect(script).toContain('function animateTo(target, duration = 500');
+    expect(script).toContain('state.raf = requestAnimationFrame(frame)');
+    expect(script).toContain('clipPath id="raceReveal"');
+    expect(script).toContain('<polyline class="race-line');
+    expect(styles).toContain('.race-calendar');
+    expect(styles).toContain('.race-line-hero');
+    expect(styles).toContain('.race-needle');
+    expect(script).toContain('class="race-endpoint"');
+    expect(script).toContain('labelsByHeight');
+    expect(script).toContain('race-endpoint-short');
+    expect(styles).toContain('.race-endpoint-full { display: none; }');
+    expect(styles).toContain('.race-endpoint:hover');
+    expect(script).toContain('data-series-toggle');
+    expect(script).toContain('state.hidden.size < state.series.length - 1');
+    expect(styles).toContain('.race-line.is-hidden');
+    expect(styles).toContain('.race-legend-item.is-hidden');
+    expect(styles).toContain('grid-template-columns: repeat(15, minmax(0, 1fr))');
+    expect(styles).toContain('.race-calendar button { min-width: 0;');
+    expect(script).toContain('function updateLegendRanking(samples)');
+    expect(script).toContain('previousPositions');
+    expect(script).toContain('button.animate?.([');
+    expect(script).toContain("duration: 480, easing: 'cubic-bezier(.2, .8, .2, 1)'");
+    expect(styles).toContain('.race-legend-item em');
+  });
+
   test('animates the journey at constant speed across a draggable projected globe', () => {
     for (const id of ['routeGraphic', 'journeyGlobeCanvas', 'routeLinear', 'routeLinearMarker']) {
       expect(page).toContain(`id="${id}"`);
