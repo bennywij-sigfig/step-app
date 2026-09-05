@@ -81,6 +81,12 @@ describe('Champions Pantheon frontend', () => {
     expect(script).toContain('button.animate?.([');
     expect(script).toContain("duration: 480, easing: 'cubic-bezier(.2, .8, .2, 1)'");
     expect(styles).toContain('.race-legend-item em');
+    expect(page).toContain('class="active" data-race-group="teams"');
+    expect(page).toContain('class="active" data-race-metric="cumulative"');
+    expect(script).toContain('function prepareViewportAutoplay()');
+    expect(script).toContain("observer.observe(oracle)");
+    expect(script).toContain("threshold: .18, rootMargin: '0px 0px -12% 0px'");
+    expect(script).toContain('if (reduceMotion) return;');
   });
 
   test('links to the excessive analytics lab without an off-canvas navigation link', () => {

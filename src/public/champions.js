@@ -489,6 +489,21 @@
             animateTo(race.dates.length - 1, reduceMotion ? 0 : remaining * 720, stop);
         }
 
+        function prepareViewportAutoplay() {
+            if (reduceMotion) return;
+            const oracle = byId('raceOracle');
+            if (!('IntersectionObserver' in window)) {
+                play();
+                return;
+            }
+            const observer = new IntersectionObserver(entries => {
+                if (!entries.some(entry => entry.isIntersecting)) return;
+                observer.disconnect();
+                if (!state.playing && state.progress === 0) play();
+            }, { threshold: .18, rootMargin: '0px 0px -12% 0px' });
+            observer.observe(oracle);
+        }
+
         calendar.addEventListener('click', event => {
             const button = event.target.closest('[data-race-day]');
             if (!button) return;
@@ -524,6 +539,7 @@
         byId('racePlay').addEventListener('click', play);
         syncControlState();
         renderChart();
+        prepareViewportAutoplay();
     }
 
     function renderChampionCards(data) {
