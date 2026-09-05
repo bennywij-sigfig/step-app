@@ -83,6 +83,13 @@ describe('Champions Pantheon frontend', () => {
     expect(styles).toContain('.race-legend-item em');
   });
 
+  test('links to the excessive analytics lab without an off-canvas navigation link', () => {
+    expect(page).toContain('href="/champions/analytics"');
+    expect(page).toContain('The Department of Excessive Step Analytics');
+    expect(page).not.toContain('class="skip-link"');
+    expect(styles).toContain('.analytics-portal');
+  });
+
   test('animates the journey at constant speed across a draggable projected globe', () => {
     for (const id of ['routeGraphic', 'journeyGlobeCanvas', 'routeLinear', 'routeLinearMarker']) {
       expect(page).toContain(`id="${id}"`);

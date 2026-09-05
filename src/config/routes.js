@@ -60,6 +60,7 @@ const ROUTES = {
     dashboard: '/',
     chat: '/chat',
     champions: '/champions',
+    championsAnalytics: '/champions/analytics',
     admin: '/admin',
     health: '/health',
     pig: '/pig'

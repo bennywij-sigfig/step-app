@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#070913">
+    <title>Excessive Step Analytics — The Pantheon</title>
+    <link rel="stylesheet" href="/champions-analytics.css">
+</head>
+<body>
+    <div class="lab-cosmos" aria-hidden="true"></div>
+    <header class="lab-header">
+        <a href="/champions">← The Pantheon</a>
+        <span>AUTHORIZED PERSONNEL &amp; CURIOUS PEDESTRIANS ONLY</span>
+    </header>
+
+    <main>
+        <section class="lab-hero" aria-labelledby="labTitle">
+            <p class="kicker">SIGFIG INSTITUTE OF UNNECESSARY QUANTIFICATION</p>
+            <h1 id="labTitle">The Department of<br><em>Excessive Step Analytics</em></h1>
+            <p>Three answers to questions nobody was brave enough to ask. All findings are peer-reviewed by at least one pedometer.</p>
+            <div class="specimen-strip" aria-hidden="true"><i></i><b>51</b><i></i><b>15</b><i></i><b>9,041,885</b><i></i></div>
+        </section>
+
+        <div id="analyticsLoading" class="lab-message" role="status">Calibrating the calf spectrometer…</div>
+        <div id="analyticsError" class="lab-message error" hidden>
+            <strong>The spreadsheets have rejected our hypothesis.</strong>
+            <button type="button" id="retryAnalytics">Recalculate destiny</button>
+        </div>
+
+        <div id="analyticsExperience" hidden>
+            <section class="experiment heatmap-experiment" aria-labelledby="heatmapTitle">
+                <div class="experiment-number" aria-hidden="true">Ⅰ</div>
+                <div class="experiment-heading">
+                    <div>
+                        <p class="kicker">THE WOVEN TAPESTRY OF FOOTFALLS</p>
+                        <h2 id="heatmapTitle">Fifteen days, rendered as questionable fabric</h2>
+                        <p>Brighter squares mean more steps. Hollow squares are missing reports. Hover or tap a cell for the unembroidered truth.</p>
+                    </div>
+                    <div class="lab-toggle" role="group" aria-label="Heatmap subjects">
+                        <button type="button" class="active" data-heatmap-group="teams" aria-pressed="true">Teams</button>
+                        <button type="button" data-heatmap-group="people" aria-pressed="false">Everyone</button>
+                    </div>
+                </div>
+                <div class="heatmap-shell" tabindex="0" aria-label="Scrollable daily step heatmap">
+                    <div class="heatmap" id="stepHeatmap"></div>
+                </div>
+                <div class="heat-legend"><span>less mortal effort</span><i></i><i></i><i></i><i></i><i></i><span>mythic calves</span></div>
+            </section>
+
+            <section class="experiment bump-experiment" aria-labelledby="bumpTitle">
+                <div class="experiment-number" aria-hidden="true">Ⅱ</div>
+                <div class="experiment-heading">
+                    <div>
+                        <p class="kicker">THE GREAT JOSTLING</p>
+                        <h2 id="bumpTitle">Rank is temporary. Crossing lines are forever.</h2>
+                        <p>Every overtake, reversal, and brief administrative coup—based on cumulative steps at the end of each day.</p>
+                    </div>
+                    <div class="lab-toggle" role="group" aria-label="Rank chart subjects">
+                        <button type="button" class="active" data-bump-group="teams" aria-pressed="true">Teams</button>
+                        <button type="button" data-bump-group="people" aria-pressed="false">Top 12 people</button>
+                    </div>
+                </div>
+                <div class="chart-shell">
+                    <svg id="rankBumpChart" class="bump-chart" viewBox="0 0 1100 620" role="img" aria-labelledby="bumpSvgTitle bumpSvgDesc">
+                        <title id="bumpSvgTitle">Rank changes by day</title>
+                        <desc id="bumpSvgDesc">Lines show daily cumulative rank and cross when competitors overtake one another.</desc>
+                    </svg>
+                </div>
+                <div class="bump-legend" id="bumpLegend"></div>
+            </section>
+
+            <section class="experiment constellation-experiment" aria-labelledby="constellationTitle">
+                <div class="experiment-number" aria-hidden="true">Ⅲ</div>
+                <div class="experiment-heading">
+                    <div>
+                        <p class="kicker">THE CALF CONSTELLATION</p>
+                        <h2 id="constellationTitle">Intensity meets consistency in deep space</h2>
+                        <p>Farther right means a higher daily average. Higher means steadier output. Larger stars walked farther. Hover, tap, or focus to identify celestial pedestrians.</p>
+                    </div>
+                </div>
+                <div class="chart-shell constellation-shell">
+                    <svg id="constellationChart" class="constellation-chart" viewBox="0 0 1100 650" role="img" aria-labelledby="constellationSvgTitle constellationSvgDesc">
+                        <title id="constellationSvgTitle">Participant intensity and consistency</title>
+                        <desc id="constellationSvgDesc">A scatter plot comparing average daily steps, consistency, and total steps for every participant.</desc>
+                    </svg>
+                </div>
+                <div class="quadrant-key" aria-hidden="true">
+                    <span>STEADY PILGRIMS</span><span>RELENTLESS TITANS</span><span>CHAOS WALKERS</span><span>WEEKEND COMETS</span>
+                </div>
+            </section>
+
+            <section class="lab-disclaimer">
+                <p class="kicker">A NOTE FROM LEGAL</p>
+                <p>Correlation does not imply causation. It does, however, imply that we can draw a very attractive glowing circle around it.</p>
+            </section>
+        </div>
+    </main>
+
+    <footer><span>DEPARTMENT FILE 2025–XV</span><a href="/champions">Re-enter the Pantheon →</a></footer>
+    <script src="/champions-analytics.js"></script>
+</body>
+</html>

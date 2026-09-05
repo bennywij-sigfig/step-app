@@ -1113,6 +1113,10 @@ app.get('/champions', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'champions.html'));
 });
 
+app.get('/champions/analytics', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'champions-analytics.html'));
+});
+
 app.get('/api/champions', apiLimiter, requireApiAuth, async (req, res) => {
   try {
     if (!champions2025Cache) {

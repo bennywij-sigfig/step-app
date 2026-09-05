@@ -67,6 +67,7 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.pages.dashboard).toBe('/');
       expect(ROUTES.pages.chat).toBe('/chat');
       expect(ROUTES.pages.champions).toBe('/champions');
+      expect(ROUTES.pages.championsAnalytics).toBe('/champions/analytics');
       expect(ROUTES.pages.admin).toBe('/admin');
       expect(ROUTES.pages.health).toBe('/health');
     });

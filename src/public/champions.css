@@ -344,6 +344,21 @@ section:not(.hero) { margin: 0 0 110px; }
 .race-legend-item strong { font-size: 11px; font-variant-numeric: tabular-nums; }
 .race-footnote { margin: 18px 0 0; color: #8f8897; font-size: 10px; letter-spacing: .05em; text-align: center; }
 
+.analytics-portal {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 30px;
+    padding: clamp(28px, 5vw, 52px);
+    border: 1px dashed rgba(124, 231, 255, .4);
+    border-radius: 24px;
+    background: radial-gradient(circle at 90% 20%, rgba(124, 231, 255, .11), transparent 35%), rgba(255, 255, 255, .025);
+}
+.analytics-portal h2 { margin: 0 0 10px; font: 500 clamp(32px, 5vw, 56px)/.98 Georgia, serif; letter-spacing: -.04em; }
+.analytics-portal p:last-child { max-width: 700px; margin-bottom: 0; color: var(--muted); line-height: 1.5; }
+.analytics-portal a { padding: 14px 18px; color: #091018; border-radius: 999px; background: #7ce7ff; box-shadow: 0 0 32px rgba(124, 231, 255, .17); font-size: 12px; font-weight: 850; text-decoration: none; white-space: nowrap; }
+.analytics-portal a:hover, .analytics-portal a:focus-visible { background: var(--ivory); transform: translateY(-2px); }
+
 .club-200k {
     position: relative;
     padding: clamp(28px, 6vw, 68px);
@@ -576,6 +591,8 @@ td strong, tr.podium-row td { color: var(--ivory); }
     .individual-podium-card { min-height: 0; }
     .club-200k { padding: 45px 17px 24px; }
     .race-oracle { padding: 42px 13px 24px; }
+    .analytics-portal { grid-template-columns: 1fr; }
+    .analytics-portal a { text-align: center; white-space: normal; }
     .race-oracle-heading { grid-template-columns: 1fr; }
     .race-day-sigil { width: 88px; height: 88px; position: absolute; top: 47px; right: 16px; opacity: .32; pointer-events: none; }
     .race-day-sigil strong { font-size: 34px; }
