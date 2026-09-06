@@ -11,6 +11,7 @@ function classList() {
   const values = new Set();
   return {
     add: (...names) => names.forEach(name => values.add(name)),
+    remove: (...names) => names.forEach(name => values.delete(name)),
     contains: name => values.has(name),
     values
   };
@@ -28,18 +29,25 @@ function makeRow(key) {
     dataset: { rankKey: String(key) },
     classList: classList(),
     style: { setProperty: jest.fn() },
+    parentElement: { appendChild: jest.fn() },
+    getBoundingClientRect: () => ({ top: Number(key) * 50 }),
     querySelector: selector => selector === '.rank' ? rank : null,
     rank
   };
 }
 
-function setup() {
+function setup(reducedMotion = true) {
   const values = new Map();
   const storage = {
     getItem: key => values.get(key) ?? null,
     setItem: (key, value) => values.set(key, value)
   };
-  const window = { localStorage: storage, matchMedia: () => ({ matches: true }) };
+  const window = {
+    localStorage: storage,
+    matchMedia: () => ({ matches: reducedMotion }),
+    setTimeout: callback => { callback(); return 1; },
+    clearTimeout: () => {}
+  };
   vm.runInNewContext(source, { window, JSON, Date, Object, Number });
   return { api: window.LeaderboardRankHistory, storage, values };
 }
@@ -73,8 +81,11 @@ describe('device-local leaderboard rank history', () => {
     expect(rows[1].rank.classList.contains('rank-improved')).toBe(true);
     expect(rows[0].rank.classList.contains('rank-declined')).toBe(true);
     expect(rows[1].rank.attributes['aria-label']).toBe('Rank 1, improved from rank 2');
+    expect(rows[1].rank.attributes['data-rank-context']).toBe('Previously #2 · improved');
+    expect(rows[1].rank.attributes.tabindex).toBe('0');
     expect(rows[0].rank.title).toBe('Previously #1');
-    expect(page).not.toMatch(/rank-(?:improved|declined)[\s\S]{0,200}content\s*:/);
+    expect(page).not.toContain('content: "↑"');
+    expect(page).not.toContain('content: "↓"');
   });
 
   test('does not compare ranks across challenge boundaries', () => {
@@ -86,10 +97,33 @@ describe('device-local leaderboard rank history', () => {
     expect(row.rank.classList.contains('rank-improved')).toBe(false);
   });
 
+  test('replay restores the previous state before creating fresh movement animations', () => {
+    const { api, storage } = setup(false);
+    const rows = [makeRow(1), makeRow(2)];
+    rows.forEach(row => { row.animate = jest.fn(); });
+    const container = { classList: classList(), querySelectorAll: () => rows };
+    const common = { container, kind: 'team', scope: 'challenge:9', viewerId: 4, storage };
+    api.apply({ ...common, entries: [{ key: 1, rank: 1 }, { key: 2, rank: 2 }] });
+    api.apply({ ...common, entries: [{ key: 2, rank: 1 }, { key: 1, rank: 2 }] });
+    rows.forEach(row => row.animate.mockClear());
+
+    expect(api.replay(container)).toBe(true);
+    rows.forEach(row => {
+      expect(row.animate).toHaveBeenCalledTimes(1);
+      expect(row.animate.mock.calls[0][0][0].transform).toContain('translateY(');
+      expect(row.animate.mock.calls[0][1]).toMatchObject({ duration: 900, easing: 'linear' });
+    });
+    expect(rows.map(row => row.animate.mock.calls[0][1].delay).sort((a, b) => a - b)).toEqual([0, 100]);
+  });
+
   test('dashboard wires stable ranked identities and separate individual/team histories', () => {
     expect(page).toContain('src="/leaderboard-rank-history.js"');
     expect(page.indexOf('/leaderboard-rank-history.js')).toBeLessThan(page.indexOf('/dashboard.js'));
     expect(page).toContain('@keyframes rank-change-flip');
+    expect(page).toContain('animation: rank-change-flip 900ms linear');
+    expect(page).toContain('.rank-history-tooltip');
+    expect(source).toContain('function attachRankContext(row, rank)');
+    expect(source).toContain("row.addEventListener('pointerenter', show)");
     expect(page).toContain('.rank.rank-improved');
     expect(page).toContain('.rank.rank-declined');
     expect(dashboard).toContain('function applyRankHistory(');

@@ -2,6 +2,36 @@
     'use strict';
 
     const PREFIX = 'stepLeaderboardRanks:v1';
+    const transitions = new WeakMap();
+    let tooltip = null;
+
+    function ensureTooltip() {
+        if (tooltip) return tooltip;
+        tooltip = document.createElement('div');
+        tooltip.className = 'rank-history-tooltip';
+        tooltip.hidden = true;
+        document.body.appendChild(tooltip);
+        return tooltip;
+    }
+
+    function attachRankContext(row, rank) {
+        if (typeof row.addEventListener !== 'function' || row.dataset.rankContextAttached === 'true') return;
+        row.dataset.rankContextAttached = 'true';
+        const tip = ensureTooltip();
+        const show = () => {
+            tip.textContent = rank.dataset.rankContext;
+            tip.hidden = false;
+            const rect = rank.getBoundingClientRect();
+            const tipRect = tip.getBoundingClientRect();
+            tip.style.left = `${Math.max(8, Math.min(window.innerWidth - tipRect.width - 8, rect.left - 8))}px`;
+            tip.style.top = `${Math.max(8, rect.top - tipRect.height - 8)}px`;
+        };
+        const hide = () => { tip.hidden = true; };
+        row.addEventListener('pointerenter', show);
+        row.addEventListener('pointerleave', hide);
+        rank.addEventListener('focus', show);
+        rank.addEventListener('blur', hide);
+    }
 
     function storageKey(kind, viewerId) {
         return `${PREFIX}:${String(viewerId || 'anonymous')}:${kind}`;
@@ -27,17 +57,75 @@
                 ranks: Object.fromEntries(entries.map(entry => [String(entry.key), Number(entry.rank)]))
             }));
         } catch (_error) {
-            // Ranking history is an optional device-local enhancement. Storage
-            // limits or privacy mode must never prevent the leaderboard loading.
+            // This optional device-local enhancement must never block rankings.
         }
     }
 
-    function animateWhenVisible(container, changedRows, reduceMotion) {
-        if (!changedRows.length || reduceMotion) return;
-        const play = () => changedRows.forEach((row, index) => {
-            row.style.setProperty('--rank-change-delay', `${Math.min(index * 45, 360)}ms`);
-            row.classList.add('rank-change-animate');
+    function setPreviousState(transition) {
+        const ordered = [...transition.records].sort((left, right) =>
+            left.previousRank - right.previousRank || left.rank - right.rank
+        );
+        ordered.forEach(record => {
+            transition.section.appendChild(record.row);
+            record.rankNode.textContent = `#${record.previousRank}`;
+            record.rankNode.classList.remove('rank-improved', 'rank-declined');
         });
+        transition.container.classList?.add('rank-history-previous');
+    }
+
+    function setCurrentState(transition, animate) {
+        const previousPositions = new Map(transition.records.map(record => [
+            record.key,
+            record.row.getBoundingClientRect()
+        ]));
+        const ordered = [...transition.records].sort((left, right) => left.rank - right.rank);
+        ordered.forEach(record => {
+            transition.section.appendChild(record.row);
+            record.rankNode.textContent = `#${record.rank}`;
+            if (record.changed) {
+                record.rankNode.classList.add(record.improved ? 'rank-improved' : 'rank-declined');
+            }
+        });
+        transition.container.classList?.remove('rank-history-previous');
+        if (!animate) return;
+
+        ordered.filter(record => record.changed).forEach((record, index) => {
+            const previous = previousPositions.get(record.key);
+            const current = record.row.getBoundingClientRect();
+            const deltaY = previous.top - current.top;
+            const delay = Math.min(index * 100, 500);
+            if (typeof record.row.animate === 'function') {
+                record.row.animate([
+                    { opacity: .55, filter: 'brightness(1.45)', transform: `translateY(${deltaY}px) perspective(700px) rotateX(-62deg) scale(.98)` },
+                    { opacity: 1, filter: 'brightness(1.12)', transform: 'translateY(0) perspective(700px) rotateX(7deg) scale(1.01)', offset: .7 },
+                    { opacity: 1, filter: 'none', transform: 'translateY(0) perspective(700px) rotateX(0) scale(1)' }
+                ], { duration: 900, delay, easing: 'linear' });
+            } else {
+                record.row.style.setProperty('--rank-change-delay', `${delay}ms`);
+                record.row.style.setProperty('--rank-previous-y', `${deltaY}px`);
+                record.row.classList.remove('rank-change-animate');
+                void record.row.offsetWidth;
+                record.row.classList.add('rank-change-animate');
+            }
+        });
+    }
+
+    function playTransition(transition, { hold = 550 } = {}) {
+        if (transition.timer) window.clearTimeout(transition.timer);
+        const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        setPreviousState(transition);
+        if (reduceMotion) {
+            setCurrentState(transition, false);
+            return;
+        }
+        transition.timer = window.setTimeout(() => {
+            transition.timer = null;
+            setCurrentState(transition, true);
+        }, hold);
+    }
+
+    function playWhenVisible(transition) {
+        const play = () => playTransition(transition);
         if (!('IntersectionObserver' in window)) {
             play();
             return;
@@ -47,7 +135,7 @@
             observer.disconnect();
             play();
         }, { threshold: .12 });
-        observer.observe(container);
+        observer.observe(transition.container);
     }
 
     function apply({ container, kind, scope, viewerId, entries, storage = window.localStorage }) {
@@ -61,27 +149,51 @@
         if (!previous || previous.scope !== String(scope)) return [];
 
         const rows = new Map([...container.querySelectorAll('[data-rank-key]')].map(row => [row.dataset.rankKey, row]));
-        const changes = [];
-        normalized.forEach(entry => {
-            const previousRank = Number(previous.ranks[entry.key]);
-            if (!Number.isInteger(previousRank) || previousRank === entry.rank) return;
+        const records = normalized.map(entry => {
             const row = rows.get(entry.key);
-            const rank = row?.querySelector('.rank');
-            if (!row || !rank) return;
+            const rankNode = row?.querySelector('.rank');
+            const storedRank = Number(previous.ranks[entry.key]);
+            if (!row || !rankNode) return null;
+            const previousRank = Number.isInteger(storedRank) ? storedRank : entry.rank;
+            const changed = previousRank !== entry.rank;
             const improved = entry.rank < previousRank;
-            rank.classList.add(improved ? 'rank-improved' : 'rank-declined');
-            rank.setAttribute('aria-label', `Rank ${entry.rank}, ${improved ? 'improved' : 'declined'} from rank ${previousRank}`);
-            rank.title = `Previously #${previousRank}`;
-            row.classList.add('rank-changed');
-            changes.push({ key: entry.key, previousRank, rank: entry.rank, direction: improved ? 'up' : 'down', row });
-        });
-        animateWhenVisible(
+            if (changed) {
+                const direction = improved ? 'improved' : 'declined';
+                rankNode.setAttribute('aria-label', `Rank ${entry.rank}, ${direction} from rank ${previousRank}`);
+                rankNode.setAttribute('data-rank-context', `Previously #${previousRank} · ${direction}`);
+                rankNode.setAttribute('tabindex', '0');
+                rankNode.title = `Previously #${previousRank}`;
+                row.classList.add('rank-changed');
+                attachRankContext(row, rankNode);
+            }
+            return { ...entry, row, rankNode, previousRank, changed, improved };
+        }).filter(Boolean);
+        const changed = records.filter(record => record.changed);
+        if (!changed.length) return [];
+
+        const transition = {
             container,
-            changes.map(change => change.row),
-            window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-        );
-        return changes.map(({ row, ...change }) => change);
+            section: records[0].row.parentElement,
+            records,
+            timer: null
+        };
+        transitions.set(container, transition);
+        setPreviousState(transition);
+        playWhenVisible(transition);
+        return changed.map(record => ({
+            key: record.key,
+            previousRank: record.previousRank,
+            rank: record.rank,
+            direction: record.improved ? 'up' : 'down'
+        }));
     }
 
-    window.LeaderboardRankHistory = { apply, storageKey, readSnapshot };
+    function replay(container) {
+        const transition = transitions.get(container);
+        if (!transition) return false;
+        playTransition(transition, { hold: 700 });
+        return true;
+    }
+
+    window.LeaderboardRankHistory = { apply, replay, storageKey, readSnapshot };
 })();
