@@ -669,6 +669,18 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        function applyRankHistory(container, kind, data, rankedEntries, identity) {
+            const challengeId = currentUser?.current_challenge?.id;
+            if (!window.LeaderboardRankHistory || data.type !== 'challenge' || !challengeId) return;
+            window.LeaderboardRankHistory.apply({
+                container,
+                kind,
+                scope: `challenge:${challengeId}`,
+                viewerId: currentUser.id,
+                entries: rankedEntries.map((entry, index) => ({ key: identity(entry), rank: index + 1 }))
+            });
+        }
+
         // Load leaderboard
         async function loadLeaderboard() {
             // Clear expanded user state when reloading individual leaderboard
@@ -709,7 +721,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const isCurrentUser = currentUser && Number(user.id) === Number(currentUser.id);
                         const highlightClass = isCurrentUser ? ' current-user' : '';
                         
-                        return `<div class="leaderboard-item${highlightClass}">
+                        return `<div class="leaderboard-item${highlightClass}" data-rank-key="${Number(user.id)}">
                             <div class="leaderboard-identity">
                                 <button type="button" class="team-disclosure" data-user-id="${user.id}" data-user-name="${escapeHtml(user.name)}" aria-expanded="false" aria-label="Show daily steps for ${escapeHtml(user.name)}"></button>
                                 <span class="rank">#${index + 1}</span>
@@ -789,6 +801,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 leaderboardDiv.innerHTML = html;
+                applyRankHistory(leaderboardDiv, 'individual', data, data.data?.ranked || [], user => user.id);
                 
                 // Attach listeners only to the freshly rendered leaderboard.
                 // Scanning the whole document here used to add duplicate handlers
@@ -1013,7 +1026,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const isCurrentTeam = currentUser && currentUser.team === team.team;
                         const highlightClass = isCurrentTeam ? ' current-team' : '';
                         
-                        return `<div class="leaderboard-item team-identified${highlightClass}" style="${teamAccentStyle(team.team_id)}">
+                        return `<div class="leaderboard-item team-identified${highlightClass}" data-rank-key="${Number(team.team_id)}" style="${teamAccentStyle(team.team_id)}">
                             <div class="leaderboard-identity">
                                 <button type="button" class="team-disclosure" data-team="${escapeHtml(team.team)}" data-team-id="${Number(team.team_id)}" aria-expanded="false" aria-label="Show members of ${escapeHtml(team.team)}"></button>
                                 <span class="rank">#${index + 1}</span>
@@ -1089,6 +1102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     : Boolean(data.data?.ranked?.length || data.data?.unranked?.length);
                 if (hasTeamRows) html += '<div class="leaderboard-footer">members · reporting · steps/day</div>';
                 teamLeaderboard.innerHTML = html;
+                applyRankHistory(teamLeaderboard, 'team', data, data.data?.ranked || [], team => team.team_id);
                 attachDisclosureListeners(teamLeaderboard);
                 return true;
             } catch (error) {

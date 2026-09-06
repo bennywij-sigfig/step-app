@@ -490,6 +490,19 @@
             font-variant-numeric: tabular-nums;
         }
 
+        .rank.rank-improved { color: #15803d; font-weight: 800; }
+        .rank.rank-declined { color: #b42318; font-weight: 800; }
+        .leaderboard-item.rank-change-animate {
+            animation: rank-change-flip 680ms cubic-bezier(.2, .78, .2, 1) both;
+            animation-delay: var(--rank-change-delay, 0ms);
+            transform-origin: center;
+        }
+        @keyframes rank-change-flip {
+            0% { opacity: .18; transform: perspective(700px) rotateX(-78deg) translateY(8px); }
+            58% { opacity: 1; transform: perspective(700px) rotateX(8deg) translateY(-2px); }
+            100% { opacity: 1; transform: perspective(700px) rotateX(0) translateY(0); }
+        }
+
         .unranked-section .leaderboard-item {
             background: rgba(248, 250, 252, 0.46);
         }
@@ -1499,7 +1512,8 @@
     <script src="/theme-manager.js"></script>
     <script src="/mega-confetti-physics.js"></script>
     <script src="/confetti.js"></script>
-    <script src="/dashboard.js?v=20260904-direct-routes-v1"></script>    </div>
+    <script src="/leaderboard-rank-history.js"></script>
+    <script src="/dashboard.js?v=20260906-rank-history-v1"></script>    </div>
 
     <!-- Unobtrusive Extras Section -->
     <div style="margin-top: 40px; margin-bottom: 40px; padding: 0 20px; max-width: 400px; margin-left: auto; margin-right: auto;">
