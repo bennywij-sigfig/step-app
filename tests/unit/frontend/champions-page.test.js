@@ -83,6 +83,10 @@ describe('Champions Pantheon frontend', () => {
     expect(styles).toContain('.race-legend-item em');
     expect(page).toContain('class="active" data-race-group="teams"');
     expect(page).toContain('class="active" data-race-metric="cumulative"');
+    expect(script).toContain('const yAxisTicks = maximum =>');
+    expect(script).toContain('[5000, 10000, 25000]');
+    expect(script).toContain('const grid = yAxisTicks(state.maximum).map');
+    expect(script).not.toContain('state.maximum * (4 - index) / 4');
     expect(script).toContain('function prepareViewportAutoplay()');
     expect(script).toContain("observer.observe(oracle)");
     expect(script).toContain("threshold: .18, rootMargin: '0px 0px -12% 0px'");

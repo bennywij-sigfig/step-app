@@ -249,6 +249,19 @@
         const xAt = progress => plot.left + (plot.right - plot.left) * progress / (race.dates.length - 1);
         const yAt = value => plot.bottom - (plot.bottom - plot.top) * value / state.maximum;
         const compact = value => value >= 1000000 ? `${number(value / 1000000, 1)}m` : value >= 1000 ? `${number(value / 1000)}k` : number(value);
+        const yAxisTicks = maximum => {
+            const target = maximum / 4;
+            const candidates = [];
+            for (let scale = 1; scale <= 1000; scale *= 10) {
+                [5000, 10000, 25000].forEach(step => candidates.push(step * scale));
+            }
+            const step = candidates.reduce((best, candidate) =>
+                Math.abs(candidate - target) < Math.abs(best - target) ? candidate : best
+            );
+            const ticks = [];
+            for (let value = 0; value <= maximum; value += step) ticks.push(value);
+            return ticks;
+        };
         const initials = value => {
             const words = displayName(value).trim().split(/\s+/).filter(Boolean);
             return (words.length > 1 ? words.map(word => word[0]) : [words[0]?.slice(0, 2) || '?'])
@@ -304,9 +317,8 @@
             const magnitude = 10 ** Math.floor(Math.log10(rawMaximum));
             state.maximum = Math.ceil(rawMaximum / magnitude * 1.08) * magnitude;
 
-            const grid = Array.from({ length: 5 }, (_, index) => {
-                const value = state.maximum * (4 - index) / 4;
-                const y = plot.top + (plot.bottom - plot.top) * index / 4;
+            const grid = yAxisTicks(state.maximum).map(value => {
+                const y = yAt(value);
                 return `<line x1="${plot.left}" y1="${y}" x2="${plot.right}" y2="${y}"/><text x="${plot.left - 13}" y="${y + 4}" text-anchor="end">${compact(value)}</text>`;
             }).join('');
             const paths = state.series.map((series, index) => {
