@@ -427,6 +427,17 @@ function createChatRouter({
     }
   });
 
+  router.post('/cancel', requireApiAuth, validateCSRFToken, chatApiLimiter, (req, res) => {
+    const planId = req.body?.plan_id;
+    if (typeof planId !== 'string') return res.status(400).json({ error: 'Invalid cancellation request' });
+    const plans = prunePlans(req);
+    if (!plans[planId]) {
+      return res.status(409).json({ error: 'This review already expired or was canceled.' });
+    }
+    delete plans[planId];
+    res.json({ result: { kind: 'plan_canceled' } });
+  });
+
   router.post('/team-rename/confirm', requireApiAuth, validateCSRFToken, teamRenameLimiter, async (req, res) => {
     const planId = req.body?.plan_id;
     if (typeof planId !== 'string') return res.status(400).json({ error: 'Invalid confirmation request' });
@@ -457,11 +468,17 @@ function createChatRouter({
     const plans = prunePlans(req);
     const plan = plans[planId];
     if (!plan) return res.status(409).json({ error: 'This preview expired or was already used. Preview the entries again.' });
+    const hasDateWarnings = plan.entries.some(entry => entry.date_warning);
+    if (hasDateWarnings && req.body?.date_warnings_confirmed !== true) {
+      return res.status(409).json({ error: 'Check the warned dates and confirm that they are correct before saving.' });
+    }
 
     // Consume before execution so retries cannot accidentally repeat a write.
     delete plans[planId];
     try {
-      const result = await service.commitPlan(req.session.userId, plan, mode);
+      const result = await service.commitPlan(req.session.userId, plan, mode, {
+        dateWarningsConfirmed: req.body?.date_warnings_confirmed === true
+      });
       res.json({ result: { kind: 'step_commit', ...result } });
     } catch (error) {
       console.error('Chat confirmation failed:', error.message);

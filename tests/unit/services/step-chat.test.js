@@ -124,6 +124,28 @@ describe('Step Chat deterministic write service', () => {
     });
   });
 
+  test('refuses to commit a warned batch until dates are explicitly confirmed', async () => {
+    const plan = await service.previewEntries(
+      1,
+      [{ date: '2025-08-20', count: 9000 }],
+      {
+        clientDate: '2025-08-20',
+        clientHour: 9,
+        clientTime: '9:00 AM',
+        clientTimezone: 'America/Los_Angeles'
+      }
+    );
+
+    await expect(service.commitPlan(1, plan, 'overwrite_conflicts')).rejects.toThrow(
+      'explicitly confirm the warned dates'
+    );
+    expect((await get(db, `SELECT count FROM steps WHERE user_id = 1 AND date = '2025-08-20'`)).count).toBe(5000);
+
+    const result = await service.commitPlan(1, plan, 'overwrite_conflicts', { dateWarningsConfirmed: true });
+    expect(result.saved).toBe(1);
+    expect((await get(db, `SELECT count FROM steps WHERE user_id = 1 AND date = '2025-08-20'`)).count).toBe(9000);
+  });
+
   test('new-only confirmation does not overwrite a conflict', async () => {
     const plan = await service.previewEntries(1, [
       { date: '2025-08-19', count: 4000 },

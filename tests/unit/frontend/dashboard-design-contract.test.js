@@ -54,6 +54,15 @@ describe('dashboard design contract', () => {
     expect(dashboard).not.toContain("max-height 0.3s");
   });
 
+  test('date warnings offer explicit save, correction, and cancel paths', () => {
+    expect(dashboard).toContain('function renderDateWarning(warning, date, rawSteps)');
+    expect(dashboard).toContain('Yes, save for ${formatCompactDate(date)}');
+    expect(dashboard).toContain('Use yesterday (${formatCompactDate(warning.suggested_date)})');
+    expect(dashboard).toContain("cancelButton.textContent = 'Cancel'");
+    expect(dashboard).toContain('pendingDateWarningConfirmation = null');
+    expect(dashboard).toContain('panel.remove()');
+  });
+
   test('chart renders the full challenge calendar with zero and future days plus benchmarks', () => {
     expect(dashboard).toContain('startDate = currentUser.current_challenge.start_date');
     expect(dashboard).toContain('endDate = currentUser.current_challenge.end_date');

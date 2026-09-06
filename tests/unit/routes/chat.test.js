@@ -251,12 +251,83 @@ describe('Step Chat routes', () => {
       .set('X-CSRF-Token', 'csrf-test')
       .send({ plan_id: planId, mode: 'new_only' })
       .expect(200);
-    expect(service.commitPlan).toHaveBeenCalledWith(42, expect.objectContaining({ entries: preview.entries }), 'new_only');
+    expect(service.commitPlan).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({ entries: preview.entries }),
+      'new_only',
+      { dateWarningsConfirmed: false }
+    );
 
     await agent.post('/api/chat/confirm')
       .set('X-CSRF-Token', 'csrf-test')
       .send({ plan_id: planId, mode: 'new_only' })
       .expect(409);
+  });
+
+  test('preserves a warned batch plan until explicit date acknowledgement is supplied', async () => {
+    const preview = {
+      kind: 'step_preview',
+      challengeId: 9,
+      entries: [{
+        date: '2026-08-20', count: 9000, existing_count: 5000, status: 'conflict',
+        date_warning: { code: 'early_local_today', message: 'Is this really today?' }
+      }],
+      summary: { new: 0, unchanged: 0, conflicts: 1 }
+    };
+    const { app, service } = buildApp({ serviceOverrides: { executeIntent: jest.fn(async () => preview) } });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const planned = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Log 9000 today' })
+      .expect(200);
+    const confirmation = { plan_id: planned.body.result.plan_id, mode: 'overwrite_conflicts' };
+
+    const blocked = await agent.post('/api/chat/confirm')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send(confirmation)
+      .expect(409);
+    expect(blocked.body.error).toMatch(/warned dates/i);
+    expect(service.commitPlan).not.toHaveBeenCalled();
+
+    await agent.post('/api/chat/confirm')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ ...confirmation, date_warnings_confirmed: true })
+      .expect(200);
+    expect(service.commitPlan).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({ entries: preview.entries }),
+      'overwrite_conflicts',
+      { dateWarningsConfirmed: true }
+    );
+  });
+
+  test('explicit cancellation revokes a preview without committing it', async () => {
+    const preview = {
+      kind: 'step_preview', challengeId: 9,
+      entries: [{ date: '2026-08-20', count: 8000, existing_count: null, status: 'new' }],
+      summary: { new: 1, unchanged: 0, conflicts: 0 }
+    };
+    const { app, service } = buildApp({ serviceOverrides: { executeIntent: jest.fn(async () => preview) } });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const planned = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Log 8000 on August 20' })
+      .expect(200);
+    const planId = planned.body.result.plan_id;
+
+    await agent.post('/api/chat/cancel')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ plan_id: planId })
+      .expect(200, { result: { kind: 'plan_canceled' } });
+    expect(service.commitPlan).not.toHaveBeenCalled();
+
+    await agent.post('/api/chat/confirm')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ plan_id: planId, mode: 'new_only' })
+      .expect(409);
+    expect(service.commitPlan).not.toHaveBeenCalled();
   });
 
   test('rejects missing CSRF and oversized messages', async () => {

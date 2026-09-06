@@ -194,6 +194,30 @@ button {
     font-size: 13px;
 }
 
+.chat-date-confirmation {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    color: var(--ink, #172033);
+    border: 1px solid rgba(180, 130, 0, .38);
+    border-radius: 9px;
+    background: rgba(255, 248, 214, .78);
+    font-size: 12px;
+    font-weight: 650;
+    line-height: 1.4;
+    cursor: pointer;
+}
+
+.chat-date-confirmation input {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: var(--primary-color);
+}
+
 .chat-actions {
     display: flex;
     flex-wrap: wrap;

@@ -855,6 +855,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 actions.appendChild(changeButton);
             }
 
+            const cancelButton = document.createElement('button');
+            cancelButton.type = 'button';
+            cancelButton.className = 'secondary';
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => {
+                pendingDateWarningConfirmation = null;
+                panel.remove();
+                document.getElementById('date').focus();
+            });
+            actions.appendChild(cancelButton);
+
             panel.appendChild(actions);
             messageDiv.appendChild(panel);
         }

@@ -377,9 +377,9 @@
         const summaryText = `${toneLead(tone, 'preview')} ${result.summary.new} new, ${result.summary.conflicts} conflict${result.summary.conflicts === 1 ? '' : 's'}, ${result.summary.unchanged} unchanged.`;
         const message = createMessage('assistant', summaryText);
         addList(message, result.entries.map(entry => {
-            if (entry.status === 'new') return `${entry.date}: ${formatNumber(entry.count)} — new`;
-            if (entry.status === 'unchanged') return `${entry.date}: ${formatNumber(entry.count)} — already matches`;
-            return `${entry.date}: ${formatNumber(entry.existing_count)} → ${formatNumber(entry.count)} — conflict`;
+            if (entry.status === 'new') return `${entry.date}: ${formatNumber(entry.count)} — will add a new entry`;
+            if (entry.status === 'unchanged') return `${entry.date}: ${formatNumber(entry.count)} — already matches; no change`;
+            return `${entry.date}: existing ${formatNumber(entry.existing_count)}; proposed ${formatNumber(entry.count)} — will replace only if you choose replace`;
         }));
 
         const warnedEntries = result.entries.filter(entry => entry.date_warning);
@@ -393,35 +393,63 @@
         if (!result.plan_id) return;
         const actions = document.createElement('div');
         actions.className = 'chat-actions';
+        const saveButtons = [];
+        let dateConfirmation = null;
+
+        const updateSaveButtons = () => {
+            const blocked = Boolean(dateConfirmation && !dateConfirmation.checked);
+            saveButtons.forEach(button => { button.disabled = blocked; });
+        };
+
+        if (warnedEntries.length > 0) {
+            const confirmation = document.createElement('label');
+            confirmation.className = 'chat-date-confirmation';
+            dateConfirmation = document.createElement('input');
+            dateConfirmation.type = 'checkbox';
+            dateConfirmation.addEventListener('change', updateSaveButtons);
+            const text = document.createElement('span');
+            text.textContent = `I checked ${warnedEntries.length === 1 ? 'this date' : `all ${warnedEntries.length} warned dates`} and the dates are correct.`;
+            confirmation.append(dateConfirmation, text);
+            message.appendChild(confirmation);
+        }
 
         const confirm = async mode => {
+            if (dateConfirmation && !dateConfirmation.checked) return;
             for (const button of actions.querySelectorAll('button')) button.disabled = true;
             try {
-                const data = await postJson('/api/chat/confirm', { plan_id: result.plan_id, mode });
-                createMessage('assistant', `Saved ${data.result.saved} entr${data.result.saved === 1 ? 'y' : 'ies'}${data.result.skipped ? `; skipped ${data.result.skipped}` : ''}.`);
+                const data = await postJson('/api/chat/confirm', {
+                    plan_id: result.plan_id,
+                    mode,
+                    date_warnings_confirmed: warnedEntries.length > 0 && dateConfirmation?.checked === true
+                });
+                createMessage('assistant', `Saved ${data.result.saved} entr${data.result.saved === 1 ? 'y' : 'ies'}${data.result.skipped ? `; left ${data.result.skipped} unchanged` : ''}.`);
                 actions.remove();
             } catch (error) {
                 createMessage('error', error.message);
                 for (const button of actions.querySelectorAll('button')) button.disabled = false;
+                updateSaveButtons();
             }
         };
 
+        const addSaveAction = (label, className, mode) => {
+            const button = actionButton(label, className, () => confirm(mode));
+            saveButtons.push(button);
+            actions.appendChild(button);
+        };
+        const datePrefix = warnedEntries.length ? 'Confirm dates & ' : '';
         if (result.summary.new > 0) {
-            actions.appendChild(actionButton(
-                result.summary.conflicts
-                    ? (warnedEntries.length ? 'Yes, save new only' : 'Save new only')
-                    : `${warnedEntries.length ? 'Yes, save' : 'Save'} ${result.summary.new} entr${result.summary.new === 1 ? 'y' : 'ies'}`,
-                'secondary',
-                () => confirm('new_only')
-            ));
+            const label = result.summary.conflicts > 0
+                ? `${datePrefix}add ${result.summary.new} new; keep ${result.summary.conflicts} existing`
+                : `${datePrefix}add ${result.summary.new} new entr${result.summary.new === 1 ? 'y' : 'ies'}`;
+            addSaveAction(label, 'secondary', 'new_only');
         }
         if (result.summary.conflicts > 0) {
-            actions.appendChild(actionButton(
-                `${warnedEntries.length ? 'Yes, overwrite' : 'Overwrite'} ${result.summary.conflicts} conflict${result.summary.conflicts === 1 ? '' : 's'}`,
-                '',
-                () => confirm('overwrite_conflicts')
-            ));
+            const label = result.summary.new > 0
+                ? `${datePrefix}add ${result.summary.new} new + replace ${result.summary.conflicts} existing`
+                : `${datePrefix}replace ${result.summary.conflicts} existing entr${result.summary.conflicts === 1 ? 'y' : 'ies'}`;
+            addSaveAction(label, '', 'overwrite_conflicts');
         }
+        updateSaveButtons();
 
         if (result.entries.length === 1 && warnedEntries.length === 1 && warnedEntries[0].date_warning.suggested_date) {
             const entry = warnedEntries[0];
@@ -440,10 +468,24 @@
                     } catch (error) {
                         createMessage('error', error.message);
                         for (const button of actions.querySelectorAll('button')) button.disabled = false;
+                        updateSaveButtons();
                     }
                 }
             ));
         }
+        actions.appendChild(actionButton('Cancel — save nothing', 'secondary', async () => {
+            for (const button of actions.querySelectorAll('button')) button.disabled = true;
+            try {
+                await postJson('/api/chat/cancel', { plan_id: result.plan_id });
+                if (dateConfirmation) dateConfirmation.disabled = true;
+                actions.remove();
+                createMessage('assistant', 'Canceled. No step entries were changed.');
+            } catch (error) {
+                createMessage('error', error.message);
+                for (const button of actions.querySelectorAll('button')) button.disabled = false;
+                updateSaveButtons();
+            }
+        }));
         message.appendChild(actions);
     }
 
@@ -464,9 +506,16 @@
             }
         });
         actions.appendChild(confirm);
-        actions.appendChild(actionButton('Cancel', 'secondary', () => {
-            actions.remove();
-            createMessage('assistant', 'Team name left unchanged.');
+        actions.appendChild(actionButton('Cancel', 'secondary', async () => {
+            for (const button of actions.querySelectorAll('button')) button.disabled = true;
+            try {
+                await postJson('/api/chat/cancel', { plan_id: result.plan_id });
+                actions.remove();
+                createMessage('assistant', 'Team name left unchanged.');
+            } catch (error) {
+                createMessage('error', error.message);
+                for (const button of actions.querySelectorAll('button')) button.disabled = false;
+            }
         }));
         message.appendChild(actions);
     }

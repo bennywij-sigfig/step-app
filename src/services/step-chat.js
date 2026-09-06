@@ -238,9 +238,13 @@ function createStepChatService({
     }
   }
 
-  async function commitPlan(userId, plan, mode) {
+  async function commitPlan(userId, plan, mode, options = {}) {
     if (!['new_only', 'overwrite_conflicts'].includes(mode)) throw userError('Invalid confirmation mode');
     if (!plan || !Array.isArray(plan.entries) || plan.entries.length === 0) throw userError('Invalid step plan');
+    const warnedEntries = plan.entries.filter(entry => entry.date_warning);
+    if (warnedEntries.length > 0 && options.dateWarningsConfirmed !== true) {
+      throw userError('Review and explicitly confirm the warned dates before saving');
+    }
 
     const user = await get('SELECT archived_at FROM users WHERE id = ?', [userId]);
     if (!user || user.archived_at) throw userError('This account cannot record steps');
