@@ -60,6 +60,22 @@
         }, 1000);
     }
 
+    function restoreSectionAnchor() {
+        if (!window.location.hash) return;
+        let target;
+        try {
+            target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+        } catch (_) {
+            return;
+        }
+        if (!target || !byId('championsExperience').contains(target)) return;
+        // The archive is hidden until its API response arrives, so the browser's
+        // initial hash jump occurs before these sections have a layout position.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            target.scrollIntoView({ block: 'start', behavior: 'auto' });
+        }));
+    }
+
     function prepareJourneyAnimation(routePercent) {
         const globe = byId('routeGraphic');
         const canvas = byId('journeyGlobeCanvas');
@@ -638,6 +654,7 @@
         byId('championsLoading').hidden = true;
         byId('championsError').hidden = true;
         byId('championsExperience').hidden = false;
+        restoreSectionAnchor();
         prepareJourneyAnimation(routePercent);
     }
 

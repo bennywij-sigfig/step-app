@@ -126,6 +126,42 @@ h1 {
 .year { padding: 9px 15px; font: inherit; font-size: 12px; font-weight: 800; }
 .year.future { padding: 9px 11px; color: #837c91; border-color: rgba(255,255,255,.1); background: transparent; font-size: 11px; }
 
+.champions-sections {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: -36px 0 70px;
+    padding: 14px 0;
+    border-block: 1px solid rgba(247, 200, 93, .14);
+    overflow-x: auto;
+    scrollbar-width: thin;
+}
+.champions-sections span {
+    flex: 0 0 auto;
+    margin-right: 5px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+}
+.champions-sections a {
+    flex: 0 0 auto;
+    padding: 7px 10px;
+    color: var(--ivory);
+    border: 1px solid rgba(247, 200, 93, .18);
+    border-radius: 999px;
+    background: rgba(255,255,255,.025);
+    font-size: 12px;
+    font-weight: 650;
+    text-decoration: none;
+}
+.champions-sections a:hover,
+.champions-sections a:focus-visible { color: var(--night); border-color: var(--gold); background: var(--gold); }
+section[id],
+.section-anchor-target { scroll-margin-top: 24px; }
+.section-anchor-target { display: block; height: 0; }
+
 .wireframe-stage {
     position: relative;
     min-width: 0;

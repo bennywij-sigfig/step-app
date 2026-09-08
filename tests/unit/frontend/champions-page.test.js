@@ -93,6 +93,23 @@ describe('Champions Pantheon frontend', () => {
     expect(script).toContain('if (reduceMotion) return;');
   });
 
+  test('provides stable direct links to every archive section', () => {
+    const anchors = [
+      'pantheon', 'champions', 'team-podium', 'individual-podium', 'race', 'analytics',
+      'club-200k', 'grand-total', 'journey', 'notable-stats', 'final-results',
+      'honors-2026', 'countdown-2026'
+    ];
+    for (const anchor of anchors) {
+      expect(page).toContain(`href="#${anchor}"`);
+      expect(page).toContain(`id="${anchor}"`);
+    }
+    expect(page).toContain('aria-label="Jump to a champions section"');
+    expect(script).toContain('function restoreSectionAnchor()');
+    expect(script).toContain("target.scrollIntoView({ block: 'start', behavior: 'auto' })");
+    expect(styles).toContain('.champions-sections');
+    expect(styles).toContain('.section-anchor-target');
+  });
+
   test('links to the excessive analytics lab without an off-canvas navigation link', () => {
     expect(page).toContain('href="/champions/analytics"');
     expect(page).toContain('The Department of Excessive Step Analytics');

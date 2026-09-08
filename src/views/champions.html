@@ -16,7 +16,7 @@
     </header>
 
     <main id="championsContent">
-        <section class="hero" aria-labelledby="pantheonTitle">
+        <section class="hero" id="pantheon" aria-labelledby="pantheonTitle">
             <div class="hero-copy">
                 <p class="eyebrow">THE IMMORTALS WALK AMONG US</p>
                 <h1 id="pantheonTitle">The Pantheon</h1>
@@ -38,6 +38,23 @@
             </div>
         </section>
 
+        <nav class="champions-sections" aria-label="Jump to a champions section">
+            <span>Explore the archive</span>
+            <a href="#pantheon">Overview</a>
+            <a href="#champions">Champions</a>
+            <a href="#team-podium">Team podium</a>
+            <a href="#individual-podium">Individual podium</a>
+            <a href="#race">The race</a>
+            <a href="#analytics">Analytics</a>
+            <a href="#club-200k">Club 200K</a>
+            <a href="#grand-total">Grand total</a>
+            <a href="#journey">The journey</a>
+            <a href="#notable-stats">Notable stats</a>
+            <a href="#final-results">Final results</a>
+            <a href="#honors-2026">2026 honors</a>
+            <a href="#countdown-2026">Countdown</a>
+        </nav>
+
         <div id="championsLoading" class="loading-oracle" role="status">
             <span class="laurel">☙</span> Consulting the sacred archive… <span class="laurel">❧</span>
         </div>
@@ -48,7 +65,7 @@
         </div>
 
         <div id="championsExperience" hidden>
-            <section class="awards-section" aria-labelledby="awardsTitle">
+            <section class="awards-section" id="champions" aria-labelledby="awardsTitle">
                 <div class="section-heading">
                     <p class="eyebrow">CROWNED IN 2025</p>
                     <h2 id="awardsTitle">The highest step of the podium</h2>
@@ -59,7 +76,7 @@
                 </div>
             </section>
 
-            <section class="podium-section" aria-labelledby="teamPodiumTitle">
+            <section class="podium-section" id="team-podium" aria-labelledby="teamPodiumTitle">
                 <div class="section-heading">
                     <p class="eyebrow">LEGIONS OF LEGEND</p>
                     <h2 id="teamPodiumTitle">Team podium</h2>
@@ -68,7 +85,7 @@
                 <div id="teamPodium" class="podium-list"></div>
             </section>
 
-            <section class="podium-section" aria-labelledby="individualPodiumTitle">
+            <section class="podium-section" id="individual-podium" aria-labelledby="individualPodiumTitle">
                 <div class="section-heading">
                     <p class="eyebrow">MORTALS, ALLEGEDLY</p>
                     <h2 id="individualPodiumTitle">Individual podium</h2>
@@ -76,6 +93,7 @@
                 <div id="individualPodium" class="individual-podium"></div>
             </section>
 
+            <span id="race" class="section-anchor-target" aria-hidden="true"></span>
             <section class="race-oracle" id="raceOracle" aria-labelledby="raceOracleTitle">
                 <div class="race-oracle-heading">
                     <div>
@@ -116,7 +134,7 @@
                 <p class="race-footnote" id="raceFootnote">The brightest trajectories are named below. Time itself is draggable, more or less.</p>
             </section>
 
-            <section class="analytics-portal" aria-labelledby="analyticsPortalTitle">
+            <section class="analytics-portal" id="analytics" aria-labelledby="analyticsPortalTitle">
                 <div>
                     <p class="eyebrow">THE DATA HAS BECOME SELF-AWARE</p>
                     <h2 id="analyticsPortalTitle">The Department of Excessive Step Analytics</h2>
@@ -125,7 +143,7 @@
                 <a href="/champions/analytics">Open the forbidden spreadsheets <span aria-hidden="true">→</span></a>
             </section>
 
-            <section class="club-200k" aria-labelledby="club200KTitle">
+            <section class="club-200k" id="club-200k" aria-labelledby="club200KTitle">
                 <div class="club-200k-header">
                     <div class="club-200k-mark" aria-hidden="true">
                         <span>CLUB</span>
@@ -142,13 +160,13 @@
                 <div id="club200KMembers" class="club-200k-members" aria-label="2025 Club 200K members"></div>
             </section>
 
-            <section class="steps-reveal" aria-labelledby="totalStepsTitle">
+            <section class="steps-reveal" id="grand-total" aria-labelledby="totalStepsTitle">
                 <p class="eyebrow">THE GRAND TOTAL</p>
                 <h2 id="totalStepsTitle"><span id="totalSteps">—</span> steps</h2>
                 <p id="totalStepsSummary"></p>
             </section>
 
-            <section class="journey-section" aria-labelledby="journeyTitle">
+            <section class="journey-section" id="journey" aria-labelledby="journeyTitle">
                 <div class="section-heading">
                     <p class="eyebrow">ONE VERY LONG WALK</p>
                     <h2 id="journeyTitle">Delhi → Singapore → San Francisco</h2>
@@ -226,9 +244,10 @@
                 </details>
             </section>
 
+            <span id="notable-stats" class="section-anchor-target" aria-hidden="true"></span>
             <section class="stat-plaque-grid" id="supportingStats" aria-label="Notable championship statistics"></section>
 
-            <section class="standings-section" aria-labelledby="finalStandingsTitle">
+            <section class="standings-section" id="final-results" aria-labelledby="finalStandingsTitle">
                 <div class="section-heading">
                     <p class="eyebrow">THE FINAL TABLETS</p>
                     <h2 id="finalStandingsTitle">Final results</h2>
@@ -255,7 +274,7 @@
                 </details>
             </section>
 
-            <section class="next-year" aria-labelledby="nextYearTitle">
+            <section class="next-year" id="honors-2026" aria-labelledby="nextYearTitle">
                 <p class="eyebrow">THE ORACLE FORETELLS</p>
                 <h2 id="nextYearTitle">More honors await in 2026</h2>
                 <div class="future-awards">
@@ -267,6 +286,7 @@
                 <p>The velvet rope opens again in 2026: reach 200,000 steps with 100% reporting to claim a place. The other tablets awaken after the challenge closes.</p>
             </section>
 
+            <span id="countdown-2026" class="section-anchor-target" aria-hidden="true"></span>
             <section class="challenge-countdown" id="challengeCountdown" aria-labelledby="countdownTitle">
                 <div class="countdown-sigil" aria-hidden="true"><span>ⅩⅤ</span></div>
                 <p class="eyebrow" id="countdownKicker">THE LAST MILE APPROACHES</p>
