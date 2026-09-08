@@ -579,7 +579,9 @@ app.use('/api/v1', createRestApiRouter({
   tokenService: apiTokenService,
   preAuthLimiter: apiPreAuthLimiter,
   tokenLimiter: apiTokenLimiter,
-  createTransactionConnection
+  createTransactionConnection,
+  getIndividualLeaderboard: getIndividualLeaderboardWithRates,
+  getTeamLeaderboard: getTeamLeaderboardWithRates
 }));
 app.use('/api/admin/api-tokens', createApiTokenAdminRouter({
   requireApiAdmin,

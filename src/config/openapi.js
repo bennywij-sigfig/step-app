@@ -2,9 +2,9 @@ const openApiDocument = {
   openapi: '3.0.3',
   info: {
     title: 'Step Challenge REST API',
-    version: '1.0.0',
+    version: '1.1.0',
     license: { name: 'ISC', url: 'https://opensource.org/license/isc-license-txt' },
-    description: 'A scoped, user-isolated API for reading profiles and creating, reading, or explicitly replacing daily step entries.'
+    description: 'A scoped API for participant-visible leaderboards, token-owner profiles, and creating, reading, or explicitly replacing the token owner’s daily step entries.'
   },
   servers: [
     {
@@ -14,6 +14,7 @@ const openApiDocument = {
   ],
   tags: [
     { name: 'Profile', description: 'The API token owner and active challenge.' },
+    { name: 'Leaderboards', description: 'Active-challenge standings visible to challenge participants.' },
     { name: 'Steps', description: 'Daily step entries belonging to the API token owner.' }
   ],
   security: [{ bearerAuth: [] }],
@@ -33,6 +34,50 @@ const openApiDocument = {
           200: {
             description: 'Profile and active challenge.',
             content: { 'application/json': { schema: { $ref: '#/components/schemas/ProfileResponse' } } }
+          },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          500: { $ref: '#/components/responses/ServerError' }
+        }
+      }
+    },
+    '/leaderboards/individual': {
+      get: {
+        tags: ['Leaderboards'],
+        summary: 'Get individual standings',
+        description: 'Returns active-challenge individual standings separated into officially ranked and unranked participants. It never returns participant email addresses or daily step records.',
+        operationId: 'getIndividualLeaderboard',
+        'x-required-scope': 'leaderboard:read',
+        'x-codeSamples': [{
+          lang: 'Shell',
+          source: 'curl -H "Authorization: Bearer $STEP_API_TOKEN" \\\n  https://step-app-4x-yhw.fly.dev/api/v1/leaderboards/individual'
+        }],
+        responses: {
+          200: {
+            description: 'Individual standings, or empty arrays when there is no active challenge.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/IndividualLeaderboardResponse' } } }
+          },
+          401: { $ref: '#/components/responses/Unauthorized' },
+          403: { $ref: '#/components/responses/Forbidden' },
+          500: { $ref: '#/components/responses/ServerError' }
+        }
+      }
+    },
+    '/leaderboards/team': {
+      get: {
+        tags: ['Leaderboards'],
+        summary: 'Get team standings',
+        description: 'Returns active-challenge aggregate team standings separated into officially ranked and unranked teams.',
+        operationId: 'getTeamLeaderboard',
+        'x-required-scope': 'leaderboard:read',
+        'x-codeSamples': [{
+          lang: 'Shell',
+          source: 'curl -H "Authorization: Bearer $STEP_API_TOKEN" \\\n  https://step-app-4x-yhw.fly.dev/api/v1/leaderboards/team'
+        }],
+        responses: {
+          200: {
+            description: 'Team standings, or empty arrays when there is no active challenge.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/TeamLeaderboardResponse' } } }
           },
           401: { $ref: '#/components/responses/Unauthorized' },
           403: { $ref: '#/components/responses/Forbidden' },
@@ -239,6 +284,69 @@ const openApiDocument = {
         required: ['entries'],
         properties: {
           entries: { type: 'array', maxItems: 1000, items: { $ref: '#/components/schemas/StepEntry' } }
+        }
+      },
+      LeaderboardChallenge: {
+        allOf: [
+          { $ref: '#/components/schemas/Challenge' },
+          {
+            type: 'object',
+            required: ['status', 'current_day', 'total_days', 'remaining_days'],
+            properties: {
+              status: { type: 'string', enum: ['upcoming', 'active', 'ended'], example: 'active' },
+              current_day: { type: 'integer', minimum: 0, example: 8 },
+              total_days: { type: 'integer', minimum: 1, example: 15 },
+              remaining_days: { type: 'integer', minimum: 0, example: 8 }
+            }
+          }
+        ]
+      },
+      IndividualStanding: {
+        type: 'object',
+        required: ['position', 'ranked', 'participant_id', 'name', 'team', 'total_steps', 'days_logged', 'steps_per_day_reported', 'reporting_rate'],
+        properties: {
+          position: { type: 'integer', minimum: 1, description: 'Position within the ranked or unranked array.' },
+          ranked: { type: 'boolean' },
+          participant_id: { type: 'integer' },
+          name: { type: 'string' },
+          team: { type: 'string', nullable: true },
+          total_steps: { type: 'integer', minimum: 0 },
+          days_logged: { type: 'integer', minimum: 0 },
+          steps_per_day_reported: { type: 'number', minimum: 0 },
+          reporting_rate: { type: 'number', minimum: 0, description: 'May temporarily exceed 100 during supported-region date overlap.' }
+        }
+      },
+      TeamStanding: {
+        type: 'object',
+        required: ['position', 'ranked', 'team_id', 'name', 'member_count', 'total_steps', 'entries_logged', 'steps_per_day_reported', 'reporting_rate'],
+        properties: {
+          position: { type: 'integer', minimum: 1, description: 'Position within the ranked or unranked array.' },
+          ranked: { type: 'boolean' },
+          team_id: { type: 'integer' },
+          name: { type: 'string' },
+          member_count: { type: 'integer', minimum: 0 },
+          total_steps: { type: 'integer', minimum: 0 },
+          entries_logged: { type: 'integer', minimum: 0 },
+          steps_per_day_reported: { type: 'number', minimum: 0 },
+          reporting_rate: { type: 'number', minimum: 0, description: 'May temporarily exceed 100 during supported-region date overlap.' }
+        }
+      },
+      IndividualLeaderboardResponse: {
+        type: 'object',
+        required: ['challenge', 'ranked', 'unranked'],
+        properties: {
+          challenge: { type: 'object', allOf: [{ $ref: '#/components/schemas/LeaderboardChallenge' }], nullable: true },
+          ranked: { type: 'array', items: { $ref: '#/components/schemas/IndividualStanding' } },
+          unranked: { type: 'array', items: { $ref: '#/components/schemas/IndividualStanding' } }
+        }
+      },
+      TeamLeaderboardResponse: {
+        type: 'object',
+        required: ['challenge', 'ranked', 'unranked'],
+        properties: {
+          challenge: { type: 'object', allOf: [{ $ref: '#/components/schemas/LeaderboardChallenge' }], nullable: true },
+          ranked: { type: 'array', items: { $ref: '#/components/schemas/TeamStanding' } },
+          unranked: { type: 'array', items: { $ref: '#/components/schemas/TeamStanding' } }
         }
       },
       CreateStepInput: {

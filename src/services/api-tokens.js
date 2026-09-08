@@ -3,8 +3,9 @@ const { hashToken } = require('../utils/token');
 
 const API_TOKEN_PREFIX = 'step_';
 const API_TOKEN_PATTERN = /^step_[A-Za-z0-9_-]{43}$/;
-const ALLOWED_API_SCOPES = new Set(['profile:read', 'steps:read', 'steps:write']);
-const READ_ONLY_SCOPES = ['profile:read', 'steps:read'];
+const ALLOWED_API_SCOPES = new Set(['profile:read', 'steps:read', 'leaderboard:read', 'steps:write']);
+const PERSONAL_READ_SCOPES = ['profile:read', 'steps:read'];
+const READ_ONLY_SCOPES = [...PERSONAL_READ_SCOPES, 'leaderboard:read'];
 const READ_WRITE_SCOPES = [...READ_ONLY_SCOPES, 'steps:write'];
 
 function generateApiToken() {
@@ -32,7 +33,7 @@ function normalizeScopes(value) {
     .filter(Boolean)
     .sort();
   if (!normalized.length || normalized.some(scope => !ALLOWED_API_SCOPES.has(scope))) {
-    throw new Error('Scopes must contain only profile:read, steps:read, and steps:write');
+    throw new Error('Scopes must contain only profile:read, steps:read, leaderboard:read, and steps:write');
   }
   return normalized;
 }
@@ -151,6 +152,7 @@ function createApiTokenService({ db }) {
 module.exports = {
   ALLOWED_API_SCOPES,
   API_TOKEN_PATTERN,
+  PERSONAL_READ_SCOPES,
   READ_ONLY_SCOPES,
   READ_WRITE_SCOPES,
   apiTokenPrefix,

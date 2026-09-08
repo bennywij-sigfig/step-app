@@ -1226,8 +1226,9 @@
                     <div style="flex: 0 0 140px;">
                         <label style="display: block; margin-bottom: 8px; font-weight: 500; color: #555;">Access</label>
                         <select id="newTokenAccess" style="width: 100%; padding: 12px; border: 2px solid rgba(102, 126, 234, 0.1); border-radius: 10px; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); font-size: 14px; transition: all 0.3s ease;">
-                            <option value="read_write">Read + Write</option>
-                            <option value="read_only">Read Only</option>
+                            <option value="personal_read">Personal Read Only</option>
+                            <option value="read_only">Read + Leaderboards</option>
+                            <option value="read_write">Read + Write + Leaderboards</option>
                         </select>
                     </div>
                     <div style="flex: 0 0 120px;">
@@ -1244,7 +1245,7 @@
             </div>
             
             <div style="background: rgba(52, 144, 220, 0.1); backdrop-filter: blur(10px); padding: 12px; border-radius: 8px; font-size: 14px; color: #1976d2; border: 1px solid rgba(52, 144, 220, 0.2);">
-                <strong>Security Note:</strong> Send tokens only as <code>Authorization: Bearer …</code>. Read/write access can create entries; replacing an existing date requires an explicit <code>PUT</code>. Tokens can be revoked at any time.
+                <strong>Security Note:</strong> Send tokens only as <code>Authorization: Bearer …</code>. Leaderboard options include participant-visible active-challenge standings; Personal Read Only does not. Write access can create entries; replacing an existing date requires an explicit <code>PUT</code>. Tokens can be revoked at any time.
             </div>
         </div>
         

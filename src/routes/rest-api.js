@@ -1,7 +1,13 @@
 const express = require('express');
 const { extractBearerToken } = require('../services/api-tokens');
 const { isValidDate } = require('../utils/validation');
-const { getLatestSupportedLocalDate, isDateInChallengePeriod } = require('../utils/challenge');
+const {
+  getCurrentChallengeDay,
+  getChallengeStatus,
+  getTotalChallengeDays,
+  getLatestSupportedLocalDate,
+  isDateInChallengePeriod
+} = require('../utils/challenge');
 
 class RestApiError extends Error {
   constructor(status, message, details = null) {
@@ -11,7 +17,15 @@ class RestApiError extends Error {
   }
 }
 
-function createRestApiRouter({ db, tokenService, preAuthLimiter, tokenLimiter, createTransactionConnection }) {
+function createRestApiRouter({
+  db,
+  tokenService,
+  preAuthLimiter,
+  tokenLimiter,
+  createTransactionConnection,
+  getIndividualLeaderboard,
+  getTeamLeaderboard
+}) {
   const router = express.Router();
   const getFrom = (connection, sql, params = []) => new Promise((resolve, reject) => {
     connection.get(sql, params, (error, row) => error ? reject(error) : resolve(row));
@@ -126,6 +140,79 @@ function createRestApiRouter({ db, tokenService, preAuthLimiter, tokenLimiter, c
       res.status(500).json({ error: 'Unable to load profile' });
     }
   });
+
+  function summarizeChallenge(challenge, currentDay, now) {
+    const totalDays = getTotalChallengeDays(challenge);
+    const status = getChallengeStatus(challenge, now);
+    if (status === 'invalid' || totalDays === 0) throw new Error('Active challenge dates are invalid');
+    return {
+      id: challenge.id,
+      name: challenge.name,
+      start_date: challenge.start_date,
+      end_date: challenge.end_date,
+      reporting_threshold: challenge.reporting_threshold,
+      status,
+      current_day: currentDay,
+      total_days: totalDays,
+      remaining_days: status === 'upcoming' ? totalDays : status === 'active' ? totalDays - currentDay + 1 : 0
+    };
+  }
+
+  const individualFields = (row, position, ranked) => ({
+    position,
+    ranked,
+    participant_id: row.id,
+    name: row.name,
+    team: row.team || null,
+    total_steps: Number(row.total_steps) || 0,
+    days_logged: Number(row.days_logged) || 0,
+    steps_per_day_reported: Number(row.steps_per_day_reported) || 0,
+    reporting_rate: Number(row.personal_reporting_rate) || 0
+  });
+
+  const teamFields = (row, position, ranked) => ({
+    position,
+    ranked,
+    team_id: row.team_id,
+    name: row.team,
+    member_count: Number(row.member_count) || 0,
+    total_steps: Number(row.total_steps) || 0,
+    entries_logged: Number(row.team_entries) || 0,
+    steps_per_day_reported: Number(row.team_steps_per_day_reported) || 0,
+    reporting_rate: Number(row.team_reporting_rate) || 0
+  });
+
+  async function loadLeaderboard(req, res, type) {
+    req.apiAction = `leaderboard.${type}.read`;
+    try {
+      const challenge = await getFrom(db, `SELECT id, name, start_date, end_date, reporting_threshold
+        FROM challenges WHERE is_active = 1 LIMIT 1`);
+      if (!challenge) {
+        req.apiAuditDetails = { challenge_id: null, ranked: 0, unranked: 0 };
+        return res.json({ challenge: null, ranked: [], unranked: [] });
+      }
+      const now = new Date();
+      const currentDay = getCurrentChallengeDay(challenge, now);
+      const challengeSummary = summarizeChallenge(challenge, currentDay, now);
+      const loader = type === 'individual' ? getIndividualLeaderboard : getTeamLeaderboard;
+      if (typeof loader !== 'function') throw new Error('Leaderboard service unavailable');
+      const standings = await loader(challenge.id, currentDay, challenge.reporting_threshold, db);
+      const mapFields = type === 'individual' ? individualFields : teamFields;
+      const ranked = standings.ranked.map((row, index) => mapFields(row, index + 1, true));
+      const unranked = standings.unranked.map((row, index) => mapFields(row, index + 1, false));
+      req.apiAuditDetails = { challenge_id: challenge.id, ranked: ranked.length, unranked: unranked.length };
+      return res.json({ challenge: challengeSummary, ranked, unranked });
+    } catch (error) {
+      console.error(`REST ${type} leaderboard read failed:`, error.message);
+      return res.status(500).json({ error: `Unable to load ${type} leaderboard` });
+    }
+  }
+
+  router.get('/leaderboards/individual', requireScope('leaderboard:read'), (req, res) =>
+    loadLeaderboard(req, res, 'individual'));
+
+  router.get('/leaderboards/team', requireScope('leaderboard:read'), (req, res) =>
+    loadLeaderboard(req, res, 'team'));
 
   router.get('/steps', requireScope('steps:read'), async (req, res) => {
     req.apiAction = 'steps.read';

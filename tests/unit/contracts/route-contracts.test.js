@@ -83,6 +83,8 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.rest).toBeDefined();
       expect(ROUTES.rest.profile).toBe('/api/v1/me');
       expect(ROUTES.rest.steps).toBe('/api/v1/steps');
+      expect(ROUTES.rest.individualLeaderboard).toBe('/api/v1/leaderboards/individual');
+      expect(ROUTES.rest.teamLeaderboard).toBe('/api/v1/leaderboards/team');
     });
   });
 

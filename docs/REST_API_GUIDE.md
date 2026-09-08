@@ -24,6 +24,26 @@ curl -H "Authorization: Bearer $STEP_API_TOKEN" \
 
 Requires `profile:read`.
 
+## Leaderboards
+
+Tokens created with **Read + Leaderboards** or **Read + Write + Leaderboards** include `leaderboard:read`. **Personal Read Only** tokens do not. Existing tokens must be reissued to gain this scope.
+
+Individual standings:
+
+```bash
+curl -H "Authorization: Bearer $STEP_API_TOKEN" \
+  https://step-app-4x-yhw.fly.dev/api/v1/leaderboards/individual
+```
+
+Team standings:
+
+```bash
+curl -H "Authorization: Bearer $STEP_API_TOKEN" \
+  https://step-app-4x-yhw.fly.dev/api/v1/leaderboards/team
+```
+
+Both endpoints return only the active challenge. Officially ranked and unranked standings are separate arrays. Individual results include display names, team names, totals, logged-day counts, reported-day averages, and reporting rates, but never email addresses or another participant’s daily records.
+
 ## Step history
 
 ```bash

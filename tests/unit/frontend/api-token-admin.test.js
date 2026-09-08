@@ -11,6 +11,8 @@ describe('REST API token admin UI', () => {
     expect(html).toContain('REST API Token Management');
     expect(js).toContain("fetch('/api/admin/api-tokens')");
     expect(js).toContain("fetch('/api/admin/api-tokens/audit/recent?limit=50')");
+    expect(html).toContain('<option value="personal_read">Personal Read Only</option>');
+    expect(html).toContain('Personal Read Only does not.');
   });
 
   test('treats raw tokens as create-response-only values', () => {

@@ -10,6 +10,8 @@ All endpoints require `Authorization: Bearer <token>` and return JSON.
 
 - `GET /api/v1/me` — authenticated profile, team, and active challenge (`profile:read`)
 - `GET /api/v1/steps?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` — own step history (`steps:read`)
+- `GET /api/v1/leaderboards/individual` — active-challenge individual standings without emails or other users’ daily records (`leaderboard:read`)
+- `GET /api/v1/leaderboards/team` — active-challenge aggregate team standings (`leaderboard:read`)
 - `POST /api/v1/steps` — create a new own-step entry; returns `409` if the date exists (`steps:write`)
 - `PUT /api/v1/steps/:date` — explicitly replace an existing own-step entry; returns `404` if absent (`steps:write`)
 

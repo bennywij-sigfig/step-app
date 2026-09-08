@@ -286,7 +286,7 @@ describe('normalized live teams preserve current and historical behavior', () =>
     const apiToken = `step_${'a'.repeat(43)}`;
     await run(db, `INSERT INTO api_tokens
       (token_hash, token_prefix, user_id, name, scopes, expires_at)
-      VALUES (?, 'step_aaaaaaaa…', 1, 'Contract token', 'profile:read', '2030-01-01T00:00:00Z')`,
+      VALUES (?, 'step_aaaaaaaa…', 1, 'Contract token', 'leaderboard:read,profile:read', '2030-01-01T00:00:00Z')`,
     [crypto.createHash('sha256').update(apiToken).digest('hex')]);
     const apiProfile = await agent.get('/api/v1/me')
       .set('Authorization', `Bearer ${apiToken}`)
@@ -294,6 +294,32 @@ describe('normalized live teams preserve current and historical behavior', () =>
     expect(apiProfile.body.user).toMatchObject({
       email: 'admin@example.com', name: 'Admin Walker', team: 'Current Blue'
     });
+
+    const apiIndividuals = await agent.get('/api/v1/leaderboards/individual')
+      .set('Authorization', `Bearer ${apiToken}`)
+      .expect(200);
+    expect(apiIndividuals.body.ranked).toEqual([]);
+    expect(apiIndividuals.body.unranked.map(row => ({
+      name: row.name, team: row.team, total_steps: row.total_steps,
+      days_logged: row.days_logged, steps_per_day_reported: row.steps_per_day_reported
+    }))).toEqual([
+      { name: 'Admin Walker', team: 'Current Blue', total_steps: 36000, days_logged: 3, steps_per_day_reported: 12000 },
+      { name: 'Green Walker', team: 'Current Green', total_steps: 33000, days_logged: 3, steps_per_day_reported: 11000 }
+    ]);
+    expect(JSON.stringify(apiIndividuals.body)).not.toMatch(/admin@example\.com|meets_threshold|avg_steps_per_day/);
+
+    const apiTeams = await agent.get('/api/v1/leaderboards/team')
+      .set('Authorization', `Bearer ${apiToken}`)
+      .expect(200);
+    expect(apiTeams.body.ranked).toEqual([]);
+    expect(apiTeams.body.unranked.map(row => ({
+      name: row.name, member_count: row.member_count, total_steps: row.total_steps,
+      entries_logged: row.entries_logged, steps_per_day_reported: row.steps_per_day_reported
+    }))).toEqual([
+      { name: 'Current Blue', member_count: 2, total_steps: 36000, entries_logged: 3, steps_per_day_reported: 12000 },
+      { name: 'Current Green', member_count: 1, total_steps: 33000, entries_logged: 3, steps_per_day_reported: 11000 }
+    ]);
+    expect(JSON.stringify(apiTeams.body)).not.toMatch(/internal_note|meets_threshold|avg_steps_per_entry/);
 
     const snapshot = await agent.get('/api/admin/challenges/1/team-snapshot').expect(200);
     expect(snapshot.body.teams).toEqual([{ team_name: 'Historic Blue' }, { team_name: 'Historic Green' }]);

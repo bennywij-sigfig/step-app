@@ -86,6 +86,8 @@ describe('Production Smoke Tests', () => {
       if (!isProduction) return;
       await request(baseUrl).get('/api/v1/me').expect(401);
       await request(baseUrl).get('/api/v1/steps').expect(401);
+      await request(baseUrl).get('/api/v1/leaderboards/individual').expect(401);
+      await request(baseUrl).get('/api/v1/leaderboards/team').expect(401);
     });
 
     test('should no longer expose retired MCP routes', async () => {

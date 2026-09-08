@@ -46,7 +46,9 @@ const ROUTES = {
   // Bearer-token REST API
   rest: {
     profile: '/api/v1/me',
-    steps: '/api/v1/steps'
+    steps: '/api/v1/steps',
+    individualLeaderboard: '/api/v1/leaderboards/individual',
+    teamLeaderboard: '/api/v1/leaderboards/team'
   },
 
   // Authenticated API documentation

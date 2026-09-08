@@ -46,10 +46,32 @@ describe('versioned bearer-token REST API', () => {
     readToken = await tokenService.createToken({ userId: 1, name: 'Read token', scopes: READ_ONLY_SCOPES, expiresDays: 30 });
     const createTransactionConnection = () => open(file);
     const pass = (req, res, next) => next();
+    const getIndividualLeaderboard = jest.fn(async () => ({
+      ranked: [{
+        id: 2, name: 'Two', team: null, total_steps: 9999, days_logged: 1,
+        steps_per_day_reported: 9999, personal_reporting_rate: 100,
+        email: 'must-not-leak@example.com', meets_threshold: 1
+      }],
+      unranked: [{
+        id: 1, name: 'One', team: 'Blue', total_steps: 5000, days_logged: 1,
+        steps_per_day_reported: 5000, personal_reporting_rate: 50, meets_threshold: 0
+      }]
+    }));
+    const getTeamLeaderboard = jest.fn(async () => ({
+      ranked: [{
+        team_id: 1, team: 'Blue', member_count: 1, total_steps: 5000,
+        team_entries: 1, team_steps_per_day_reported: 5000,
+        team_reporting_rate: 100, internal_note: 'must-not-leak'
+      }],
+      unranked: []
+    }));
 
     app = express();
     app.use(express.json());
-    app.use('/api/v1', createRestApiRouter({ db, tokenService, preAuthLimiter: pass, tokenLimiter: pass, createTransactionConnection }));
+    app.use('/api/v1', createRestApiRouter({
+      db, tokenService, preAuthLimiter: pass, tokenLimiter: pass, createTransactionConnection,
+      getIndividualLeaderboard, getTeamLeaderboard
+    }));
     app.use('/api/admin/api-tokens', createApiTokenAdminRouter({
       requireApiAdmin: pass,
       validateCSRFToken: (req, res, next) => req.get('X-CSRF-Token') === 'test' ? next() : res.status(403).json({ error: 'Invalid CSRF token' }),
@@ -93,12 +115,67 @@ describe('versioned bearer-token REST API', () => {
     expect(JSON.stringify(steps.body)).not.toContain('9999');
   });
 
+  test('returns scoped active-challenge leaderboards without private or internal fields', async () => {
+    const individual = await request(app).get('/api/v1/leaderboards/individual')
+      .set(bearer(readToken.token)).expect(200);
+    expect(individual.headers['cache-control']).toBe('no-store');
+    expect(individual.body.challenge).toMatchObject({
+      id: 7, name: 'Current', status: 'active', reporting_threshold: 70,
+      current_day: expect.any(Number), total_days: expect.any(Number), remaining_days: expect.any(Number)
+    });
+    expect(individual.body.ranked).toEqual([{
+      position: 1, ranked: true, participant_id: 2, name: 'Two', team: null,
+      total_steps: 9999, days_logged: 1, steps_per_day_reported: 9999, reporting_rate: 100
+    }]);
+    expect(individual.body.unranked[0]).toMatchObject({
+      position: 1, ranked: false, participant_id: 1, name: 'One'
+    });
+    expect(JSON.stringify(individual.body)).not.toMatch(/must-not-leak|email|meets_threshold/);
+
+    const team = await request(app).get('/api/v1/leaderboards/team')
+      .set(bearer(readToken.token)).expect(200);
+    expect(team.body.ranked).toEqual([{
+      position: 1, ranked: true, team_id: 1, name: 'Blue', member_count: 1,
+      total_steps: 5000, entries_logged: 1, steps_per_day_reported: 5000, reporting_rate: 100
+    }]);
+    expect(JSON.stringify(team.body)).not.toContain('internal_note');
+  });
+
+  test('returns empty standings when there is no active challenge', async () => {
+    await run(db, 'UPDATE challenges SET is_active = 0');
+    const response = await request(app).get('/api/v1/leaderboards/individual')
+      .set(bearer(readToken.token)).expect(200);
+    expect(response.body).toEqual({ challenge: null, ranked: [], unranked: [] });
+  });
+
+  test('reports bounded timing for upcoming and ended active-challenge records', async () => {
+    await run(db, "UPDATE challenges SET start_date = '2099-01-01', end_date = '2099-01-10'");
+    const upcoming = await request(app).get('/api/v1/leaderboards/individual')
+      .set(bearer(readToken.token)).expect(200);
+    expect(upcoming.body.challenge).toMatchObject({
+      status: 'upcoming', current_day: 0, total_days: 10, remaining_days: 10
+    });
+
+    await run(db, "UPDATE challenges SET start_date = '2020-01-01', end_date = '2020-01-10'");
+    const ended = await request(app).get('/api/v1/leaderboards/team')
+      .set(bearer(readToken.token)).expect(200);
+    expect(ended.body.challenge).toMatchObject({
+      status: 'ended', current_day: 10, total_days: 10, remaining_days: 0
+    });
+
+    await run(db, "UPDATE challenges SET start_date = '2026-02-01', end_date = '2026-01-01'");
+    await request(app).get('/api/v1/leaderboards/individual')
+      .set(bearer(readToken.token)).expect(500, { error: 'Unable to load individual leaderboard' });
+  });
+
   test('enforces read and write scopes', async () => {
     await request(app).get('/api/v1/steps').set(bearer(readToken.token)).expect(200);
     await request(app).post('/api/v1/steps').set(bearer(readToken.token))
       .send({ date: '2025-08-21', count: 6000 }).expect(403);
     const noProfile = await tokenService.createToken({ userId: 1, name: 'Steps only', scopes: ['steps:read'], expiresDays: 30 });
     await request(app).get('/api/v1/me').set(bearer(noProfile.token)).expect(403);
+    await request(app).get('/api/v1/leaderboards/individual').set(bearer(noProfile.token)).expect(403);
+    await request(app).get('/api/v1/leaderboards/team').set(bearer(noProfile.token)).expect(403);
   });
 
   test('separates create conflicts from explicit replacement', async () => {
@@ -149,17 +226,28 @@ describe('versioned bearer-token REST API', () => {
     const created = await request(app).post('/api/admin/api-tokens').set('X-CSRF-Token', 'test')
       .send({ user_id: 1, name: 'Automation', access: 'read_only', expires_days: 30 }).expect(201);
     expect(created.body.token.token).toMatch(/^step_/);
+    expect(created.body.token.scopes).toEqual(expect.arrayContaining([
+      'profile:read', 'steps:read', 'leaderboard:read'
+    ]));
+    const personal = await request(app).post('/api/admin/api-tokens').set('X-CSRF-Token', 'test')
+      .send({ user_id: 1, name: 'Personal only', access: 'personal_read', expires_days: 30 }).expect(201);
+    expect(personal.body.token.scopes).toEqual(['profile:read', 'steps:read']);
+    await request(app).get('/api/v1/leaderboards/individual')
+      .set(bearer(personal.body.token.token)).expect(403);
     const listed = await request(app).get('/api/admin/api-tokens').expect(200);
     expect(JSON.stringify(listed.body)).not.toContain(created.body.token.token);
   });
 
   test('records bounded activity without bearer-token leakage', async () => {
     await request(app).get('/api/v1/me').set(bearer(writeToken.token)).expect(200);
+    await request(app).get('/api/v1/leaderboards/individual').set(bearer(writeToken.token)).expect(200);
     await request(app).post('/api/v1/steps').set(bearer(writeToken.token))
       .send({ date: '2025-08-23', count: 4321 }).expect(201);
     await new Promise(resolve => setTimeout(resolve, 20));
     const audit = await request(app).get('/api/admin/api-tokens/audit/recent').expect(200);
-    expect(audit.body.logs.map(row => row.action)).toEqual(expect.arrayContaining(['profile.read', 'steps.create']));
+    expect(audit.body.logs.map(row => row.action)).toEqual(expect.arrayContaining([
+      'profile.read', 'leaderboard.individual.read', 'steps.create'
+    ]));
     expect(JSON.stringify(audit.body)).not.toContain(writeToken.token);
   });
 });

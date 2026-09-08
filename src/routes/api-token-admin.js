@@ -1,5 +1,5 @@
 const express = require('express');
-const { READ_ONLY_SCOPES, READ_WRITE_SCOPES } = require('../services/api-tokens');
+const { PERSONAL_READ_SCOPES, READ_ONLY_SCOPES, READ_WRITE_SCOPES } = require('../services/api-tokens');
 
 function createApiTokenAdminRouter({ requireApiAdmin, validateCSRFToken, adminApiLimiter, tokenService }) {
   const router = express.Router();
@@ -17,13 +17,16 @@ function createApiTokenAdminRouter({ requireApiAdmin, validateCSRFToken, adminAp
   router.post('/', validateCSRFToken, async (req, res) => {
     try {
       const access = req.body?.access;
-      if (!['read_only', 'read_write'].includes(access)) {
-        return res.status(400).json({ error: 'Access must be read_only or read_write' });
+      if (!['personal_read', 'read_only', 'read_write'].includes(access)) {
+        return res.status(400).json({ error: 'Access must be personal_read, read_only, or read_write' });
       }
+      const scopes = access === 'read_write'
+        ? READ_WRITE_SCOPES
+        : access === 'read_only' ? READ_ONLY_SCOPES : PERSONAL_READ_SCOPES;
       const token = await tokenService.createToken({
         userId: Number(req.body?.user_id),
         name: req.body?.name,
-        scopes: access === 'read_write' ? READ_WRITE_SCOPES : READ_ONLY_SCOPES,
+        scopes,
         expiresDays: Number(req.body?.expires_days)
       });
       res.status(201).json({

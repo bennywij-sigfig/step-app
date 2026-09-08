@@ -9,8 +9,12 @@ describe('authenticated OpenAPI documentation', () => {
   test('describes every current bearer-token REST operation and no delete operation', () => {
     expect(openApiDocument.openapi).toBe('3.0.3');
     expect(openApiDocument.servers).toEqual([{ url: '/api/v1', description: expect.any(String) }]);
-    expect(Object.keys(openApiDocument.paths)).toEqual(['/me', '/steps', '/steps/{date}']);
+    expect(Object.keys(openApiDocument.paths)).toEqual([
+      '/me', '/leaderboards/individual', '/leaderboards/team', '/steps', '/steps/{date}'
+    ]);
     expect(Object.keys(openApiDocument.paths['/me'])).toEqual(['get']);
+    expect(Object.keys(openApiDocument.paths['/leaderboards/individual'])).toEqual(['get']);
+    expect(Object.keys(openApiDocument.paths['/leaderboards/team'])).toEqual(['get']);
     expect(Object.keys(openApiDocument.paths['/steps'])).toEqual(['get', 'post']);
     expect(Object.keys(openApiDocument.paths['/steps/{date}'])).toEqual(['put']);
     expect(JSON.stringify(openApiDocument.paths)).not.toContain('"delete"');
@@ -24,6 +28,11 @@ describe('authenticated OpenAPI documentation', () => {
     });
     expect(openApiDocument.paths['/me'].get['x-required-scope']).toBe('profile:read');
     expect(openApiDocument.paths['/steps'].get['x-required-scope']).toBe('steps:read');
+    expect(openApiDocument.paths['/leaderboards/individual'].get['x-required-scope']).toBe('leaderboard:read');
+    expect(openApiDocument.paths['/leaderboards/team'].get['x-required-scope']).toBe('leaderboard:read');
+    expect(openApiDocument.components.schemas.IndividualStanding.properties).not.toHaveProperty('email');
+    expect(openApiDocument.components.schemas.IndividualStanding.properties.reporting_rate).not.toHaveProperty('maximum');
+    expect(openApiDocument.components.schemas.TeamStanding.properties.reporting_rate).not.toHaveProperty('maximum');
     expect(openApiDocument.paths['/steps'].post['x-required-scope']).toBe('steps:write');
     expect(openApiDocument.paths['/steps/{date}'].put['x-required-scope']).toBe('steps:write');
     expect(openApiDocument.components.schemas.CreateStepInput).toMatchObject({
