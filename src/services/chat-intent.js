@@ -93,9 +93,17 @@ function validateChatIntent(rawIntent) {
 
   if (intent === 'calculate_overtake') {
     if (typeof rawIntent.target_name !== 'string' || rawIntent.target_name.trim().length === 0) {
-      invalid('Tell me which participant you want to overtake.');
+      invalid('Tell me which participant should be overtaken.');
     }
     normalized.target_name = rawIntent.target_name.trim().slice(0, 100);
+    if (rawIntent.challenger_name !== undefined && rawIntent.challenger_name !== null) {
+      if (typeof rawIntent.challenger_name !== 'string' || rawIntent.challenger_name.trim().length === 0) {
+        invalid('Tell me which participant is trying to overtake the target.');
+      }
+      normalized.challenger_name = rawIntent.challenger_name.trim().slice(0, 100);
+    } else {
+      normalized.challenger_name = null;
+    }
   }
 
   if (intent === 'calculate_target_average') {

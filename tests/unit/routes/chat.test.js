@@ -499,6 +499,59 @@ describe('Step Chat routes', () => {
       .send({ plan_id: reviewed.body.result.plan_id }).expect(409);
   });
 
+  test('uses the authoritative named-challenger result instead of contradictory model prose', async () => {
+    const overtake = {
+      kind: 'overtake',
+      challenger: {
+        id: 7, name: 'Vamshi Krishna', total: 187716, days: 8,
+        average: 23464.5, is_authenticated_user: false
+      },
+      target: { id: 8, name: 'Hardik Agarwal', average: 35571 },
+      days: 7,
+      required_total: 345850,
+      required_daily_average: 49408,
+      feasible_under_daily_limit: true,
+      assumption: "Hardik Agarwal's current reported-day average does not change."
+    };
+    const model = {
+      generate: jest.fn()
+        .mockResolvedValueOnce({
+          text: null,
+          functionCalls: [{
+            name: 'calculate_overtake',
+            args: { challenger_name: 'Vamshi Krishna', target_name: 'Hardik Agarwal' }
+          }]
+        })
+        .mockResolvedValueOnce({
+          text: 'Vamshi needs only 4,752 steps per day.',
+          functionCalls: []
+        })
+    };
+    const registry = {
+      declarations: [{ name: 'calculate_overtake', parameters: { type: 'object', properties: {} } }],
+      execute: jest.fn(async () => overtake)
+    };
+    const { app } = buildApp({
+      agentMode: 'tools', toolRegistry: registry,
+      providerOverrides: { createToolModel: jest.fn(() => model) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'What does Vamshi need to catch Hardik?' })
+      .expect(200);
+
+    expect(registry.execute).toHaveBeenCalledWith(
+      'calculate_overtake',
+      { challenger_name: 'Vamshi Krishna', target_name: 'Hardik Agarwal' },
+      expect.objectContaining({ userId: 42 })
+    );
+    expect(response.body.result).toEqual(overtake);
+    expect(response.body.reply).toBeNull();
+    expect(JSON.stringify(response.body)).not.toContain('4,752');
+  });
+
   test('tool-agent previews still receive the existing confirmation plan', async () => {
     const model = { generate: jest.fn(async () => ({
       text: 'I saved it.',

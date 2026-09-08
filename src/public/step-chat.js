@@ -624,9 +624,12 @@
                 ? ''
                 : ' That exceeds the app’s 70,000-step daily limit, so this projection is not achievable in the selected time.';
             const provisional = result.target_is_provisional ? ' Nobody is ranked yet, so this target is provisional.' : '';
-            const text = `${toneLead(tone, 'overtake')} To finish above ${result.target.name}’s current ${formatNumber(Math.round(result.target.average))}-step average, average at least ${formatNumber(result.required_daily_average)} steps for ${result.days} day${result.days === 1 ? '' : 's'} (${formatNumber(result.required_total)} additional steps total).${provisional}${feasibility} Assumption: ${result.assumption}`;
+            const challenger = result.challenger || { name: 'You', is_authenticated_user: true };
+            const subject = challenger.is_authenticated_user ? 'You need' : `${challenger.name} needs`;
+            const text = `${toneLead(tone, 'overtake')} ${subject} to average at least ${formatNumber(result.required_daily_average)} steps for ${result.days} day${result.days === 1 ? '' : 's'} (${formatNumber(result.required_total)} additional steps total) to finish above ${result.target.name}’s current ${formatNumber(Math.round(result.target.average))}-step average.${provisional}${feasibility} Assumption: ${result.assumption}`;
             const message = createMessage('assistant', reply || text);
             appendVerifiedFacts(message, [
+                `Challenger: ${challenger.is_authenticated_user ? 'you' : challenger.name}`,
                 `Target: ${result.target.name} at ${formatNumber(Math.round(result.target.average))} steps/day${result.target_is_provisional ? ' (provisional)' : ''}`,
                 `Required pace: ${formatNumber(result.required_daily_average)} steps/day for ${result.days} day${result.days === 1 ? '' : 's'}`,
                 `Additional steps: ${formatNumber(result.required_total)}`,

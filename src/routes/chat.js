@@ -296,7 +296,7 @@ function createChatRouter({
         if (result.kind === 'team_rename_preview') attachTeamRenamePlan(req, result);
         // Challenge timing is rendered from the tool result so model prose
         // cannot contradict the inclusive Singapore-open/Pacific-close window.
-        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview'].includes(result.kind)
+        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview', 'overtake'].includes(result.kind)
           ? null
           : agentResult.text;
         return res.json({

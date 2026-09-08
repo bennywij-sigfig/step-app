@@ -126,6 +126,13 @@
       "maxRounds": 2
     },
     {
+      "id": "named-participant-overtake",
+      "message": "What will Vamshi Krishna need to do to catch up to Hardik Agarwal?",
+      "requiredTools": ["calculate_overtake"],
+      "forbiddenTools": ["calculate_overtake_leader", "calculate_target_average"],
+      "maxRounds": 2
+    },
+    {
       "id": "multi-fact-read",
       "message": "How many days are left and show me the team leaderboard?",
       "requiredTools": ["get_challenge_info", "get_team_leaderboard"],

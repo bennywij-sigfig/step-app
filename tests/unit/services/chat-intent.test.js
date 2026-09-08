@@ -71,8 +71,19 @@ describe('constrained chat intent validation', () => {
     })).toEqual({
       intent: 'calculate_overtake',
       target_name: 'Ada',
+      challenger_name: null,
       days: 5,
       tone: 'neutral'
+    });
+
+    expect(validateChatIntent({
+      intent: 'calculate_overtake',
+      challenger_name: '  Vamshi Krishna  ',
+      target_name: '  Hardik Agarwal  ',
+      tone: 'neutral'
+    })).toMatchObject({
+      challenger_name: 'Vamshi Krishna',
+      target_name: 'Hardik Agarwal'
     });
   });
 

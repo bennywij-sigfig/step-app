@@ -587,43 +587,83 @@ function createStepChatService({
     };
   }
 
-  async function calculateOvertakeFromLeaderboard(userId, target, leaderboard, requestedDays, asOfDate) {
-    if (Number(target.id) === Number(userId)) throw userError('Choose someone other than yourself to overtake');
-    const everyone = [...leaderboard.ranked, ...leaderboard.unranked];
-    const me = everyone.find(row => Number(row.id) === Number(userId)) || { total_steps: 0, days_logged: 0, steps_per_day_reported: 0 };
-    const days = await getProjectionDays(leaderboard.challenge, requestedDays, userId, asOfDate);
+  function resolveLeaderboardParticipant(everyone, participantName, role) {
+    const query = String(participantName || '').toLocaleLowerCase();
+    const exact = everyone.filter(row => String(row.name || '').toLocaleLowerCase() === query);
+    const matches = exact.length
+      ? exact
+      : everyone.filter(row => String(row.name || '').toLocaleLowerCase().includes(query));
+    if (matches.length === 1) return { participant: matches[0] };
+    return {
+      clarification: {
+        kind: 'clarification',
+        message: matches.length
+          ? `More than one participant matched the ${role} name.`
+          : `No participant matched the ${role} name.`,
+        candidates: matches.slice(0, 5).map(row => row.name)
+      }
+    };
+  }
+
+  async function calculateOvertakeFromLeaderboard(userId, challenger, target, leaderboard, requestedDays, asOfDate) {
+    if (Number(target.id) === Number(challenger.id)) {
+      throw userError('Choose two different participants for an overtake calculation');
+    }
+    const days = await getProjectionDays(leaderboard.challenge, requestedDays, challenger.id, asOfDate);
     const targetAverage = Number(target.steps_per_day_reported) || 0;
-    const myTotal = Number(me.total_steps) || 0;
-    const myDays = Number(me.days_logged) || 0;
-    const requiredAdditional = Math.max(0, Math.floor(targetAverage * (myDays + days) - myTotal) + 1);
+    const challengerTotal = Number(challenger.total_steps) || 0;
+    const challengerDays = Number(challenger.days_logged) || 0;
+    const requiredAdditional = Math.max(
+      0,
+      Math.floor(targetAverage * (challengerDays + days) - challengerTotal) + 1
+    );
+    const requiredDailyAverage = Math.ceil(requiredAdditional / days);
 
     return {
       kind: 'overtake',
+      challenger: {
+        id: challenger.id,
+        name: challenger.name,
+        total: challengerTotal,
+        days: challengerDays,
+        average: Number(challenger.steps_per_day_reported) || 0,
+        is_authenticated_user: Number(challenger.id) === Number(userId)
+      },
       target: { id: target.id, name: target.name, average: targetAverage },
-      current: { total: myTotal, days: myDays, average: Number(me.steps_per_day_reported) || 0 },
+      // Keep current as a compatibility alias for existing clients.
+      current: { total: challengerTotal, days: challengerDays, average: Number(challenger.steps_per_day_reported) || 0 },
       as_of_date: asOfDate,
       days,
       required_total: requiredAdditional,
-      required_daily_average: Math.ceil(requiredAdditional / days),
-      feasible_under_daily_limit: Math.ceil(requiredAdditional / days) <= 70000,
+      required_daily_average: requiredDailyAverage,
+      feasible_under_daily_limit: requiredDailyAverage <= 70000,
       assumption: `${target.name}'s current reported-day average does not change.`
     };
   }
 
-  async function calculateOvertake(userId, targetName, requestedDays, asOfDate = null) {
+  async function calculateOvertake(userId, targetName, requestedDays, asOfDate = null, challengerName = null) {
     const leaderboard = await individualLeaderboard();
     const everyone = [...leaderboard.ranked, ...leaderboard.unranked];
-    const query = targetName.toLocaleLowerCase();
-    const exact = everyone.filter(row => String(row.name || '').toLocaleLowerCase() === query);
-    const matches = exact.length ? exact : everyone.filter(row => String(row.name || '').toLocaleLowerCase().includes(query));
-    if (matches.length !== 1) {
-      return {
-        kind: 'clarification',
-        message: matches.length ? 'More than one participant matched that name.' : 'No participant matched that name.',
-        candidates: matches.slice(0, 5).map(row => row.name)
-      };
+    const targetResolution = resolveLeaderboardParticipant(everyone, targetName, 'target');
+    if (targetResolution.clarification) return targetResolution.clarification;
+
+    let challenger;
+    if (challengerName) {
+      const challengerResolution = resolveLeaderboardParticipant(everyone, challengerName, 'challenger');
+      if (challengerResolution.clarification) return challengerResolution.clarification;
+      challenger = challengerResolution.participant;
+    } else {
+      challenger = everyone.find(row => Number(row.id) === Number(userId));
+      if (!challenger) {
+        const user = await get('SELECT id, name FROM users WHERE id = ?', [userId]);
+        if (!user) throw userError('User not found');
+        challenger = { ...user, total_steps: 0, days_logged: 0, steps_per_day_reported: 0 };
+      }
     }
-    return calculateOvertakeFromLeaderboard(userId, matches[0], leaderboard, requestedDays, asOfDate);
+
+    return calculateOvertakeFromLeaderboard(
+      userId, challenger, targetResolution.participant, leaderboard, requestedDays, asOfDate
+    );
   }
 
   async function calculateOvertakeLeader(userId, requestedDays, asOfDate = null) {
@@ -642,7 +682,16 @@ function createStepChatService({
         candidates: []
       };
     }
-    const result = await calculateOvertakeFromLeaderboard(userId, leader, leaderboard, requestedDays, asOfDate);
+    const everyone = [...leaderboard.ranked, ...leaderboard.unranked];
+    let challenger = everyone.find(row => Number(row.id) === Number(userId));
+    if (!challenger) {
+      const user = await get('SELECT id, name FROM users WHERE id = ?', [userId]);
+      if (!user) throw userError('User not found');
+      challenger = { ...user, total_steps: 0, days_logged: 0, steps_per_day_reported: 0 };
+    }
+    const result = await calculateOvertakeFromLeaderboard(
+      userId, challenger, leader, leaderboard, requestedDays, asOfDate
+    );
     return { ...result, target_is_provisional: leaderIsProvisional };
   }
 
@@ -664,7 +713,9 @@ function createStepChatService({
       case 'show_my_steps': return getMySteps(userId, intent.start_date, intent.end_date);
       case 'individual_leaderboard': return individualLeaderboard();
       case 'team_leaderboard': return teamLeaderboard();
-      case 'calculate_overtake': return calculateOvertake(userId, intent.target_name, intent.days, intent.as_of_date);
+      case 'calculate_overtake': return calculateOvertake(
+        userId, intent.target_name, intent.days, intent.as_of_date, intent.challenger_name
+      );
       case 'calculate_target_average': return calculateTargetAverage(userId, intent.target_average, intent.days, intent.as_of_date);
       case 'challenge_outlook': return challengeOutlook(userId, intent.leaderboard, intent.as_of_date);
       case 'challenge_info': return challengeInfo(intent.as_of_date);

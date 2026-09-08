@@ -334,6 +334,47 @@ describe('Step Chat deterministic write service', () => {
     }
   });
 
+  test('calculates one named participant’s pace to overtake another without using authenticated-user totals', async () => {
+    const standings = [
+      {
+        id: 2, name: 'Hardik Agarwal', total_steps: 284568, days_logged: 8,
+        steps_per_day_reported: 35571, personal_reporting_rate: 100
+      },
+      {
+        id: 1, name: 'Vamshi Krishna', total_steps: 187716, days_logged: 8,
+        steps_per_day_reported: 23464.5, personal_reporting_rate: 100
+      }
+    ];
+    const overtakeService = createStepChatService({
+      db,
+      getIndividualLeaderboard: async () => ({ ranked: standings, unranked: [] }),
+      getTeamLeaderboard: async () => ({ ranked: [], unranked: [] })
+    });
+
+    const result = await overtakeService.executeIntent(2, {
+      intent: 'calculate_overtake',
+      challenger_name: 'vamshi krishna',
+      target_name: 'hardik agarwal',
+      days: 7,
+      as_of_date: '2025-08-25',
+      tone: 'neutral'
+    });
+
+    expect(result).toMatchObject({
+      kind: 'overtake',
+      challenger: {
+        id: 1, name: 'Vamshi Krishna', total: 187716, days: 8,
+        average: 23464.5, is_authenticated_user: false
+      },
+      target: { id: 2, name: 'Hardik Agarwal', average: 35571 },
+      days: 7,
+      required_total: 345850,
+      required_daily_average: 49408,
+      feasible_under_daily_limit: true
+    });
+    expect(result.required_daily_average).not.toBe(4752);
+  });
+
   test('a rolled-back chat transaction cannot roll back an unrelated write', async () => {
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'step-chat-transaction-'));
     const dbPath = path.join(tempDir, 'steps.db');

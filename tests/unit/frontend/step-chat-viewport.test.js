@@ -71,7 +71,7 @@ describe('Trotter standalone mobile layout contract', () => {
 
   test('uses versioned chat assets and responsive desktop/mobile shells', () => {
     expect(page).toContain('/step-chat.css?v=20260906-batch-safety-v1');
-    expect(page).toContain('/step-chat.js?v=20260906-batch-safety-v1');
+    expect(page).toContain('/step-chat.js?v=20260908-general-overtake-v1');
     expect(css).toContain('width: min(920px, 100%);');
     expect(css).toContain('height: min(780px, calc(var(--chat-visible-height, 100dvh) - clamp(24px, 6vw, 56px)));');
     expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?height: var\(--chat-visible-height, 100dvh\)/);

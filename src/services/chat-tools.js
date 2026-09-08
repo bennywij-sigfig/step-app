@@ -65,11 +65,12 @@ const declarations = [
   },
   {
     name: 'calculate_overtake',
-    description: 'Calculate the authenticated user’s pace needed to overtake a named participant’s current average.',
+    description: 'Calculate a challenger’s pace needed to overtake a named participant’s current average. Omit challenger_name when the challenger is the authenticated user; include it for another leaderboard participant.',
     parameters: {
       type: 'object',
       properties: {
         target_name: { type: 'string', minLength: 1, maxLength: 100 },
+        challenger_name: { type: 'string', minLength: 1, maxLength: 100 },
         days: { type: 'integer', minimum: 1, maximum: 366 },
         as_of_date: optionalDate
       },
@@ -176,7 +177,7 @@ function createChatToolRegistry({ service }) {
         return service.executeIntent(userId, intent);
       }
       case 'calculate_overtake': {
-        assertArguments(rawArgs, ['target_name', 'days', 'as_of_date']);
+        assertArguments(rawArgs, ['target_name', 'challenger_name', 'days', 'as_of_date']);
         const intent = validateChatIntent({
           intent: 'calculate_overtake', tone: 'neutral',
           ...rawArgs, as_of_date: rawArgs.as_of_date || currentDate

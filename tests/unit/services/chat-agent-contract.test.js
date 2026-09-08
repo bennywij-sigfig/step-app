@@ -114,6 +114,24 @@ describe('Trotter tool registry contract', () => {
     )).rejects.toThrow('individual or team');
   });
 
+  test('supports a named leaderboard participant overtaking another participant', async () => {
+    const service = fakeService();
+    const registry = createChatToolRegistry({ service });
+    await registry.execute(
+      'calculate_overtake',
+      { challenger_name: 'Vamshi Krishna', target_name: 'Hardik Agarwal', days: 7 },
+      { userId: 42, currentDate: '2026-09-02' }
+    );
+    expect(service.executeIntent).toHaveBeenCalledWith(42, {
+      intent: 'calculate_overtake',
+      tone: 'neutral',
+      challenger_name: 'Vamshi Krishna',
+      target_name: 'Hardik Agarwal',
+      days: 7,
+      as_of_date: '2026-09-02'
+    });
+  });
+
   test('resolves the current leader inside one compound calculation tool', async () => {
     const service = fakeService();
     const registry = createChatToolRegistry({ service });
@@ -164,6 +182,36 @@ describe('bounded Trotter tool-agent contract', () => {
     });
     expect(model.generate).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({ text: 'Oink and hello.', rounds: 1, tool_results: [], primary_result: null });
+  });
+
+  test('preserves both participants in a named overtake request', async () => {
+    const service = fakeService();
+    const model = {
+      generate: jest.fn()
+        .mockResolvedValueOnce({
+          text: null,
+          functionCalls: [{
+            name: 'calculate_overtake',
+            args: { challenger_name: 'Vamshi Krishna', target_name: 'Hardik Agarwal' }
+          }]
+        })
+        .mockResolvedValueOnce({ text: 'Vamshi needs the calculated pace to pass Hardik.', functionCalls: [] })
+    };
+    const result = await runTrotterAgent({
+      model,
+      registry: createChatToolRegistry({ service }),
+      message: 'What will Vamshi Krishna need to do to catch Hardik Agarwal?',
+      history: [],
+      tone: 'neutral',
+      context: { userId: 42, currentDate: '2026-09-02' }
+    });
+
+    expect(service.executeIntent).toHaveBeenCalledWith(42, expect.objectContaining({
+      challenger_name: 'Vamshi Krishna', target_name: 'Hardik Agarwal'
+    }));
+    expect(result.tool_results[0].args).toEqual({
+      challenger_name: 'Vamshi Krishna', target_name: 'Hardik Agarwal'
+    });
   });
 
   test('executes an allowlisted read and returns a final answer in at most two rounds', async () => {
