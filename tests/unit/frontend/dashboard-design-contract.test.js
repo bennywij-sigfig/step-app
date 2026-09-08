@@ -111,6 +111,15 @@ describe('dashboard design contract', () => {
     expect(dashboard).toContain("tab.setAttribute('aria-current', 'page')");
   });
 
+  test('keeps leaderboard titles static and renders inactive status in the content subheading', () => {
+    expect(html).toContain('<h2>Individual Leaderboard</h2>');
+    expect(html).toContain('<h2>Team Leaderboard</h2>');
+    expect(dashboard).not.toContain("querySelector('#leaderboardView h2')");
+    expect(dashboard).not.toContain("querySelector('#teamLeaderboardView h2')");
+    expect(dashboard).toContain("<h3>No active challenge</h3><p>Showing all-time individual rankings.</p>");
+    expect(dashboard).toContain("<h3>No active challenge</h3><p>Showing all-time team rankings.</p>");
+  });
+
   test('prefetches hidden leaderboards only after visible step content loads', () => {
     expect(dashboard).toContain('await loadSteps()');
     expect(dashboard).toContain('Promise.allSettled([loadIndividualForNavigation(), loadTeamsForNavigation()])');

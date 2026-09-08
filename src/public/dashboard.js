@@ -686,14 +686,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear expanded user state when reloading individual leaderboard
             expandedUsers.clear();
             
-            // Update header text based on challenge status
-            const leaderboardHeader = document.querySelector('#leaderboardView h2');
-            if (!currentUser || !currentUser.current_challenge) {
-                leaderboardHeader.textContent = 'No active challenge';
-            } else {
-                leaderboardHeader.textContent = 'Individual Leaderboard';
-            }
-            
             try {
                 const response = await fetch('/api/leaderboard');
                 const data = await response.json();
@@ -707,7 +699,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (data.type === 'all_time') {
                     leaderboard = data.data;
-                    challengeInfo = '<h3>All-Time Rankings</h3>';
+                    challengeInfo = '<h3>No active challenge</h3><p>Showing all-time individual rankings.</p>';
                 } else if (data.type === 'challenge') {
                     challengeInfo = `<h3>${escapeHtml(data.meta.challenge_name)} - Day ${data.meta.challenge_day}</h3>`;
                 }
@@ -992,14 +984,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear expanded state when reloading
             expandedTeams.clear();
             
-            // Update header text based on challenge status
-            const teamLeaderboardHeader = document.querySelector('#teamLeaderboardView h2');
-            if (!currentUser || !currentUser.current_challenge) {
-                teamLeaderboardHeader.textContent = 'No active challenge';
-            } else {
-                teamLeaderboardHeader.textContent = 'Team Leaderboard';
-            }
-            
             try {
                 const response = await fetch('/api/team-leaderboard');
                 const data = await response.json();
@@ -1023,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 let challengeInfo = '';
                 
                 if (data.type === 'all_time') {
-                    challengeInfo = '<h3>All-Time Team Rankings</h3>';
+                    challengeInfo = '<h3>No active challenge</h3><p>Showing all-time team rankings.</p>';
                 } else if (data.type === 'challenge') {
                     challengeInfo = `<h3>${escapeHtml(data.meta.challenge_name)} - Day ${data.meta.challenge_day}</h3>`;
                 }
