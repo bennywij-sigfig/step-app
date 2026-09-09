@@ -36,7 +36,7 @@ function makeRow(key) {
   };
 }
 
-function setup(reducedMotion = true) {
+function setup(reducedMotion = true, preciseHover = true) {
   const values = new Map();
   const storage = {
     getItem: key => values.get(key) ?? null,
@@ -44,7 +44,9 @@ function setup(reducedMotion = true) {
   };
   const window = {
     localStorage: storage,
-    matchMedia: () => ({ matches: reducedMotion }),
+    matchMedia: query => ({
+      matches: query === '(hover: hover) and (pointer: fine)' ? preciseHover : reducedMotion
+    }),
     setTimeout: callback => { callback(); return 1; },
     clearTimeout: () => {}
   };
@@ -88,6 +90,22 @@ describe('device-local leaderboard rank history', () => {
     expect(page).not.toContain('content: "↓"');
   });
 
+  test('keeps tooltip behavior off touch-oriented devices', () => {
+    const { api, storage } = setup(true, false);
+    const rows = [makeRow(1), makeRow(2)];
+    const container = { querySelectorAll: () => rows };
+    const common = { container, kind: 'team', scope: 'challenge:9', viewerId: 4, storage };
+    api.apply({ ...common, entries: [{ key: 1, rank: 1 }, { key: 2, rank: 2 }] });
+
+    api.apply({ ...common, entries: [{ key: 2, rank: 1 }, { key: 1, rank: 2 }] });
+
+    expect(rows[1].rank.attributes['aria-label']).toBe('Rank 1, improved from rank 2');
+    expect(rows[1].rank.attributes['data-rank-context']).toBeUndefined();
+    expect(rows[1].rank.attributes.tabindex).toBeUndefined();
+    expect(rows[1].rank.title).toBe('');
+    expect(page).toMatch(/@media \(hover: none\) and \(pointer: coarse\)[\s\S]*?\.rank-history-tooltip\s*\{[\s\S]*?display: none !important/);
+  });
+
   test('does not compare ranks across challenge boundaries', () => {
     const { api, storage } = setup();
     const row = makeRow(1);
@@ -123,6 +141,7 @@ describe('device-local leaderboard rank history', () => {
     expect(page).toContain('animation: rank-change-flip 900ms linear');
     expect(page).toContain('.rank-history-tooltip');
     expect(source).toContain('function attachRankContext(row, rank)');
+    expect(source).toContain("window.matchMedia?.('(hover: hover) and (pointer: fine)')");
     expect(source).toContain("row.addEventListener('pointerenter', show)");
     expect(page).toContain('.rank.rank-improved');
     expect(page).toContain('.rank.rank-declined');

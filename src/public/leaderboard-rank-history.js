@@ -5,6 +5,10 @@
     const transitions = new WeakMap();
     let tooltip = null;
 
+    function supportsPreciseHover() {
+        return window.matchMedia?.('(hover: hover) and (pointer: fine)').matches === true;
+    }
+
     function ensureTooltip() {
         if (tooltip) return tooltip;
         tooltip = document.createElement('div');
@@ -15,7 +19,7 @@
     }
 
     function attachRankContext(row, rank) {
-        if (typeof row.addEventListener !== 'function' || row.dataset.rankContextAttached === 'true') return;
+        if (!supportsPreciseHover() || typeof row.addEventListener !== 'function' || row.dataset.rankContextAttached === 'true') return;
         row.dataset.rankContextAttached = 'true';
         const tip = ensureTooltip();
         const show = () => {
@@ -160,11 +164,13 @@
             if (changed) {
                 const direction = improved ? 'improved' : 'declined';
                 rankNode.setAttribute('aria-label', `Rank ${entry.rank}, ${direction} from rank ${previousRank}`);
-                rankNode.setAttribute('data-rank-context', `Previously #${previousRank} · ${direction}`);
-                rankNode.setAttribute('tabindex', '0');
-                rankNode.title = `Previously #${previousRank}`;
                 row.classList.add('rank-changed');
-                attachRankContext(row, rankNode);
+                if (supportsPreciseHover()) {
+                    rankNode.setAttribute('data-rank-context', `Previously #${previousRank} · ${direction}`);
+                    rankNode.setAttribute('tabindex', '0');
+                    rankNode.title = `Previously #${previousRank}`;
+                    attachRankContext(row, rankNode);
+                }
             }
             return { ...entry, row, rankNode, previousRank, changed, improved };
         }).filter(Boolean);
