@@ -1,6 +1,6 @@
 const MAX_TOOL_CALLS = 4;
-const MAX_MODEL_ROUNDS = 3;
-const MAX_TOOL_WAVES = 2;
+const MAX_MODEL_ROUNDS = 4;
+const MAX_TOOL_WAVES = 3;
 const PREVIEW_TOOLS = new Set(['preview_step_entries', 'preview_my_team_rename']);
 
 class ChatAgentProtocolError extends Error {
@@ -34,6 +34,25 @@ function parseDirectStepRequest(message, currentDate, clientDate = null) {
   return { date, count };
 }
 
+function parseDirectOvertakeRequest(message) {
+  const match = String(message || '').match(
+    /^\s*(?:what|how much|how many steps)\s+do\s+i\s+need(?:\s+to\s+do)?(?:\s+to)?\s+(?:overtake|catch|pass)\s+(.+?)\s*[?.!]*\s*$/i
+  );
+  if (!match) return null;
+
+  const durationMatch = match[1].match(/^(.*?)(?:\s+(?:in|over|within|for)\s+(\d+)\s+days?)?$/i);
+  const days = durationMatch?.[2] ? Number(durationMatch[2]) : null;
+  if (days !== null && (!Number.isInteger(days) || days < 1 || days > 366)) return null;
+
+  const targets = String(durationMatch?.[1] || '')
+    .split(/\s+(?:or|and)\s+/i)
+    .map(target => target.trim().replace(/^["']+|["']+$/g, ''))
+    .filter(Boolean);
+  if (targets.length === 0 || targets.some(target => target.length > 100)) return null;
+  if (targets.length > 1) return { targets: targets.slice(0, 5) };
+  return { targetName: targets[0], ...(days ? { days } : {}) };
+}
+
 function normalizeCalls(response) {
   if (!response || typeof response !== 'object') throw new ChatAgentProtocolError('Invalid model response');
   if (!Array.isArray(response.functionCalls)) return [];
@@ -62,6 +81,39 @@ async function runTrotterAgent({ model, registry, message, history, tone, contex
       tool_results: [{ name: 'preview_step_entries', args: { entries: [directEntry] }, result }],
       primary_result: result,
       requires_confirmation: true,
+      rounds: 0
+    };
+  }
+
+  // Common first-person overtake requests do not need model planning. Running
+  // the compound calculator directly also prevents the model from inventing a
+  // duration when the user wants all remaining unlogged challenge dates.
+  const directOvertake = parseDirectOvertakeRequest(message);
+  if (directOvertake?.targets) {
+    const result = {
+      kind: 'clarification',
+      message: 'I can calculate one overtake target at a time. Which participant should I use?',
+      candidates: directOvertake.targets
+    };
+    return {
+      text: null,
+      tool_results: [],
+      primary_result: result,
+      requires_confirmation: false,
+      rounds: 0
+    };
+  }
+  if (directOvertake?.targetName) {
+    const args = {
+      target_name: directOvertake.targetName,
+      ...(directOvertake.days ? { days: directOvertake.days } : {})
+    };
+    const result = await registry.execute('calculate_overtake', args, context);
+    return {
+      text: null,
+      tool_results: [{ name: 'calculate_overtake', args, result }],
+      primary_result: result,
+      requires_confirmation: false,
       rounds: 0
     };
   }
@@ -159,6 +211,7 @@ module.exports = {
   MAX_MODEL_ROUNDS,
   MAX_TOOL_CALLS,
   MAX_TOOL_WAVES,
+  parseDirectOvertakeRequest,
   parseDirectStepRequest,
   runTrotterAgent
 };

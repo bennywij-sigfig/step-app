@@ -588,11 +588,19 @@ function createStepChatService({
   }
 
   function resolveLeaderboardParticipant(everyone, participantName, role) {
-    const query = String(participantName || '').toLocaleLowerCase();
-    const exact = everyone.filter(row => String(row.name || '').toLocaleLowerCase() === query);
-    const matches = exact.length
+    const normalizeName = value => String(value || '')
+      .normalize('NFKC')
+      .toLocaleLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .trim()
+      .replace(/\s+/g, ' ');
+    const query = normalizeName(participantName);
+    const exact = query
+      ? everyone.filter(row => normalizeName(row.name) === query)
+      : [];
+    const matches = exact.length || !query
       ? exact
-      : everyone.filter(row => String(row.name || '').toLocaleLowerCase().includes(query));
+      : everyone.filter(row => normalizeName(row.name).includes(query));
     if (matches.length === 1) return { participant: matches[0] };
     return {
       clarification: {

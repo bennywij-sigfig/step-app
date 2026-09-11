@@ -1,5 +1,5 @@
 const { createChatToolRegistry } = require('../../../src/services/chat-tools');
-const { runTrotterAgent } = require('../../../src/services/chat-agent');
+const { parseDirectOvertakeRequest, runTrotterAgent } = require('../../../src/services/chat-agent');
 
 function fakeService() {
   return {
@@ -161,6 +161,58 @@ describe('Trotter tool registry contract', () => {
 });
 
 describe('bounded Trotter tool-agent contract', () => {
+  test.each([
+    ['What do I need to do to overtake Shashi', { targetName: 'Shashi' }],
+    ['What do I need to do overtake Anurag', { targetName: 'Anurag' }],
+    ['How many steps do I need to pass anurag.shrivastava?', { targetName: 'anurag.shrivastava' }],
+    ['What do I need to overtake Shashi in 3 days?', { targetName: 'Shashi', days: 3 }],
+    ['What do I need to overtake Shashi or Anurag', { targets: ['Shashi', 'Anurag'] }]
+  ])('deterministically parses first-person overtake request: %s', (message, expected) => {
+    expect(parseDirectOvertakeRequest(message)).toEqual(expected);
+  });
+
+  test('runs a direct single-target overtake without inferred days or model calls', async () => {
+    const service = fakeService();
+    const model = { generate: jest.fn() };
+    const result = await runTrotterAgent({
+      model,
+      registry: createChatToolRegistry({ service }),
+      message: 'What do I need to do overtake Anurag',
+      history: [],
+      tone: 'neutral',
+      context: { userId: 42, currentDate: '2026-09-02' }
+    });
+
+    expect(model.generate).not.toHaveBeenCalled();
+    expect(service.executeIntent).toHaveBeenCalledWith(42, {
+      intent: 'calculate_overtake', tone: 'neutral', target_name: 'Anurag',
+      challenger_name: null, days: null, as_of_date: '2026-09-02'
+    });
+    expect(result).toMatchObject({ rounds: 0, requires_confirmation: false });
+    expect(result.tool_results[0].args).toEqual({ target_name: 'Anurag' });
+  });
+
+  test('asks the user to choose one target when an overtake request names alternatives', async () => {
+    const service = fakeService();
+    const model = { generate: jest.fn() };
+    const result = await runTrotterAgent({
+      model,
+      registry: createChatToolRegistry({ service }),
+      message: 'What do I need to do to overtake Shashi or Anurag',
+      history: [],
+      tone: 'neutral',
+      context: { userId: 42, currentDate: '2026-09-02' }
+    });
+
+    expect(model.generate).not.toHaveBeenCalled();
+    expect(service.executeIntent).not.toHaveBeenCalled();
+    expect(result.primary_result).toEqual({
+      kind: 'clarification',
+      message: 'I can calculate one overtake target at a time. Which participant should I use?',
+      candidates: ['Shashi', 'Anurag']
+    });
+  });
+
   test('rejects an empty model response instead of silently showing unrelated fallback text', async () => {
     const model = { generate: jest.fn(async () => ({ text: null, functionCalls: [] })) };
     const registry = createChatToolRegistry({ service: fakeService() });
@@ -345,26 +397,27 @@ describe('bounded Trotter tool-agent contract', () => {
     ]);
   });
 
-  test('allows two bounded read-tool waves and a third-round final response', async () => {
+  test('allows three bounded tool waves and a fourth-round final response', async () => {
     const registry = createChatToolRegistry({ service: fakeService() });
     const model = {
       generate: jest.fn()
         .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_challenge_info', args: {} }] })
         .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_team_leaderboard', args: {} }] })
+        .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'calculate_overtake', args: { target_name: 'Anurag' } }] })
         .mockResolvedValueOnce({ text: 'Here is the combined answer.', functionCalls: [] })
     };
     const result = await runTrotterAgent({
       model, registry, message: 'and then?', history: [], tone: 'neutral',
       context: { userId: 42, currentDate: '2026-08-26' }
     });
-    expect(model.generate).toHaveBeenCalledTimes(3);
-    expect(result.rounds).toBe(3);
+    expect(model.generate).toHaveBeenCalledTimes(4);
+    expect(result.rounds).toBe(4);
     expect(result.tool_results.map(item => item.name)).toEqual([
-      'get_challenge_info', 'get_team_leaderboard'
+      'get_challenge_info', 'get_team_leaderboard', 'calculate_overtake'
     ]);
   });
 
-  test('enforces four total calls, two tool waves, and no final-round tools', async () => {
+  test('enforces four total calls, three tool waves, and no final-round tools', async () => {
     const registry = createChatToolRegistry({ service: fakeService() });
     const tooManyModel = {
       generate: jest.fn(async () => ({
@@ -382,11 +435,12 @@ describe('bounded Trotter tool-agent contract', () => {
         .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_challenge_info', args: {} }] })
         .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_team_leaderboard', args: {} }] })
         .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_my_steps', args: {} }] })
+        .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'get_my_team', args: {} }] })
     };
     await expect(runTrotterAgent({
       model: finalRoundToolModel, registry, message: 'keep going', history: [], tone: 'neutral',
       context: { userId: 42, currentDate: '2026-08-26' }
     })).rejects.toThrow('after the final tool wave');
-    expect(finalRoundToolModel.generate).toHaveBeenCalledTimes(3);
+    expect(finalRoundToolModel.generate).toHaveBeenCalledTimes(4);
   });
 });

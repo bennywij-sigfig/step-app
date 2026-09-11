@@ -337,7 +337,7 @@ describe('Step Chat deterministic write service', () => {
   test('calculates one named participant’s pace to overtake another without using authenticated-user totals', async () => {
     const standings = [
       {
-        id: 2, name: 'Hardik Agarwal', total_steps: 284568, days_logged: 8,
+        id: 2, name: 'Hardik.Agarwal', total_steps: 284568, days_logged: 8,
         steps_per_day_reported: 35571, personal_reporting_rate: 100
       },
       {
@@ -366,7 +366,7 @@ describe('Step Chat deterministic write service', () => {
         id: 1, name: 'Vamshi Krishna', total: 187716, days: 8,
         average: 23464.5, is_authenticated_user: false
       },
-      target: { id: 2, name: 'Hardik Agarwal', average: 35571 },
+      target: { id: 2, name: 'Hardik.Agarwal', average: 35571 },
       days: 7,
       required_total: 345850,
       required_daily_average: 49408,
