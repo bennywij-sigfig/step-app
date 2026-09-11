@@ -432,6 +432,52 @@ describe('normalized live teams preserve current and historical behavior', () =>
     expect(teamRows.find(row => row.team === 'Current Green').member_count).toBe(1);
   });
 
+  test('sorts individual and team leaderboards by full-precision averages', async () => {
+    await run(db, `INSERT INTO teams (id, name, name_key) VALUES
+      (30, 'Alpha Precision Team', 'alpha precision team'),
+      (40, 'Zulu Precision Team', 'zulu precision team')`);
+    await run(db, `INSERT INTO users (id, email, name, team_id) VALUES
+      (5, 'alpha-precision@example.com', 'Alpha Precision Walker', 30),
+      (6, 'zulu-precision@example.com', 'Zulu Precision Walker', 40)`);
+    await run(db, `INSERT INTO steps (user_id, date, count, challenge_id) VALUES
+      (5, '2026-08-30', 1000, 2),
+      (5, '2026-08-31', 1000, 2),
+      (5, '2026-09-01', 1001, 2),
+      (6, '2026-08-30', 1000, 2),
+      (6, '2026-08-31', 1001, 2),
+      (6, '2026-09-01', 1001, 2)`);
+
+    try {
+      const individualResponse = await agent.get('/api/leaderboard').expect(200);
+      const individuals = [
+        ...individualResponse.body.data.ranked,
+        ...individualResponse.body.data.unranked
+      ].filter(row => row.name.includes('Precision Walker'));
+      expect(individuals.map(row => row.name)).toEqual([
+        'Zulu Precision Walker',
+        'Alpha Precision Walker'
+      ]);
+      expect(individuals[0].steps_per_day_reported).toBeCloseTo(3002 / 3);
+      expect(individuals[1].steps_per_day_reported).toBeCloseTo(3001 / 3);
+
+      const teamResponse = await agent.get('/api/team-leaderboard').expect(200);
+      const teams = [
+        ...teamResponse.body.data.ranked,
+        ...teamResponse.body.data.unranked
+      ].filter(row => row.team.includes('Precision Team'));
+      expect(teams.map(row => row.team)).toEqual([
+        'Zulu Precision Team',
+        'Alpha Precision Team'
+      ]);
+      expect(teams[0].team_steps_per_day_reported).toBeCloseTo(3002 / 3);
+      expect(teams[1].team_steps_per_day_reported).toBeCloseTo(3001 / 3);
+    } finally {
+      await run(db, 'DELETE FROM steps WHERE user_id IN (5, 6)');
+      await run(db, 'DELETE FROM users WHERE id IN (5, 6)');
+      await run(db, 'DELETE FROM teams WHERE id IN (30, 40)');
+    }
+  });
+
   test('live CSV export follows a renamed team through the normalized relation', async () => {
     const csrf = await agent.get('/api/csrf-token').expect(200);
     await agent.put('/api/admin/teams/10')

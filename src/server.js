@@ -351,7 +351,7 @@ async function getIndividualLeaderboardWithRates(challengeId, currentDay, thresh
         COALESCE(AVG(s.count), 0) as avg_steps_per_day,
         COUNT(s.id) as days_logged,
         CASE 
-          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) * 1.0 / COUNT(s.id)
           ELSE 0 
         END as steps_per_day_reported,
         CASE 
@@ -395,12 +395,12 @@ async function getTeamLeaderboardWithRates(challengeId, currentDay, threshold, d
         COALESCE(SUM(s.count), 0) as total_steps,
         COALESCE(AVG(s.count), 0) as avg_steps_per_entry,
         CASE 
-          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) * 1.0 / COUNT(s.id)
           ELSE 0 
         END as avg_steps_per_day_reported,
         CASE 
           WHEN COUNT(DISTINCT u.id) > 0 AND COUNT(s.id) > 0 THEN 
-            COALESCE(SUM(s.count), 0) / COUNT(s.id)
+            COALESCE(SUM(s.count), 0) * 1.0 / COUNT(s.id)
           ELSE 0 
         END as team_steps_per_day_reported,
         COUNT(s.id) as team_entries,
@@ -1517,7 +1517,7 @@ app.get('/api/leaderboard', apiLimiter, requireApiAuth, async (req, res) => {
           COALESCE(AVG(s.count), 0) as avg_steps_per_day,
           COUNT(s.id) as days_logged,
           CASE 
-            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) * 1.0 / COUNT(s.id)
             ELSE 0 
           END as steps_per_day_reported
         FROM users u
@@ -2273,12 +2273,12 @@ app.get('/api/team-leaderboard', apiLimiter, requireApiAuth, async (req, res) =>
           COALESCE(SUM(s.count), 0) as total_steps,
           COALESCE(AVG(s.count), 0) as avg_steps_per_entry,
           CASE 
-            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) * 1.0 / COUNT(s.id)
             ELSE 0 
           END as avg_steps_per_day_reported,
           CASE 
             WHEN COUNT(DISTINCT u.id) > 0 AND COUNT(s.id) > 0 THEN 
-              COALESCE(SUM(s.count), 0) / COUNT(s.id)
+              COALESCE(SUM(s.count), 0) * 1.0 / COUNT(s.id)
             ELSE 0 
           END as team_steps_per_day_reported
         FROM users u
@@ -2582,7 +2582,7 @@ app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, 
           COALESCE(AVG(s.count), 0) as avg_steps_per_day,
           COUNT(s.id) as days_logged,
           CASE 
-            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+            WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) * 1.0 / COUNT(s.id)
             ELSE 0 
           END as steps_per_day_reported
         FROM users u
@@ -2610,7 +2610,7 @@ app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, 
         COALESCE(SUM(s.count), 0) as total_steps,
         COUNT(s.id) as days_logged,
         CASE 
-          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) / COUNT(s.id)
+          WHEN COUNT(s.id) > 0 THEN COALESCE(SUM(s.count), 0) * 1.0 / COUNT(s.id)
           ELSE 0 
         END as steps_per_day_reported,
         CASE 
