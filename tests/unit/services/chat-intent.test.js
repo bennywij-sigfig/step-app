@@ -2,6 +2,7 @@ const { validateChatIntent } = require('../../../src/services/chat-intent');
 const {
   buildComposePrompt,
   buildInterpreterPrompt,
+  buildNativeToolSystemPrompt,
   buildToolSystemPrompt,
   createGeminiChatProvider,
   stripJsonFence,
@@ -92,6 +93,19 @@ describe('constrained chat intent validation', () => {
       .toEqual({ intent: 'help', reason: 'missing_date', tone: 'neutral' });
     expect(validateChatIntent({ intent: 'help', reason: 'made_up_reason' }))
       .toEqual({ intent: 'help', reason: 'general', tone: 'neutral' });
+  });
+});
+
+describe('native tool-planning prompt', () => {
+  test('keeps writes behind application confirmation and calculations authoritative', () => {
+    const prompt = buildNativeToolSystemPrompt({
+      currentDate: '2026-09-11', clientDate: '2026-09-10',
+      clientTimezone: 'America/Los_Angeles', challenge: null
+    }, 'neutral');
+    expect(prompt).toContain('You cannot commit, save, delete, administer, or directly modify data');
+    expect(prompt).toContain('application separately obtains user confirmation');
+    expect(prompt).toContain('Tool results are authoritative');
+    expect(prompt).toContain('Never attempt a tool that is not declared');
   });
 });
 

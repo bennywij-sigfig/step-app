@@ -24,6 +24,7 @@ function createChatRouter({
   service,
   toolRegistry = null,
   agentMode = 'legacy',
+  agentRunner = runTrotterAgent,
   now = () => Date.now(),
   imageRequestLog = (...args) => console.info(...args)
 }) {
@@ -271,7 +272,7 @@ function createChatRouter({
           return res.status(503).json({ error: 'Trotter tool mode is not configured.' });
         }
         const tone = ALLOWED_TONES.has(req.body?.tone) ? req.body.tone : 'neutral';
-        const agentResult = await runTrotterAgent({
+        const agentResult = await agentRunner({
           model: provider.createToolModel(context),
           registry: toolRegistry,
           message: message.trim(),
@@ -296,7 +297,7 @@ function createChatRouter({
         if (result.kind === 'team_rename_preview') attachTeamRenamePlan(req, result);
         // Challenge timing is rendered from the tool result so model prose
         // cannot contradict the inclusive Singapore-open/Pacific-close window.
-        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview', 'overtake'].includes(result.kind)
+        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview', 'overtake', 'overtake_comparison'].includes(result.kind)
           ? null
           : agentResult.text;
         return res.json({

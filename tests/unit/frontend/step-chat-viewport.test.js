@@ -13,6 +13,8 @@ describe('Trotter standalone mobile layout contract', () => {
     expect(dashboard).not.toContain('id="trotterNav"');
     expect(dashboard).not.toContain('id="stepChatOverlay"');
     expect(dashboard).not.toContain('/step-chat.js');
+    expect(dashboard).not.toContain('/chat-v2');
+    expect(js).toContain("const API_BASE = IS_CHAT_V2 ? '/api/chat-v2' : '/api/chat'");
     expect(page).toContain('id="stepChatOverlay" class="chat-page-shell"');
     expect(page).toContain('id="chatCloseBtn"');
     expect(page).toContain('href="/dashboard"');
@@ -64,14 +66,14 @@ describe('Trotter standalone mobile layout contract', () => {
     expect(js).toContain('add ${result.summary.new} new + replace ${result.summary.conflicts} existing');
     expect(js).toContain('will replace only if you choose replace');
     expect(js).toContain("actionButton('Cancel — save nothing'");
-    expect(js).toContain("postJson('/api/chat/cancel', { plan_id: result.plan_id })");
+    expect(js).toContain("postJson(`${API_BASE}/cancel`, { plan_id: result.plan_id })");
     expect(js).toContain("'Canceled. No step entries were changed.'");
     expect(css).toContain('.chat-date-confirmation');
   });
 
   test('uses versioned chat assets and responsive desktop/mobile shells', () => {
     expect(page).toContain('/step-chat.css?v=20260906-batch-safety-v1');
-    expect(page).toContain('/step-chat.js?v=20260908-general-overtake-v1');
+    expect(page).toContain('/step-chat.js?v=20260911-native-agent-v2');
     expect(css).toContain('width: min(920px, 100%);');
     expect(css).toContain('height: min(780px, calc(var(--chat-visible-height, 100dvh) - clamp(24px, 6vw, 56px)));');
     expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?height: var\(--chat-visible-height, 100dvh\)/);

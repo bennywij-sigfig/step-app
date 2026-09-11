@@ -12,7 +12,7 @@ describe('team rename and identity UI contract', () => {
     expect(chat).toContain("result.kind === 'team_rename_preview'");
     expect(chat).toContain("actionButton('Rename team'");
     expect(chat).toContain("actionButton('Cancel'");
-    expect(chat).toContain("postJson('/api/chat/team-rename/confirm'");
+    expect(chat).toContain("postJson(`${API_BASE}/team-rename/confirm`");
     expect(chat).not.toContain("new CustomEvent('team-renamed')");
   });
 

@@ -32,7 +32,8 @@ const {
   apiTokenLimiter
 } = require('./middleware/rateLimiters');
 const { sendEmail } = require('./services/email');
-const { createGeminiChatProvider } = require('./services/chat-provider');
+const { buildNativeToolSystemPrompt, createGeminiChatProvider } = require('./services/chat-provider');
+const { runNativeTrotterAgent } = require('./services/chat-agent-v2');
 const { createStepChatService } = require('./services/step-chat');
 const { createChatToolRegistry } = require('./services/chat-tools');
 const { getFeaturedChampions } = require('./services/champions');
@@ -573,6 +574,28 @@ app.use('/api/chat', createChatRouter({
   agentMode: process.env.CHAT_AGENT_MODE === 'tools' ? 'tools' : 'legacy'
 }));
 
+// Hidden Trotter v2 experiment: a model-native planning loop over the same
+// allowlisted read/proposal tools. No commit operation is exposed to the model.
+const chatV2Provider = createGeminiChatProvider({
+  model: process.env.CHAT_V2_MODEL || process.env.GEMINI_MODEL,
+  toolSystemPromptBuilder: buildNativeToolSystemPrompt
+});
+app.use('/api/chat-v2', createChatRouter({
+  requireApiAuth,
+  validateCSRFToken,
+  chatApiLimiter,
+  chatGlobalHourlyLimiter,
+  chatGlobalDailyLimiter,
+  chatImageLimiter,
+  chatImageGlobalLimiter,
+  teamRenameLimiter,
+  provider: chatV2Provider,
+  service: stepChatService,
+  toolRegistry: chatToolRegistry,
+  agentMode: 'tools',
+  agentRunner: runNativeTrotterAgent
+}));
+
 const apiTokenService = createApiTokenService({ db: chatDb });
 app.use('/api/v1', createRestApiRouter({
   db: chatDb,
@@ -1093,6 +1116,11 @@ app.get('/chat', requireAuth, (req, res) => {
 
 app.get('/chat.html', requireAuth, (req, res) => {
   res.redirect('/chat');
+});
+
+// Deliberately omitted from dashboard navigation while Trotter v2 is evaluated.
+app.get('/chat-v2', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'views', 'chat.html'));
 });
 
 // Authenticated REST API documentation. The documentation uses the normal web

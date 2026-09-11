@@ -60,12 +60,14 @@ describe('Route Contract Tests', () => {
       expect(ROUTES.api.champions).toBe('/api/champions');
       expect(ROUTES.api.userProfile).toBe('/api/user-profile');
       expect(ROUTES.api.settings).toBe('/api/settings');
+      expect(ROUTES.api.chatV2).toBe('/api/chat-v2');
     });
 
     test('should have expected page routes defined', () => {
       expect(ROUTES.pages).toBeDefined();
       expect(ROUTES.pages.dashboard).toBe('/');
       expect(ROUTES.pages.chat).toBe('/chat');
+      expect(ROUTES.pages.chatV2).toBe('/chat-v2');
       expect(ROUTES.pages.champions).toBe('/champions');
       expect(ROUTES.pages.championsAnalytics).toBe('/champions/analytics');
       expect(ROUTES.pages.admin).toBe('/admin');

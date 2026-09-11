@@ -14,6 +14,7 @@ function buildApp({
   serviceOverrides = {},
   toolRegistry = null,
   agentMode = 'legacy',
+  agentRunner,
   now,
   imageRequestLog = jest.fn()
 } = {}) {
@@ -61,6 +62,7 @@ function buildApp({
     service,
     toolRegistry,
     agentMode,
+    agentRunner,
     now,
     imageRequestLog
   }));
@@ -339,6 +341,38 @@ describe('Step Chat routes', () => {
       .set('X-CSRF-Token', 'csrf-test')
       .send({ message: 'x'.repeat(2001) })
       .expect(400);
+  });
+
+  test('accepts a custom model-native runner without changing the browser response shape', async () => {
+    const agentRunner = jest.fn(async () => ({
+      text: 'Native answer',
+      tool_results: [],
+      primary_result: null,
+      requires_confirmation: false,
+      rounds: 2
+    }));
+    const { app } = buildApp({
+      agentMode: 'tools',
+      agentRunner,
+      toolRegistry: { declarations: [], execute: jest.fn() },
+      providerOverrides: { createToolModel: jest.fn(() => ({ generate: jest.fn() })) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Plan this for me' })
+      .expect(200);
+
+    expect(agentRunner).toHaveBeenCalledWith(expect.objectContaining({
+      message: 'Plan this for me',
+      context: expect.objectContaining({ userId: 42 })
+    }));
+    expect(response.body).toMatchObject({
+      intent: 'tool_agent', result: { kind: 'chitchat' }, reply: 'Native answer',
+      agent: { rounds: 2, tools: [] }
+    });
   });
 
   test('wires bounded tool-agent mode without changing the browser response shape', async () => {

@@ -1,8 +1,10 @@
 (() => {
-    const STORAGE_KEY_PREFIX = 'stepChatTranscriptV3';
-    const LEGACY_STORAGE_KEYS = ['stepChatTranscriptV1', 'stepChatTranscriptV2'];
-    const STORAGE_SCOPE_KEY = 'stepChatTranscriptScopeV3';
-    const REMEMBER_KEY_PREFIX = 'stepChatRememberV1';
+    const IS_CHAT_V2 = window.location.pathname === '/chat-v2';
+    const API_BASE = IS_CHAT_V2 ? '/api/chat-v2' : '/api/chat';
+    const STORAGE_KEY_PREFIX = IS_CHAT_V2 ? 'stepChatV2TranscriptV1' : 'stepChatTranscriptV3';
+    const LEGACY_STORAGE_KEYS = IS_CHAT_V2 ? [] : ['stepChatTranscriptV1', 'stepChatTranscriptV2'];
+    const STORAGE_SCOPE_KEY = IS_CHAT_V2 ? 'stepChatV2TranscriptScopeV1' : 'stepChatTranscriptScopeV3';
+    const REMEMBER_KEY_PREFIX = IS_CHAT_V2 ? 'stepChatV2RememberV1' : 'stepChatRememberV1';
     const TONE_STORAGE_KEY = 'stepChatToneV1';
     const MAX_STORED_MESSAGES = 300;
     const MAX_STORED_CHARACTERS = 500000;
@@ -244,7 +246,7 @@
     async function extractImage(blob) {
         const csrfToken = await getCsrfToken();
         const dateContext = getClientDateContext();
-        const response = await fetch('/api/chat/image/extract', {
+        const response = await fetch(`${API_BASE}/image/extract`, {
             method: 'POST',
             headers: {
                 'Content-Type': blob.type,
@@ -340,7 +342,7 @@
             previewButton.setAttribute('aria-busy', 'true');
             for (const button of actions.querySelectorAll('button')) button.disabled = true;
             try {
-                const payload = await postJson('/api/chat/entries/preview', {
+                const payload = await postJson(`${API_BASE}/entries/preview`, {
                     entries,
                     tone: document.getElementById('chatToneSelect').value
                 });
@@ -417,7 +419,7 @@
             if (dateConfirmation && !dateConfirmation.checked) return;
             for (const button of actions.querySelectorAll('button')) button.disabled = true;
             try {
-                const data = await postJson('/api/chat/confirm', {
+                const data = await postJson(`${API_BASE}/confirm`, {
                     plan_id: result.plan_id,
                     mode,
                     date_warnings_confirmed: warnedEntries.length > 0 && dateConfirmation?.checked === true
@@ -459,7 +461,7 @@
                 async () => {
                     for (const button of actions.querySelectorAll('button')) button.disabled = true;
                     try {
-                        const payload = await postJson('/api/chat/entries/preview', {
+                        const payload = await postJson(`${API_BASE}/entries/preview`, {
                             entries: [{ date: entry.date_warning.suggested_date, count: entry.count }],
                             tone
                         });
@@ -476,7 +478,7 @@
         actions.appendChild(actionButton('Cancel — save nothing', 'secondary', async () => {
             for (const button of actions.querySelectorAll('button')) button.disabled = true;
             try {
-                await postJson('/api/chat/cancel', { plan_id: result.plan_id });
+                await postJson(`${API_BASE}/cancel`, { plan_id: result.plan_id });
                 if (dateConfirmation) dateConfirmation.disabled = true;
                 actions.remove();
                 createMessage('assistant', 'Canceled. No step entries were changed.');
@@ -497,7 +499,7 @@
         const confirm = actionButton('Rename team', '', async () => {
             for (const button of actions.querySelectorAll('button')) button.disabled = true;
             try {
-                const data = await postJson('/api/chat/team-rename/confirm', { plan_id: result.plan_id });
+                const data = await postJson(`${API_BASE}/team-rename/confirm`, { plan_id: result.plan_id });
                 createMessage('assistant', `Your team is now “${data.result.name}”.`);
                 actions.remove();
             } catch (error) {
@@ -509,7 +511,7 @@
         actions.appendChild(actionButton('Cancel', 'secondary', async () => {
             for (const button of actions.querySelectorAll('button')) button.disabled = true;
             try {
-                await postJson('/api/chat/cancel', { plan_id: result.plan_id });
+                await postJson(`${API_BASE}/cancel`, { plan_id: result.plan_id });
                 actions.remove();
                 createMessage('assistant', 'Team name left unchanged.');
             } catch (error) {
@@ -617,6 +619,18 @@
                 `Additional steps: ${formatNumber(result.required_total)}`,
                 `Within daily limit: ${result.feasible_under_daily_limit ? 'yes' : 'no'}`
             ]);
+            return;
+        }
+        if (result.kind === 'overtake_comparison') {
+            const comparisons = result.results.map(item =>
+                `${item.target.name}: ${formatNumber(item.required_daily_average)} steps/day for ${item.days} day${item.days === 1 ? '' : 's'} (${formatNumber(item.required_total)} additional)`
+            );
+            const text = `${toneLead(tone, 'overtake')} ${comparisons.join('; ')}. Each projection assumes that target’s current average does not change.`;
+            const message = createMessage('assistant', text);
+            appendVerifiedFacts(message, result.results.flatMap(item => [
+                `${item.target.name} required pace: ${formatNumber(item.required_daily_average)} steps/day`,
+                `${item.target.name} within daily limit: ${item.feasible_under_daily_limit ? 'yes' : 'no'}`
+            ]));
             return;
         }
         if (result.kind === 'overtake') {
@@ -801,7 +815,7 @@
         sendButton.disabled = true;
         setImageButtonDisabled(true);
         try {
-            const response = await fetch('/api/chat/config');
+            const response = await fetch(`${API_BASE}/config`);
             if (!response.ok) throw new Error('Chat configuration unavailable');
             const config = await response.json();
             state.configured = config.enabled;
@@ -921,6 +935,12 @@
             input.style.height = `${Math.min(input.scrollHeight, 120)}px`;
         };
 
+        if (IS_CHAT_V2) {
+            document.title = 'Trotter v2 - Step Challenge';
+            const versionLabel = document.querySelector('#stepChatTitle small');
+            if (versionLabel) versionLabel.textContent = '(v2 experiment)';
+        }
+
         initializeTouchViewport(shell, input);
         window.addEventListener('beforeunload', () => {
             if (state.imageObjectUrl) URL.revokeObjectURL(state.imageObjectUrl);
@@ -1021,7 +1041,7 @@
             sendButton.setAttribute('aria-label', 'Trotter is thinking');
             sendButton.setAttribute('aria-busy', 'true');
             try {
-                const payload = await postJson('/api/chat', {
+                const payload = await postJson(API_BASE, {
                     message,
                     history: getRecentHistory(),
                     tone: toneSelect.value,

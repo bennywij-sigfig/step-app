@@ -29,7 +29,8 @@ const ROUTES = {
     teamLeaderboard: '/api/team-leaderboard',
     champions: '/api/champions',
     userProfile: '/api/user-profile',
-    settings: '/api/settings'
+    settings: '/api/settings',
+    chatV2: '/api/chat-v2'
   },
 
   // Admin API Routes
@@ -61,6 +62,7 @@ const ROUTES = {
   pages: {
     dashboard: '/',
     chat: '/chat',
+    chatV2: '/chat-v2',
     champions: '/champions',
     championsAnalytics: '/champions/analytics',
     admin: '/admin',
