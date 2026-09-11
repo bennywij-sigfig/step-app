@@ -125,7 +125,7 @@ const declarations = [
   },
   {
     name: 'preview_step_entries',
-    description: 'Help the authenticated user track steps for one date or many dates. Prepare a review of the entries; never save or overwrite without UI confirmation.',
+    description: 'Help the authenticated user track steps for one date or many dates. Prepare a review; never save or overwrite without UI confirmation. When the user says today or yesterday, set relative_date to that exact word and omit date so the server resolves it from the trusted browser-local calendar.',
     parameters: {
       type: 'object',
       properties: {
@@ -137,9 +137,13 @@ const declarations = [
             type: 'object',
             properties: {
               date: { type: 'string', pattern: '^\\d{4}-\\d{2}-\\d{2}$' },
+              relative_date: {
+                type: 'string', enum: ['today', 'yesterday'],
+                description: 'Use only when the user explicitly says today or yesterday; omit date.'
+              },
               count: { type: 'integer', minimum: 0, maximum: 70000 }
             },
-            required: ['date', 'count']
+            required: ['count']
           }
         }
       },
@@ -230,7 +234,27 @@ function createChatToolRegistry({ service }) {
       }
       case 'preview_step_entries': {
         assertArguments(rawArgs, ['entries']);
-        const intent = validateChatIntent({ intent: 'record_steps', tone: 'neutral', entries: rawArgs.entries });
+        if (!Array.isArray(rawArgs.entries)) throw new ChatToolError('entries must be an array');
+        const entries = rawArgs.entries.map(entry => {
+          assertArguments(entry, ['date', 'relative_date', 'count']);
+          if (entry.date && entry.relative_date) {
+            throw new ChatToolError('Use either date or relative_date, not both');
+          }
+          let date = entry.date;
+          if (entry.relative_date !== undefined) {
+            if (!['today', 'yesterday'].includes(entry.relative_date)) {
+              throw new ChatToolError('relative_date must be today or yesterday');
+            }
+            date = context?.clientDate || currentDate;
+            if (entry.relative_date === 'yesterday') {
+              const priorDate = new Date(`${date}T00:00:00Z`);
+              priorDate.setUTCDate(priorDate.getUTCDate() - 1);
+              date = priorDate.toISOString().slice(0, 10);
+            }
+          }
+          return { date, count: entry.count };
+        });
+        const intent = validateChatIntent({ intent: 'record_steps', tone: 'neutral', entries });
         const preview = await service.previewEntries(userId, intent.entries, context);
         return { kind: 'step_preview', ...preview };
       }

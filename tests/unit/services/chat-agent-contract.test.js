@@ -71,6 +71,32 @@ describe('Trotter tool registry contract', () => {
     );
   });
 
+  test('resolves today and yesterday from trusted browser-local context', async () => {
+    const service = fakeService();
+    const registry = createChatToolRegistry({ service });
+    await registry.execute(
+      'preview_step_entries',
+      { entries: [
+        { relative_date: 'today', count: 3173 },
+        { relative_date: 'yesterday', count: 8000 }
+      ] },
+      { userId: 42, currentDate: '2026-09-12', clientDate: '2026-09-11' }
+    );
+    expect(service.previewEntries).toHaveBeenCalledWith(
+      42,
+      [
+        { date: '2026-09-11', count: 3173 },
+        { date: '2026-09-10', count: 8000 }
+      ],
+      expect.objectContaining({ currentDate: '2026-09-12', clientDate: '2026-09-11' })
+    );
+    await expect(registry.execute(
+      'preview_step_entries',
+      { entries: [{ date: '2026-09-12', relative_date: 'today', count: 3173 }] },
+      { userId: 42, currentDate: '2026-09-12', clientDate: '2026-09-11' }
+    )).rejects.toThrow('either date or relative_date');
+  });
+
   test('binds team rename review to the session user and rejects targeting arguments', async () => {
     const service = fakeService();
     const registry = createChatToolRegistry({ service });
