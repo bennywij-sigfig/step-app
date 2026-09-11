@@ -176,6 +176,9 @@ function createGeminiChatProvider(options = {}) {
   const privacyAcknowledged = options.privacyAcknowledged ?? process.env.GEMINI_PAID_SERVICE_ACKNOWLEDGED === 'true';
   const toolSystemPromptBuilder = options.toolSystemPromptBuilder || buildToolSystemPrompt;
   const toolMaxOutputTokens = options.toolMaxOutputTokens || 300;
+  const toolThinkingBudget = Number.isInteger(options.toolThinkingBudget)
+    ? options.toolThinkingBudget
+    : null;
 
   function isConfigured() {
     const privacyReady = !requirePrivacyAcknowledgement || privacyAcknowledged;
@@ -266,12 +269,19 @@ function createGeminiChatProvider(options = {}) {
           pendingModelContent = null;
         }
 
+        const generationConfig = {
+          temperature: allowTools ? 0.1 : 0.6,
+          maxOutputTokens: toolMaxOutputTokens,
+          ...(toolThinkingBudget !== null ? {
+            thinkingConfig: { thinkingBudget: toolThinkingBudget }
+          } : {})
+        };
         const payload = {
           systemInstruction: {
             parts: [{ text: toolSystemPromptBuilder(context, tone) }]
           },
           contents,
-          generationConfig: { temperature: allowTools ? 0.1 : 0.6, maxOutputTokens: toolMaxOutputTokens }
+          generationConfig
         };
         if (allowTools && tools.length) {
           payload.tools = [{ functionDeclarations: tools }];

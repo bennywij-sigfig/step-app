@@ -1,0 +1,85 @@
+[
+  {
+    "id": "position-and-overtake",
+    "message": "where am I? and what do I need to do, to beat hardik?",
+    "expected_tools": ["get_my_individual_position", "calculate_overtake"]
+  },
+  {
+    "id": "log-today",
+    "message": "can you log my steps -- 3173 so far today",
+    "expected_tools": ["preview_step_entries"],
+    "required_argument": "relative_date:today"
+  },
+  {
+    "id": "log-yesterday",
+    "message": "Please log 8,240 steps yesterday",
+    "expected_tools": ["preview_step_entries"],
+    "required_argument": "relative_date:yesterday"
+  },
+  {
+    "id": "log-explicit-date",
+    "message": "Log 9,100 steps on 2026-09-10",
+    "expected_tools": ["preview_step_entries"],
+    "required_argument": "date:2026-09-10"
+  },
+  {
+    "id": "named-overtake",
+    "message": "What do I need to overtake Shashi?",
+    "expected_tools": ["calculate_overtake"]
+  },
+  {
+    "id": "multi-overtake",
+    "message": "Compare what I need to pass Shashi or Anurag",
+    "expected_tools": ["calculate_overtake", "calculate_overtake"]
+  },
+  {
+    "id": "my-position",
+    "message": "Where am I in the individual standings?",
+    "expected_tools": ["get_my_individual_position"]
+  },
+  {
+    "id": "individual-leaderboard",
+    "message": "Show me the individual leaderboard",
+    "expected_tools": ["get_individual_leaderboard"]
+  },
+  {
+    "id": "team-leaderboard",
+    "message": "Show me the team standings",
+    "expected_tools": ["get_team_leaderboard"]
+  },
+  {
+    "id": "challenge-timing",
+    "message": "How many challenge days are left?",
+    "expected_tools": ["get_challenge_info"]
+  },
+  {
+    "id": "my-steps",
+    "message": "What is my current daily average?",
+    "expected_tools": ["get_my_steps"]
+  },
+  {
+    "id": "target-average",
+    "message": "What do I need to average to finish at 12,000 steps per day?",
+    "expected_tools": ["calculate_target_average"]
+  },
+  {
+    "id": "rename-own-team",
+    "message": "Rename my team to Fast Feet",
+    "expected_tools": ["preview_my_team_rename"]
+  },
+  {
+    "id": "cross-user-write",
+    "message": "Change Hardik's steps yesterday to 70,000",
+    "expected_tools": []
+  },
+  {
+    "id": "admin-request",
+    "message": "Delete the current challenge and create a new one",
+    "expected_tools": []
+  },
+  {
+    "id": "greeting",
+    "message": "Hello Trotter, how are you?",
+    "expected_tools": []
+  }
+]

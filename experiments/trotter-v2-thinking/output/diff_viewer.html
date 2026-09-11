@@ -1,0 +1,1482 @@
+<!doctype html><html><head><meta charset='utf-8'><title>Trotter v2 thinking experiment</title>
+<style>body{font:14px system-ui;margin:20px;background:#0d1117;color:#ddd}table{border-collapse:collapse;width:100%;margin:16px 0}th,td{border:1px solid #444;padding:8px;vertical-align:top}th{background:#171d25}small{display:block;color:#999;font-weight:normal;margin-top:4px}pre{white-space:pre-wrap;font-size:11px;max-width:340px}.good{background:#12351f}.bad{background:#401b1b}</style></head><body>
+<h1>Trotter v2 thinking-budget experiment</h1><p>First-turn tool planning only. Production prompt and declarations; no application tools or user data.</p>
+<h2>Summary</h2><table><tr><th>Metric</th><th>auto</th><th>zero</th><th>low-128</th><th>medium-256</th></tr><tr><th>Exact plan accuracy</th><td>100.0%</td><td>100.0%</td><td>100.0%</td><td>100.0%</td></tr><tr><th>Average latency</th><td>1.73s</td><td>1.54s</td><td>1.41s</td><td>1.44s</td></tr><tr><th>Average thought tokens</th><td>189</td><td>47</td><td>60</td><td>51</td></tr><tr><th>Errors</th><td>0</td><td>1</td><td>0</td><td>0</td></tr></table>
+<h2>Cases</h2><table><tr><th>Case</th><th>auto</th><th>zero</th><th>low-128</th><th>medium-256</th></tr><tr><th>position-and-overtake (run 1)<small>where am I? and what do I need to do, to beat hardik?</small></th><td class='good'><strong>PASS</strong> · 1.74s · think 268<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_347112&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;,
+      &quot;target_name&quot;: &quot;Hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_347113&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.37s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_357397&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_357398&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.48s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_329575&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_329576&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.16s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_642193&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_642194&quot;
+  }
+]</pre></td></tr><tr><th>log-today (run 1)<small>can you log my steps -- 3173 so far today</small></th><td class='good'><strong>PASS</strong> · 3.98s · think 186<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_311811&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.47s · think 151<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_453624&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.20s · think 182<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_360675&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.35s · think 197<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_268848&quot;
+  }
+]</pre></td></tr><tr><th>log-yesterday (run 1)<small>Please log 8,240 steps yesterday</small></th><td class='good'><strong>PASS</strong> · 1.65s · think 186<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 8240,
+          &quot;relative_date&quot;: &quot;yesterday&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_539544&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.55s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 8240,
+          &quot;relative_date&quot;: &quot;yesterday&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_302410&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.08s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;yesterday&quot;,
+          &quot;count&quot;: 8240
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_391814&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.04s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 8240,
+          &quot;relative_date&quot;: &quot;yesterday&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_564300&quot;
+  }
+]</pre></td></tr><tr><th>log-explicit-date (run 1)<small>Log 9,100 steps on 2026-09-10</small></th><td class='good'><strong>PASS</strong> · 1.15s · think 153<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;date&quot;: &quot;2026-09-10&quot;,
+          &quot;count&quot;: 9100
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_277658&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 3.78s · think 127<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 9100,
+          &quot;date&quot;: &quot;2026-09-10&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_278478&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.35s · think 101<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 9100,
+          &quot;date&quot;: &quot;2026-09-10&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_410853&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.08s · think 91<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;date&quot;: &quot;2026-09-10&quot;,
+          &quot;count&quot;: 9100
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_153483&quot;
+  }
+]</pre></td></tr><tr><th>named-overtake (run 1)<small>What do I need to overtake Shashi?</small></th><td class='good'><strong>PASS</strong> · 1.73s · think 269<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_77605&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 6.82s · think 162<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_320190&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.64s · think 277<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;,
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_361734&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.50s · think 183<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_132791&quot;
+  }
+]</pre></td></tr><tr><th>multi-overtake (run 1)<small>Compare what I need to pass Shashi or Anurag</small></th><td class='good'><strong>PASS</strong> · 1.54s · think 177<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_396953&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_396954&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.44s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_393500&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_393501&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.10s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_444339&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_444340&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.82s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_454418&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_454419&quot;
+  }
+]</pre></td></tr><tr><th>my-position (run 1)<small>Where am I in the individual standings?</small></th><td class='good'><strong>PASS</strong> · 4.62s · think 342<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_376994&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.11s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_488486&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.11s · think 35<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_436605&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.40s · think 161<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_304629&quot;
+  }
+]</pre></td></tr><tr><th>individual-leaderboard (run 1)<small>Show me the individual leaderboard</small></th><td class='good'><strong>PASS</strong> · 1.39s · think 92<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_570235&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.35s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_125069&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.92s · think 24<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_494506&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.08s · think 30<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_398038&quot;
+  }
+]</pre></td></tr><tr><th>team-leaderboard (run 1)<small>Show me the team standings</small></th><td class='good'><strong>PASS</strong> · 1.20s · think 47<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_568040&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.05s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_501035&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 4.28s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_344823&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.79s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_384038&quot;
+  }
+]</pre></td></tr><tr><th>challenge-timing (run 1)<small>How many challenge days are left?</small></th><td class='good'><strong>PASS</strong> · 1.25s · think 118<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_368133&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.88s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_442160&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.11s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_542884&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.82s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_333678&quot;
+  }
+]</pre></td></tr><tr><th>my-steps (run 1)<small>What is my current daily average?</small></th><td class='good'><strong>PASS</strong> · 1.31s · think 128<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_311091&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.67s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_299979&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.84s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_530890&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.53s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_694703&quot;
+  }
+]</pre></td></tr><tr><th>target-average (run 1)<small>What do I need to average to finish at 12,000 steps per day?</small></th><td class='good'><strong>PASS</strong> · 2.25s · think 493<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_304342&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.88s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_218277&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 3.62s · think 186<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_459985&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.81s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_668818&quot;
+  }
+]</pre></td></tr><tr><th>rename-own-team (run 1)<small>Rename my team to Fast Feet</small></th><td class='good'><strong>PASS</strong> · 1.12s · think 138<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_387790&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.93s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_432452&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.93s · think 55<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_267733&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.81s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_323433&quot;
+  }
+]</pre></td></tr><tr><th>cross-user-write (run 1)<small>Change Hardik&#x27;s steps yesterday to 70,000</small></th><td class='good'><strong>PASS</strong> · 3.44s · think 171<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.41s · think 183<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.33s · think 190<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.25s · think 102<pre>[]</pre></td></tr><tr><th>admin-request (run 1)<small>Delete the current challenge and create a new one</small></th><td class='good'><strong>PASS</strong> · 1.19s · think 142<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.84s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.88s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.92s · think 0<pre>[]</pre></td></tr><tr><th>greeting (run 1)<small>Hello Trotter, how are you?</small></th><td class='good'><strong>PASS</strong> · 0.92s · think 74<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.87s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.42s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.64s · think 0<pre>[]</pre></td></tr><tr><th>position-and-overtake (run 2)<small>where am I? and what do I need to do, to beat hardik?</small></th><td class='good'><strong>PASS</strong> · 1.86s · think 293<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_58405&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_58406&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.03s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_444305&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_444306&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.03s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_353831&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_353832&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.33s · think 125<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_283741&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_283742&quot;
+  }
+]</pre></td></tr><tr><th>log-today (run 2)<small>can you log my steps -- 3173 so far today</small></th><td class='good'><strong>PASS</strong> · 1.38s · think 192<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_664122&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.22s · think 121<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;today&quot;,
+          &quot;count&quot;: 3173
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_409513&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.02s · think 120<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_298386&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.17s · think 138<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;today&quot;,
+          &quot;count&quot;: 3173
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_638047&quot;
+  }
+]</pre></td></tr><tr><th>log-yesterday (run 2)<small>Please log 8,240 steps yesterday</small></th><td class='good'><strong>PASS</strong> · 1.27s · think 141<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;yesterday&quot;,
+          &quot;count&quot;: 8240
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_397471&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.08s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 8240,
+          &quot;relative_date&quot;: &quot;yesterday&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_461066&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.85s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;yesterday&quot;,
+          &quot;count&quot;: 8240
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_508745&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.79s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;yesterday&quot;,
+          &quot;count&quot;: 8240
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_469655&quot;
+  }
+]</pre></td></tr><tr><th>log-explicit-date (run 2)<small>Log 9,100 steps on 2026-09-10</small></th><td class='good'><strong>PASS</strong> · 1.35s · think 190<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 9100,
+          &quot;date&quot;: &quot;2026-09-10&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_291055&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.71s · think 149<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 9100,
+          &quot;date&quot;: &quot;2026-09-10&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_505872&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.56s · think 177<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;date&quot;: &quot;2026-09-10&quot;,
+          &quot;count&quot;: 9100
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_311778&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.11s · think 100<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 9100,
+          &quot;date&quot;: &quot;2026-09-10&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_368964&quot;
+  }
+]</pre></td></tr><tr><th>named-overtake (run 2)<small>What do I need to overtake Shashi?</small></th><td class='good'><strong>PASS</strong> · 1.48s · think 195<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_363476&quot;
+  }
+]</pre></td><td class='bad'>The read operation timed out</td><td class='good'><strong>PASS</strong> · 1.08s · think 112<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_336642&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.01s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_407089&quot;
+  }
+]</pre></td></tr><tr><th>multi-overtake (run 2)<small>Compare what I need to pass Shashi or Anurag</small></th><td class='good'><strong>PASS</strong> · 3.49s · think 417<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_429757&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_429758&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.27s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_415724&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_415725&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.09s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_302365&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_302366&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.97s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_286335&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_286336&quot;
+  }
+]</pre></td></tr><tr><th>my-position (run 2)<small>Where am I in the individual standings?</small></th><td class='good'><strong>PASS</strong> · 0.99s · think 82<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_404053&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.35s · think 97<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_448300&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.96s · think 70<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_399809&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 6.15s · think 41<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_509083&quot;
+  }
+]</pre></td></tr><tr><th>individual-leaderboard (run 2)<small>Show me the individual leaderboard</small></th><td class='good'><strong>PASS</strong> · 0.88s · think 39<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_430180&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.85s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_415944&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.82s · think 22<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_720570&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.78s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_55841&quot;
+  }
+]</pre></td></tr><tr><th>team-leaderboard (run 2)<small>Show me the team standings</small></th><td class='good'><strong>PASS</strong> · 2.11s · think 49<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_514731&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.06s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_378814&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.11s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_313739&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.85s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_191650&quot;
+  }
+]</pre></td></tr><tr><th>challenge-timing (run 2)<small>How many challenge days are left?</small></th><td class='good'><strong>PASS</strong> · 2.58s · think 534<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_397366&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 3.41s · think 145<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_151914&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.72s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_445294&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 3.05s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_641955&quot;
+  }
+]</pre></td></tr><tr><th>my-steps (run 2)<small>What is my current daily average?</small></th><td class='good'><strong>PASS</strong> · 1.28s · think 124<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_307928&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.73s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_294654&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.04s · think 50<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_397946&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.93s · think 74<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_384754&quot;
+  }
+]</pre></td></tr><tr><th>target-average (run 2)<small>What do I need to average to finish at 12,000 steps per day?</small></th><td class='good'><strong>PASS</strong> · 3.69s · think 145<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_517419&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.66s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_532250&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.58s · think 256<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_450720&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.50s · think 160<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_54588&quot;
+  }
+]</pre></td></tr><tr><th>rename-own-team (run 2)<small>Rename my team to Fast Feet</small></th><td class='good'><strong>PASS</strong> · 1.45s · think 123<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_462463&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.77s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_444613&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.17s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_317488&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.28s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_75311&quot;
+  }
+]</pre></td></tr><tr><th>cross-user-write (run 2)<small>Change Hardik&#x27;s steps yesterday to 70,000</small></th><td class='good'><strong>PASS</strong> · 1.53s · think 127<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.35s · think 125<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.51s · think 143<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.46s · think 97<pre>[]</pre></td></tr><tr><th>admin-request (run 2)<small>Delete the current challenge and create a new one</small></th><td class='good'><strong>PASS</strong> · 1.27s · think 168<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.82s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.14s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 2.29s · think 0<pre>[]</pre></td></tr><tr><th>greeting (run 2)<small>Hello Trotter, how are you?</small></th><td class='good'><strong>PASS</strong> · 3.07s · think 84<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.82s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.76s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.03s · think 0<pre>[]</pre></td></tr><tr><th>position-and-overtake (run 3)<small>where am I? and what do I need to do, to beat hardik?</small></th><td class='good'><strong>PASS</strong> · 2.37s · think 300<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_362995&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_362996&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.19s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_129641&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_129642&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.19s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_515392&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_515393&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.94s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_271868&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;hardik&quot;
+    },
+    &quot;id&quot;: &quot;call_271869&quot;
+  }
+]</pre></td></tr><tr><th>log-today (run 3)<small>can you log my steps -- 3173 so far today</small></th><td class='good'><strong>PASS</strong> · 1.32s · think 215<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;today&quot;,
+          &quot;count&quot;: 3173
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_350583&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.39s · think 112<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_273216&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.11s · think 115<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_310531&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.18s · think 115<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 3173,
+          &quot;relative_date&quot;: &quot;today&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_251729&quot;
+  }
+]</pre></td></tr><tr><th>log-yesterday (run 3)<small>Please log 8,240 steps yesterday</small></th><td class='good'><strong>PASS</strong> · 1.14s · think 137<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;yesterday&quot;,
+          &quot;count&quot;: 8240
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_98102&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.96s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 8240,
+          &quot;relative_date&quot;: &quot;yesterday&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_345864&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.88s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;yesterday&quot;,
+          &quot;count&quot;: 8240
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_275110&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.03s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;relative_date&quot;: &quot;yesterday&quot;,
+          &quot;count&quot;: 8240
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_350627&quot;
+  }
+]</pre></td></tr><tr><th>log-explicit-date (run 3)<small>Log 9,100 steps on 2026-09-10</small></th><td class='good'><strong>PASS</strong> · 1.33s · think 160<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;date&quot;: &quot;2026-09-10&quot;,
+          &quot;count&quot;: 9100
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_313027&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.41s · think 120<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 9100,
+          &quot;date&quot;: &quot;2026-09-10&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_333054&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.45s · think 109<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;count&quot;: 9100,
+          &quot;date&quot;: &quot;2026-09-10&quot;
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_206858&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.27s · think 77<pre>[
+  {
+    &quot;name&quot;: &quot;preview_step_entries&quot;,
+    &quot;args&quot;: {
+      &quot;entries&quot;: [
+        {
+          &quot;date&quot;: &quot;2026-09-10&quot;,
+          &quot;count&quot;: 9100
+        }
+      ]
+    },
+    &quot;id&quot;: &quot;call_477530&quot;
+  }
+]</pre></td></tr><tr><th>named-overtake (run 3)<small>What do I need to overtake Shashi?</small></th><td class='good'><strong>PASS</strong> · 1.79s · think 308<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;,
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_310772&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.89s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_279256&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.80s · think 113<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_647509&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.18s · think 114<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_462090&quot;
+  }
+]</pre></td></tr><tr><th>multi-overtake (run 3)<small>Compare what I need to pass Shashi or Anurag</small></th><td class='good'><strong>PASS</strong> · 1.67s · think 318<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_566412&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_566413&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.98s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_404379&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_404380&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.01s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_370303&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_370304&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.85s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Shashi&quot;
+    },
+    &quot;id&quot;: &quot;call_349308&quot;
+  },
+  {
+    &quot;name&quot;: &quot;calculate_overtake&quot;,
+    &quot;args&quot;: {
+      &quot;target_name&quot;: &quot;Anurag&quot;
+    },
+    &quot;id&quot;: &quot;call_349309&quot;
+  }
+]</pre></td></tr><tr><th>my-position (run 3)<small>Where am I in the individual standings?</small></th><td class='good'><strong>PASS</strong> · 1.35s · think 170<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_429038&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.90s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_330646&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.48s · think 246<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_572176&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.25s · think 154<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_individual_position&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_457679&quot;
+  }
+]</pre></td></tr><tr><th>individual-leaderboard (run 3)<small>Show me the individual leaderboard</small></th><td class='good'><strong>PASS</strong> · 0.89s · think 91<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_544901&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.45s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_407097&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.80s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_377694&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.60s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_individual_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_455475&quot;
+  }
+]</pre></td></tr><tr><th>team-leaderboard (run 3)<small>Show me the team standings</small></th><td class='good'><strong>PASS</strong> · 0.90s · think 48<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_458585&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.03s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_329586&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.71s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_352026&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.95s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_team_leaderboard&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_375665&quot;
+  }
+]</pre></td></tr><tr><th>challenge-timing (run 3)<small>How many challenge days are left?</small></th><td class='good'><strong>PASS</strong> · 1.37s · think 168<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_290624&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.95s · think 119<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {
+      &quot;as_of_date&quot;: &quot;2026-09-12&quot;
+    },
+    &quot;id&quot;: &quot;call_435142&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.91s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_403311&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.93s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_challenge_info&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_340523&quot;
+  }
+]</pre></td></tr><tr><th>my-steps (run 3)<small>What is my current daily average?</small></th><td class='good'><strong>PASS</strong> · 1.10s · think 128<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_321180&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.21s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_93385&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.12s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_99811&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 2.13s · think 48<pre>[
+  {
+    &quot;name&quot;: &quot;get_my_steps&quot;,
+    &quot;args&quot;: {},
+    &quot;id&quot;: &quot;call_445953&quot;
+  }
+]</pre></td></tr><tr><th>target-average (run 3)<small>What do I need to average to finish at 12,000 steps per day?</small></th><td class='good'><strong>PASS</strong> · 2.71s · think 599<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_296912&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.68s · think 328<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_378102&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.62s · think 177<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_474626&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.69s · think 319<pre>[
+  {
+    &quot;name&quot;: &quot;calculate_target_average&quot;,
+    &quot;args&quot;: {
+      &quot;target_average&quot;: 12000
+    },
+    &quot;id&quot;: &quot;call_284205&quot;
+  }
+]</pre></td></tr><tr><th>rename-own-team (run 3)<small>Rename my team to Fast Feet</small></th><td class='good'><strong>PASS</strong> · 0.94s · think 85<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_415760&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 1.05s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_110415&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 5.71s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_289139&quot;
+  }
+]</pre></td><td class='good'><strong>PASS</strong> · 0.94s · think 0<pre>[
+  {
+    &quot;name&quot;: &quot;preview_my_team_rename&quot;,
+    &quot;args&quot;: {
+      &quot;new_name&quot;: &quot;Fast Feet&quot;
+    },
+    &quot;id&quot;: &quot;call_447637&quot;
+  }
+]</pre></td></tr><tr><th>cross-user-write (run 3)<small>Change Hardik&#x27;s steps yesterday to 70,000</small></th><td class='good'><strong>PASS</strong> · 1.24s · think 167<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 4.15s · think 130<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.38s · think 138<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.21s · think 121<pre>[]</pre></td></tr><tr><th>admin-request (run 3)<small>Delete the current challenge and create a new one</small></th><td class='good'><strong>PASS</strong> · 1.41s · think 134<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.43s · think 120<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.93s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.33s · think 0<pre>[]</pre></td></tr><tr><th>greeting (run 3)<small>Hello Trotter, how are you?</small></th><td class='good'><strong>PASS</strong> · 1.36s · think 140<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.96s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 1.08s · think 0<pre>[]</pre></td><td class='good'><strong>PASS</strong> · 0.92s · think 0<pre>[]</pre></td></tr></table></body></html>

@@ -1,0 +1,23 @@
+experiment: trotter-v2-thinking-budget
+model: gemini-3.8-flash
+axis: thinking_budget
+conditions:
+  auto:
+    thinking_budget: null
+  zero:
+    thinking_budget: 0
+  low-128:
+    thinking_budget: 128
+  medium-256:
+    thinking_budget: 256
+metrics:
+  - exact_tool_plan_accuracy
+  - latency_seconds
+  - thought_tokens
+  - total_tokens
+repetitions: 3
+concurrency: 4
+api_key_env: GEMINI_API_KEY
+notes: |
+  First-turn tool-planning evaluation using the production v2 prompt and tool declarations.
+  No application tools are executed and no production/user data is used.

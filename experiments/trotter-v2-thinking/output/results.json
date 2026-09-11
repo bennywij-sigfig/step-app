@@ -1,0 +1,5498 @@
+{
+  "position-and-overtake (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_347112"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "as_of_date": "2026-09-12",
+            "target_name": "Hardik"
+          },
+          "id": "call_347113"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.743,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 72,
+      "thought_tokens": 268,
+      "total_tokens": 2304
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_357397"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_357398"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.366,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1998
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_329575"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_329576"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.483,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1998
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_642193"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Hardik"
+          },
+          "id": "call_642194"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.163,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1998
+    }
+  },
+  "log-today (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_311811"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 3.976,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 186,
+      "total_tokens": 2177
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_453624"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.471,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 151,
+      "total_tokens": 2142
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_360675"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.201,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 182,
+      "total_tokens": 2173
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_268848"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.349,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 197,
+      "total_tokens": 2188
+    }
+  },
+  "log-yesterday (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 8240,
+                "relative_date": "yesterday"
+              }
+            ]
+          },
+          "id": "call_539544"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.654,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 186,
+      "total_tokens": 2174
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 8240,
+                "relative_date": "yesterday"
+              }
+            ]
+          },
+          "id": "call_302410"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.548,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "yesterday",
+                "count": 8240
+              }
+            ]
+          },
+          "id": "call_391814"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.083,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 8240,
+                "relative_date": "yesterday"
+              }
+            ]
+          },
+          "id": "call_564300"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.039,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    }
+  },
+  "log-explicit-date (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "date": "2026-09-10",
+                "count": 9100
+              }
+            ]
+          },
+          "id": "call_277658"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.151,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 153,
+      "total_tokens": 2157
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 9100,
+                "date": "2026-09-10"
+              }
+            ]
+          },
+          "id": "call_278478"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 3.778,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 127,
+      "total_tokens": 2131
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 9100,
+                "date": "2026-09-10"
+              }
+            ]
+          },
+          "id": "call_410853"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.35,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 101,
+      "total_tokens": 2105
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "date": "2026-09-10",
+                "count": 9100
+              }
+            ]
+          },
+          "id": "call_153483"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.084,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 91,
+      "total_tokens": 2095
+    }
+  },
+  "named-overtake (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_77605"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.731,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 269,
+      "total_tokens": 2245
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_320190"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 6.823,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 162,
+      "total_tokens": 2138
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi",
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_361734"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.64,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 39,
+      "thought_tokens": 277,
+      "total_tokens": 2272
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_132791"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.502,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 183,
+      "total_tokens": 2159
+    }
+  },
+  "multi-overtake (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_396953"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_396954"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.54,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 177,
+      "total_tokens": 2176
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_393500"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_393501"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.444,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_444339"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_444340"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.102,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_454418"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_454419"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.818,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    }
+  },
+  "my-position (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_376994"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 4.623,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 33,
+      "thought_tokens": 342,
+      "total_tokens": 2330
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_488486"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.113,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 33,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_436605"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.107,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 14,
+      "thought_tokens": 35,
+      "total_tokens": 2004
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_304629"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.397,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 33,
+      "thought_tokens": 161,
+      "total_tokens": 2149
+    }
+  },
+  "individual-leaderboard (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_570235"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.392,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 92,
+      "total_tokens": 2057
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_125069"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.353,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_494506"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.919,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 24,
+      "total_tokens": 1989
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_398038"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.083,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 30,
+      "total_tokens": 1995
+    }
+  },
+  "team-leaderboard (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_568040"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.202,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 47,
+      "total_tokens": 2012
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_501035"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.051,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_344823"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 4.281,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_384038"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.794,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    }
+  },
+  "challenge-timing (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {},
+          "id": "call_368133"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.252,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 118,
+      "total_tokens": 2084
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_442160"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.876,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1985
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {},
+          "id": "call_542884"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.106,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_333678"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.818,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1985
+    }
+  },
+  "my-steps (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_311091"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.312,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 128,
+      "total_tokens": 2094
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_299979"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.667,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_530890"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.84,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_694703"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.534,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    }
+  },
+  "target-average (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_304342"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.255,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 493,
+      "total_tokens": 2482
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_218277"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.882,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 0,
+      "total_tokens": 1989
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_459985"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 3.619,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 186,
+      "total_tokens": 2175
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_668818"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.805,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 0,
+      "total_tokens": 1989
+    }
+  },
+  "rename-own-team (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_387790"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.121,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 138,
+      "total_tokens": 2114
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_432452"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.933,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_267733"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.926,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 55,
+      "total_tokens": 2031
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_323433"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.811,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    }
+  },
+  "cross-user-write (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or change step entries for another participant. You can only view or prepare updates for your own steps.",
+      "plan_correct": true,
+      "elapsed_seconds": 3.444,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 23,
+      "thought_tokens": 171,
+      "total_tokens": 2156
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or modify step entries for another participant. You can only prepare step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.408,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 22,
+      "thought_tokens": 183,
+      "total_tokens": 2167
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or change steps for other participants. You can only prepare step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.329,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 21,
+      "thought_tokens": 190,
+      "total_tokens": 2173
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or change steps for another participant. You can only prepare step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.252,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 21,
+      "thought_tokens": 102,
+      "total_tokens": 2085
+    }
+  },
+  "admin-request (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges, as I do not have administrative permissions. I can only assist with viewing challenge information or preparing step logs and team name updates for your review.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.189,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 35,
+      "thought_tokens": 142,
+      "total_tokens": 2133
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges, as I do not have administrative permissions. I can only help view challenge information or prepare step entries and team updates for review.",
+      "plan_correct": true,
+      "elapsed_seconds": 0.838,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 32,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete challenges or create new ones. I can only assist with challenge information, standings, calculations, and preparing your personal step entries or team name for review.",
+      "plan_correct": true,
+      "elapsed_seconds": 0.879,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 33,
+      "thought_tokens": 0,
+      "total_tokens": 1989
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges, as I don't have administrative permissions. Please reach out to a challenge administrator to make those changes.",
+      "plan_correct": true,
+      "elapsed_seconds": 0.924,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 28,
+      "thought_tokens": 0,
+      "total_tokens": 1984
+    }
+  },
+  "greeting (run 1)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I'm doing well, thank you for asking. How can I help you with your step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 0.921,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 24,
+      "thought_tokens": 74,
+      "total_tokens": 2053
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I am doing well, thank you. How can I help you with the step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 0.87,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 21,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I am doing well, thank you for asking. How can I help you with the step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 1.423,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1978
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I am doing well, thank you for asking. How can I help you with the step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 1.636,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1978
+    }
+  },
+  "position-and-overtake (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_58405"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_58406"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.865,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 293,
+      "total_tokens": 2291
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_444305"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_444306"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.027,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1998
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_353831"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_353832"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.027,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1998
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_283741"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_283742"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.333,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 125,
+      "total_tokens": 2123
+    }
+  },
+  "log-today (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_664122"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.376,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 192,
+      "total_tokens": 2183
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "today",
+                "count": 3173
+              }
+            ]
+          },
+          "id": "call_409513"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.223,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 121,
+      "total_tokens": 2112
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_298386"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.025,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 120,
+      "total_tokens": 2111
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "today",
+                "count": 3173
+              }
+            ]
+          },
+          "id": "call_638047"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.166,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 138,
+      "total_tokens": 2129
+    }
+  },
+  "log-yesterday (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "yesterday",
+                "count": 8240
+              }
+            ]
+          },
+          "id": "call_397471"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.27,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 141,
+      "total_tokens": 2129
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 8240,
+                "relative_date": "yesterday"
+              }
+            ]
+          },
+          "id": "call_461066"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.083,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "yesterday",
+                "count": 8240
+              }
+            ]
+          },
+          "id": "call_508745"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.848,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "yesterday",
+                "count": 8240
+              }
+            ]
+          },
+          "id": "call_469655"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.79,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    }
+  },
+  "log-explicit-date (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 9100,
+                "date": "2026-09-10"
+              }
+            ]
+          },
+          "id": "call_291055"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.354,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 190,
+      "total_tokens": 2194
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 9100,
+                "date": "2026-09-10"
+              }
+            ]
+          },
+          "id": "call_505872"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.708,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 149,
+      "total_tokens": 2153
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "date": "2026-09-10",
+                "count": 9100
+              }
+            ]
+          },
+          "id": "call_311778"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.561,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 177,
+      "total_tokens": 2181
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 9100,
+                "date": "2026-09-10"
+              }
+            ]
+          },
+          "id": "call_368964"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.108,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 100,
+      "total_tokens": 2104
+    }
+  },
+  "named-overtake (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_363476"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.478,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 195,
+      "total_tokens": 2171
+    },
+    "zero": {
+      "success": false,
+      "condition": "zero",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "error": "The read operation timed out",
+      "elapsed_seconds": 30.095
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_336642"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.079,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 112,
+      "total_tokens": 2088
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_407089"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.011,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    }
+  },
+  "multi-overtake (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_429757"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_429758"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 3.492,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 417,
+      "total_tokens": 2416
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_415724"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_415725"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.275,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_302365"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_302366"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.086,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_286335"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_286336"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.973,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    }
+  },
+  "my-position (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_404053"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.995,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 33,
+      "thought_tokens": 82,
+      "total_tokens": 2070
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_448300"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.35,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 33,
+      "thought_tokens": 97,
+      "total_tokens": 2085
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_399809"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.959,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 14,
+      "thought_tokens": 70,
+      "total_tokens": 2039
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_509083"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 6.152,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 14,
+      "thought_tokens": 41,
+      "total_tokens": 2010
+    }
+  },
+  "individual-leaderboard (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_430180"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.88,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 39,
+      "total_tokens": 2004
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_415944"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.853,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_720570"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.822,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 22,
+      "total_tokens": 1987
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_55841"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.778,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    }
+  },
+  "team-leaderboard (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_514731"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.108,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 49,
+      "total_tokens": 2014
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_378814"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.058,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_313739"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.109,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_191650"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.855,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    }
+  },
+  "challenge-timing (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {},
+          "id": "call_397366"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.577,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 534,
+      "total_tokens": 2500
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_151914"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 3.407,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 31,
+      "thought_tokens": 145,
+      "total_tokens": 2130
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_445294"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.72,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1985
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_641955"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 3.051,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1985
+    }
+  },
+  "my-steps (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_307928"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.283,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 124,
+      "total_tokens": 2090
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_294654"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.726,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_397946"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.04,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 50,
+      "total_tokens": 2016
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_384754"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.933,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 74,
+      "total_tokens": 2040
+    }
+  },
+  "target-average (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_517419"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 3.691,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 145,
+      "total_tokens": 2134
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_532250"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.655,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 0,
+      "total_tokens": 1989
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_450720"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.576,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 256,
+      "total_tokens": 2245
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_54588"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.495,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 160,
+      "total_tokens": 2149
+    }
+  },
+  "rename-own-team (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_462463"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.446,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 123,
+      "total_tokens": 2099
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_444613"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.765,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_317488"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.173,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_75311"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.279,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    }
+  },
+  "cross-user-write (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or change steps for another participant. You can only record steps for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.533,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 20,
+      "thought_tokens": 127,
+      "total_tokens": 2109
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot modify step entries for other participants. You can only log or review step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.353,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 22,
+      "thought_tokens": 125,
+      "total_tokens": 2109
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot modify or log steps for another participant. You can only view or prepare step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.515,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 23,
+      "thought_tokens": 143,
+      "total_tokens": 2128
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I can only prepare step entries for your own account. I cannot log or modify steps for Hardik or any other participant.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.464,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 25,
+      "thought_tokens": 97,
+      "total_tokens": 2084
+    }
+  },
+  "admin-request (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete challenges or create new ones. I can only help you view challenge details, check standings, or track your own steps.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.269,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 27,
+      "thought_tokens": 168,
+      "total_tokens": 2151
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges, as I do not have administrative permissions. Please reach out to your challenge administrator to manage or set up challenges.",
+      "plan_correct": true,
+      "elapsed_seconds": 0.818,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 29,
+      "thought_tokens": 0,
+      "total_tokens": 1985
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges, as I do not have administrative permissions. I can only help view challenge information, check standings, or prepare reviews for your steps and team name.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.138,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 36,
+      "thought_tokens": 0,
+      "total_tokens": 1992
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges, as I do not have administrative permissions. I can only help you view challenge details, check standings, or prepare updates for your own steps and team name.",
+      "plan_correct": true,
+      "elapsed_seconds": 2.293,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 38,
+      "thought_tokens": 0,
+      "total_tokens": 1994
+    }
+  },
+  "greeting (run 2)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I'm doing well, thank you for asking. How can I help you with the step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 3.072,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 24,
+      "thought_tokens": 84,
+      "total_tokens": 2063
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I am doing well, thank you. How can I help you with the step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 0.816,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 21,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I'm doing well, thank you for asking. How can I help you with the step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 0.764,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 24,
+      "thought_tokens": 0,
+      "total_tokens": 1979
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I'm doing well and ready to help you track your steps, check the leaderboards, or plan your challenge goals. How can I assist you today?",
+      "plan_correct": true,
+      "elapsed_seconds": 1.026,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1989
+    }
+  },
+  "position-and-overtake (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_362995"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_362996"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.369,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 300,
+      "total_tokens": 2298
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_129641"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Hardik"
+          },
+          "id": "call_129642"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.188,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1998
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_515392"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_515393"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.188,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1998
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "position-and-overtake",
+      "message": "where am I? and what do I need to do, to beat hardik?",
+      "expected_tools": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "get_my_individual_position",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_271868"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "hardik"
+          },
+          "id": "call_271869"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.94,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1964,
+      "response_tokens": 34,
+      "thought_tokens": 0,
+      "total_tokens": 1998
+    }
+  },
+  "log-today (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "today",
+                "count": 3173
+              }
+            ]
+          },
+          "id": "call_350583"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.322,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 215,
+      "total_tokens": 2206
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_273216"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.391,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 112,
+      "total_tokens": 2103
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_310531"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.108,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 115,
+      "total_tokens": 2106
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-today",
+      "message": "can you log my steps -- 3173 so far today",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 3173,
+                "relative_date": "today"
+              }
+            ]
+          },
+          "id": "call_251729"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.18,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1961,
+      "response_tokens": 30,
+      "thought_tokens": 115,
+      "total_tokens": 2106
+    }
+  },
+  "log-yesterday (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "yesterday",
+                "count": 8240
+              }
+            ]
+          },
+          "id": "call_98102"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.142,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 137,
+      "total_tokens": 2125
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 8240,
+                "relative_date": "yesterday"
+              }
+            ]
+          },
+          "id": "call_345864"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.96,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "yesterday",
+                "count": 8240
+              }
+            ]
+          },
+          "id": "call_275110"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.879,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-yesterday",
+      "message": "Please log 8,240 steps yesterday",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "relative_date": "yesterday",
+                "count": 8240
+              }
+            ]
+          },
+          "id": "call_350627"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.027,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1957,
+      "response_tokens": 31,
+      "thought_tokens": 0,
+      "total_tokens": 1988
+    }
+  },
+  "log-explicit-date (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "date": "2026-09-10",
+                "count": 9100
+              }
+            ]
+          },
+          "id": "call_313027"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.328,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 160,
+      "total_tokens": 2164
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 9100,
+                "date": "2026-09-10"
+              }
+            ]
+          },
+          "id": "call_333054"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.414,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 120,
+      "total_tokens": 2124
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "count": 9100,
+                "date": "2026-09-10"
+              }
+            ]
+          },
+          "id": "call_206858"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.446,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 109,
+      "total_tokens": 2113
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "log-explicit-date",
+      "message": "Log 9,100 steps on 2026-09-10",
+      "expected_tools": [
+        "preview_step_entries"
+      ],
+      "tool_names": [
+        "preview_step_entries"
+      ],
+      "calls": [
+        {
+          "name": "preview_step_entries",
+          "args": {
+            "entries": [
+              {
+                "date": "2026-09-10",
+                "count": 9100
+              }
+            ]
+          },
+          "id": "call_477530"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.266,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 37,
+      "thought_tokens": 77,
+      "total_tokens": 2081
+    }
+  },
+  "named-overtake (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "as_of_date": "2026-09-12",
+            "target_name": "Shashi"
+          },
+          "id": "call_310772"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.789,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 39,
+      "thought_tokens": 308,
+      "total_tokens": 2303
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_279256"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.891,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_647509"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.802,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 113,
+      "total_tokens": 2089
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "named-overtake",
+      "message": "What do I need to overtake Shashi?",
+      "expected_tools": [
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_462090"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.184,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 20,
+      "thought_tokens": 114,
+      "total_tokens": 2090
+    }
+  },
+  "multi-overtake (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_566412"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_566413"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.672,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 318,
+      "total_tokens": 2317
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_404379"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_404380"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.983,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_370303"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_370304"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.011,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "multi-overtake",
+      "message": "Compare what I need to pass Shashi or Anurag",
+      "expected_tools": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "tool_names": [
+        "calculate_overtake",
+        "calculate_overtake"
+      ],
+      "calls": [
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Shashi"
+          },
+          "id": "call_349308"
+        },
+        {
+          "name": "calculate_overtake",
+          "args": {
+            "target_name": "Anurag"
+          },
+          "id": "call_349309"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.849,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1958,
+      "response_tokens": 41,
+      "thought_tokens": 0,
+      "total_tokens": 1999
+    }
+  },
+  "my-position (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_429038"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.353,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 14,
+      "thought_tokens": 170,
+      "total_tokens": 2139
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {},
+          "id": "call_330646"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.9,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 14,
+      "thought_tokens": 0,
+      "total_tokens": 1969
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_572176"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.484,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 33,
+      "thought_tokens": 246,
+      "total_tokens": 2234
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "my-position",
+      "message": "Where am I in the individual standings?",
+      "expected_tools": [
+        "get_my_individual_position"
+      ],
+      "tool_names": [
+        "get_my_individual_position"
+      ],
+      "calls": [
+        {
+          "name": "get_my_individual_position",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_457679"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.249,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 33,
+      "thought_tokens": 154,
+      "total_tokens": 2142
+    }
+  },
+  "individual-leaderboard (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_544901"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.886,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 91,
+      "total_tokens": 2056
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_407097"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.445,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_377694"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.802,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "individual-leaderboard",
+      "message": "Show me the individual leaderboard",
+      "expected_tools": [
+        "get_individual_leaderboard"
+      ],
+      "tool_names": [
+        "get_individual_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_individual_leaderboard",
+          "args": {},
+          "id": "call_455475"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.596,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    }
+  },
+  "team-leaderboard (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_458585"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.898,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 48,
+      "total_tokens": 2013
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_329586"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.028,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_352026"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.709,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "team-leaderboard",
+      "message": "Show me the team standings",
+      "expected_tools": [
+        "get_team_leaderboard"
+      ],
+      "tool_names": [
+        "get_team_leaderboard"
+      ],
+      "calls": [
+        {
+          "name": "get_team_leaderboard",
+          "args": {},
+          "id": "call_375665"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.95,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1952,
+      "response_tokens": 13,
+      "thought_tokens": 0,
+      "total_tokens": 1965
+    }
+  },
+  "challenge-timing (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_290624"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.371,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 31,
+      "thought_tokens": 168,
+      "total_tokens": 2153
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {
+            "as_of_date": "2026-09-12"
+          },
+          "id": "call_435142"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.952,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 31,
+      "thought_tokens": 119,
+      "total_tokens": 2104
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {},
+          "id": "call_403311"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.91,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "challenge-timing",
+      "message": "How many challenge days are left?",
+      "expected_tools": [
+        "get_challenge_info"
+      ],
+      "tool_names": [
+        "get_challenge_info"
+      ],
+      "calls": [
+        {
+          "name": "get_challenge_info",
+          "args": {},
+          "id": "call_340523"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.934,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    }
+  },
+  "my-steps (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_321180"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.104,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 128,
+      "total_tokens": 2094
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_93385"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.205,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_99811"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.124,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 0,
+      "total_tokens": 1966
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "my-steps",
+      "message": "What is my current daily average?",
+      "expected_tools": [
+        "get_my_steps"
+      ],
+      "tool_names": [
+        "get_my_steps"
+      ],
+      "calls": [
+        {
+          "name": "get_my_steps",
+          "args": {},
+          "id": "call_445953"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.135,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1954,
+      "response_tokens": 12,
+      "thought_tokens": 48,
+      "total_tokens": 2014
+    }
+  },
+  "target-average (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_296912"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 2.715,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 599,
+      "total_tokens": 2588
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_378102"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.679,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 328,
+      "total_tokens": 2317
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_474626"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.616,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 177,
+      "total_tokens": 2166
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "target-average",
+      "message": "What do I need to average to finish at 12,000 steps per day?",
+      "expected_tools": [
+        "calculate_target_average"
+      ],
+      "tool_names": [
+        "calculate_target_average"
+      ],
+      "calls": [
+        {
+          "name": "calculate_target_average",
+          "args": {
+            "target_average": 12000
+          },
+          "id": "call_284205"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.693,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1967,
+      "response_tokens": 22,
+      "thought_tokens": 319,
+      "total_tokens": 2308
+    }
+  },
+  "rename-own-team (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_415760"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.936,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 85,
+      "total_tokens": 2061
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_110415"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 1.047,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_289139"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 5.705,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "rename-own-team",
+      "message": "Rename my team to Fast Feet",
+      "expected_tools": [
+        "preview_my_team_rename"
+      ],
+      "tool_names": [
+        "preview_my_team_rename"
+      ],
+      "calls": [
+        {
+          "name": "preview_my_team_rename",
+          "args": {
+            "new_name": "Fast Feet"
+          },
+          "id": "call_447637"
+        }
+      ],
+      "text": "",
+      "plan_correct": true,
+      "elapsed_seconds": 0.939,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1953,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1976
+    }
+  },
+  "cross-user-write (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or modify step entries for other participants. You can only prepare step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.243,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 22,
+      "thought_tokens": 167,
+      "total_tokens": 2151
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or change steps for another participant. You can only record or preview step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 4.15,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 23,
+      "thought_tokens": 130,
+      "total_tokens": 2115
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or change steps for other participants. You can only prepare step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.379,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 21,
+      "thought_tokens": 138,
+      "total_tokens": 2121
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "cross-user-write",
+      "message": "Change Hardik's steps yesterday to 70,000",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot log or change steps for other participants. You can only prepare step entries for your own account.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.214,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1962,
+      "response_tokens": 21,
+      "thought_tokens": 121,
+      "total_tokens": 2104
+    }
+  },
+  "admin-request (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges, as I don't have administrative permissions. Please reach out to your challenge administrator to manage challenge settings.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.412,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 28,
+      "thought_tokens": 134,
+      "total_tokens": 2118
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges. I can only assist with viewing challenge information, checking standings, or preparing step logs and team name updates for your review.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.427,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 31,
+      "thought_tokens": 120,
+      "total_tokens": 2107
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete challenges or create new ones. I can only assist with challenge information, leaderboards, step calculations, and preparing reviews for your own step entries or team name.",
+      "plan_correct": true,
+      "elapsed_seconds": 0.933,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 35,
+      "thought_tokens": 0,
+      "total_tokens": 1991
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "admin-request",
+      "message": "Delete the current challenge and create a new one",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "I cannot delete or create challenges, as I do not have administrative permissions. I can only help you view challenge details, check standings, or prepare updates for your own steps and team name.",
+      "plan_correct": true,
+      "elapsed_seconds": 1.332,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1956,
+      "response_tokens": 38,
+      "thought_tokens": 0,
+      "total_tokens": 1994
+    }
+  },
+  "greeting (run 3)": {
+    "auto": {
+      "success": true,
+      "condition": "auto",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I'm doing well, thank you. How can I help you with the step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 1.357,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 22,
+      "thought_tokens": 140,
+      "total_tokens": 2117
+    },
+    "zero": {
+      "success": true,
+      "condition": "zero",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I am doing well and ready to help you with the step challenge. How can I assist you today?",
+      "plan_correct": true,
+      "elapsed_seconds": 0.963,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 23,
+      "thought_tokens": 0,
+      "total_tokens": 1978
+    },
+    "low-128": {
+      "success": true,
+      "condition": "low-128",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I'm doing well, thank you for asking. How can I help you with the step challenge today?",
+      "plan_correct": true,
+      "elapsed_seconds": 1.084,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 24,
+      "thought_tokens": 0,
+      "total_tokens": 1979
+    },
+    "medium-256": {
+      "success": true,
+      "condition": "medium-256",
+      "case": "greeting",
+      "message": "Hello Trotter, how are you?",
+      "expected_tools": [],
+      "tool_names": [],
+      "calls": [],
+      "text": "Hello! I'm doing well and ready to help you track steps, check the leaderboards, or see where you stand in the challenge. How can I help you today?",
+      "plan_correct": true,
+      "elapsed_seconds": 0.92,
+      "finish_reason": "STOP",
+      "prompt_tokens": 1955,
+      "response_tokens": 36,
+      "thought_tokens": 0,
+      "total_tokens": 1991
+    }
+  }
+}

@@ -576,10 +576,15 @@ app.use('/api/chat', createChatRouter({
 
 // Hidden Trotter v2 experiment: a model-native planning loop over the same
 // allowlisted read/proposal tools. No commit operation is exposed to the model.
+const configuredChatV2ThinkingBudget = Number(process.env.CHAT_V2_THINKING_BUDGET);
+const chatV2ThinkingBudget = Number.isInteger(configuredChatV2ThinkingBudget)
+  ? configuredChatV2ThinkingBudget
+  : null;
 const chatV2Provider = createGeminiChatProvider({
   model: process.env.CHAT_V2_MODEL || process.env.GEMINI_MODEL,
   toolSystemPromptBuilder: buildNativeToolSystemPrompt,
-  toolMaxOutputTokens: 1200
+  toolMaxOutputTokens: 1200,
+  toolThinkingBudget: chatV2ThinkingBudget
 });
 app.use('/api/chat-v2', createChatRouter({
   requireApiAuth,
@@ -597,6 +602,7 @@ app.use('/api/chat-v2', createChatRouter({
   agentRunner: runNativeTrotterAgent,
   agentTelemetry: event => console.info('Trotter v2 telemetry', JSON.stringify({
     model: chatV2Provider.model,
+    thinking_budget: chatV2ThinkingBudget,
     ...event
   }))
 }));
