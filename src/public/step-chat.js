@@ -153,8 +153,8 @@
         };
     }
 
-    function appendResponseDuration(firstNewMessageIndex, durationMs) {
-        if (!IS_CHAT_V2 || !Number.isFinite(durationMs) || durationMs < 0) return;
+    function appendResponseDuration(firstNewMessageIndex, totalDurationMs, serverDurationMs = null) {
+        if (!IS_CHAT_V2 || !Number.isFinite(totalDurationMs) || totalDurationMs < 0) return;
         const transcript = document.getElementById('chatTranscript');
         const newMessages = Array.from(transcript.children).slice(firstNewMessageIndex);
         const message = newMessages.reverse().find(item =>
@@ -163,7 +163,10 @@
         if (!message) return;
         const timing = document.createElement('div');
         timing.className = 'chat-response-duration';
-        timing.textContent = `Took ${(durationMs / 1000).toFixed(1)} seconds`;
+        const totalSeconds = (totalDurationMs / 1000).toFixed(1);
+        timing.textContent = Number.isFinite(serverDurationMs) && serverDurationMs >= 0
+            ? `Total: ${totalSeconds}s · Server: ${(serverDurationMs / 1000).toFixed(1)}s`
+            : `Total: ${totalSeconds}s`;
         message.appendChild(timing);
     }
 
@@ -1142,10 +1145,11 @@
                 working?.stop();
                 const firstNewMessageIndex = transcript.children.length;
                 renderResult(payload);
-                const durationMs = Number.isFinite(payload.agent?.duration_ms)
-                    ? payload.agent.duration_ms
-                    : performance.now() - requestStartedAt;
-                appendResponseDuration(firstNewMessageIndex, durationMs);
+                appendResponseDuration(
+                    firstNewMessageIndex,
+                    performance.now() - requestStartedAt,
+                    payload.agent?.duration_ms
+                );
             } catch (error) {
                 working?.stop();
                 const firstNewMessageIndex = transcript.children.length;

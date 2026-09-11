@@ -54,7 +54,8 @@ describe('Trotter standalone mobile layout contract', () => {
     expect(js).toContain('function createWorkingIndicator()');
     expect(js).toContain("message.setAttribute('role', 'status')");
     expect(js).toContain("label.textContent = seconds > 0 ? `Working… ${seconds}s` : 'Working…'");
-    expect(js).toContain('function appendResponseDuration(firstNewMessageIndex, durationMs)');
+    expect(js).toContain('function appendResponseDuration(firstNewMessageIndex, totalDurationMs, serverDurationMs = null)');
+    expect(js).toContain('`Total: ${totalSeconds}s · Server: ${(serverDurationMs / 1000).toFixed(1)}s`');
     expect(js).toContain('payload.agent?.duration_ms');
     expect(js).toContain("sendButton.textContent = '…'");
     expect(js).not.toContain("sendButton.textContent = 'Thinking…'");
@@ -80,7 +81,7 @@ describe('Trotter standalone mobile layout contract', () => {
 
   test('uses versioned chat assets and responsive desktop/mobile shells', () => {
     expect(page).toContain('/step-chat.css?v=20260911-working-state-v1');
-    expect(page).toContain('/step-chat.js?v=20260911-agent-results-v3');
+    expect(page).toContain('/step-chat.js?v=20260911-dual-timing-v4');
     expect(css).toContain('width: min(920px, 100%);');
     expect(css).toContain('height: min(780px, calc(var(--chat-visible-height, 100dvh) - clamp(24px, 6vw, 56px)));');
     expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?height: var\(--chat-visible-height, 100dvh\)/);
