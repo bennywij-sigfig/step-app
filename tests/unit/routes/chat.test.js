@@ -15,6 +15,7 @@ function buildApp({
   toolRegistry = null,
   agentMode = 'legacy',
   agentRunner,
+  agentTelemetry,
   now,
   imageRequestLog = jest.fn()
 } = {}) {
@@ -63,6 +64,7 @@ function buildApp({
     toolRegistry,
     agentMode,
     agentRunner,
+    agentTelemetry,
     now,
     imageRequestLog
   }));
@@ -344,16 +346,21 @@ describe('Step Chat routes', () => {
   });
 
   test('accepts a custom model-native runner without changing the browser response shape', async () => {
-    const agentRunner = jest.fn(async () => ({
-      text: 'Native answer',
-      tool_results: [],
-      primary_result: null,
-      requires_confirmation: false,
-      rounds: 2
-    }));
+    const agentTelemetry = jest.fn();
+    const agentRunner = jest.fn(async options => {
+      options.telemetry({ event: 'test_event' });
+      return {
+        text: 'Native answer',
+        tool_results: [],
+        primary_result: null,
+        requires_confirmation: false,
+        rounds: 2
+      };
+    });
     const { app } = buildApp({
       agentMode: 'tools',
       agentRunner,
+      agentTelemetry,
       toolRegistry: { declarations: [], execute: jest.fn() },
       providerOverrides: { createToolModel: jest.fn(() => ({ generate: jest.fn() })) }
     });
@@ -367,12 +374,47 @@ describe('Step Chat routes', () => {
 
     expect(agentRunner).toHaveBeenCalledWith(expect.objectContaining({
       message: 'Plan this for me',
+      requestReference: expect.stringMatching(/^TROT-[A-F0-9]{6}$/),
+      telemetry: expect.any(Function),
       context: expect.objectContaining({ userId: 42 })
     }));
+    expect(agentTelemetry).toHaveBeenCalledWith(expect.objectContaining({
+      event: 'context_load_complete', outcome: 'success', duration_ms: expect.any(Number)
+    }));
+    expect(agentTelemetry).toHaveBeenCalledWith({ event: 'test_event' });
     expect(response.body).toMatchObject({
       intent: 'tool_agent', result: { kind: 'chitchat' }, reply: 'Native answer',
       agent: { rounds: 2, tools: [] }
     });
+  });
+
+  test('suppresses model prose for combined position and overtake results', async () => {
+    const authoritative = {
+      kind: 'position_and_overtake',
+      position: { ranked: true, rank: 4, ranked_count: 10, average: 9000 },
+      overtake: {
+        kind: 'overtake', target: { name: 'Hardik', average: 12000 },
+        days: 5, required_total: 75000, required_daily_average: 15000,
+        feasible_under_daily_limit: true
+      }
+    };
+    const { app } = buildApp({
+      agentMode: 'tools',
+      agentRunner: jest.fn(async () => ({
+        text: 'Invented position and arithmetic', tool_results: [],
+        primary_result: authoritative, requires_confirmation: false, rounds: 2
+      })),
+      toolRegistry: { declarations: [], execute: jest.fn() },
+      providerOverrides: { createToolModel: jest.fn(() => ({ generate: jest.fn() })) }
+    });
+    const agent = request.agent(app);
+    await agent.post('/test-login').expect(200);
+    const response = await agent.post('/api/chat')
+      .set('X-CSRF-Token', 'csrf-test')
+      .send({ message: 'Where am I and how do I beat Hardik?' })
+      .expect(200);
+    expect(response.body.result).toEqual(authoritative);
+    expect(response.body.reply).toBeNull();
   });
 
   test('wires bounded tool-agent mode without changing the browser response shape', async () => {

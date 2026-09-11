@@ -621,6 +621,29 @@
             ]);
             return;
         }
+        if (result.kind === 'position_and_overtake') {
+            const position = result.position;
+            const overtake = result.overtake;
+            const positionText = position.rank
+                ? `You are #${position.rank} of ${position.ranked_count} ranked participants at ${formatNumber(Math.round(position.average || 0))} steps/day.`
+                : position.provisional_rank
+                    ? `You are provisionally #${position.provisional_rank} of ${position.provisional_count} at ${formatNumber(Math.round(position.average || 0))} steps/day; nobody is ranked yet.`
+                    : `You are not currently ranked; your average is ${formatNumber(Math.round(position.average || 0))} steps/day.`;
+            const paceText = `To finish above ${overtake.target.name}’s current average, you need ${formatNumber(overtake.required_daily_average)} steps/day for ${overtake.days} day${overtake.days === 1 ? '' : 's'} (${formatNumber(overtake.required_total)} additional steps).`;
+            const feasibility = overtake.feasible_under_daily_limit
+                ? ''
+                : ' That exceeds the app’s 70,000-step daily limit.';
+            const message = createMessage('assistant', `${toneLead(tone, 'overtake')} ${positionText} ${paceText}${feasibility}`);
+            appendVerifiedFacts(message, [
+                ...(position.rank ? [`Rank: ${position.rank} of ${position.ranked_count}`] : []),
+                ...(position.provisional_rank ? [`Provisional position: ${position.provisional_rank} of ${position.provisional_count}`] : []),
+                `Current average: ${formatNumber(Math.round(position.average || 0))} steps/day`,
+                `Target: ${overtake.target.name} at ${formatNumber(Math.round(overtake.target.average))} steps/day`,
+                `Required pace: ${formatNumber(overtake.required_daily_average)} steps/day for ${overtake.days} day${overtake.days === 1 ? '' : 's'}`,
+                `Additional steps: ${formatNumber(overtake.required_total)}`
+            ]);
+            return;
+        }
         if (result.kind === 'overtake_comparison') {
             const comparisons = result.results.map(item =>
                 `${item.target.name}: ${formatNumber(item.required_daily_average)} steps/day for ${item.days} day${item.days === 1 ? '' : 's'} (${formatNumber(item.required_total)} additional)`

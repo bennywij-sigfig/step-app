@@ -41,16 +41,42 @@ describe('Trotter v2 model-native agent loop', () => {
     const tools = registry();
     const model = {
       generate: jest.fn()
-        .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'read_a', args: {} }] })
+        .mockResolvedValueOnce({
+          text: null, functionCalls: [{ name: 'read_a', args: {} }],
+          metadata: { finish_reason: 'STOP', prompt_tokens: 100, response_tokens: 10, thought_tokens: 20, total_tokens: 130 }
+        })
         .mockResolvedValueOnce({ text: null, functionCalls: [{ name: 'read_b', args: { scope: 'current' } }] })
         .mockResolvedValueOnce({ text: 'Here is the answer.', functionCalls: [] })
     };
+    const telemetry = jest.fn();
 
-    const result = await runNativeTrotterAgent({ ...baseRequest, model, registry: tools });
+    const result = await runNativeTrotterAgent({
+      ...baseRequest,
+      context: baseRequest.context,
+      requestReference: 'TROT-TEST01',
+      model,
+      registry: tools,
+      telemetry
+    });
 
     expect(result).toMatchObject({ text: 'Here is the answer.', rounds: 3, requires_confirmation: false });
     expect(result.tool_results.map(item => item.name)).toEqual(['read_a', 'read_b']);
     expect(model.generate.mock.calls[1][0].observations[0].result).toMatchObject({ name: 'read_a' });
+    expect(telemetry.mock.calls.map(call => call[0].event)).toEqual([
+      'request_started',
+      'model_call_complete', 'tool_call_complete',
+      'model_call_complete', 'tool_call_complete',
+      'model_call_complete', 'request_complete'
+    ]);
+    expect(telemetry.mock.calls[1][0]).toMatchObject({
+      reference: 'TROT-TEST01', turn: 1, outcome: 'success', finish_reason: 'STOP',
+      prompt_tokens: 100, response_tokens: 10, thought_tokens: 20, total_tokens: 130
+    });
+    expect(telemetry.mock.calls.at(-1)[0]).toMatchObject({
+      reference: 'TROT-TEST01', outcome: 'success', turns: 3, tool_calls: 2,
+      total_tokens: 130, result_kind: 'read'
+    });
+    expect(JSON.stringify(telemetry.mock.calls)).not.toContain(baseRequest.message);
   });
 
   test('aggregates multiple authoritative overtake calculations for deterministic rendering', async () => {
@@ -90,6 +116,28 @@ describe('Trotter v2 model-native agent loop', () => {
     expect(result).toMatchObject({ requires_confirmation: true, rounds: 1 });
     expect(result.primary_result.kind).toBe('step_preview');
     expect(model.generate).toHaveBeenCalledTimes(1);
+  });
+
+  test('records finish metadata when an empty model response fails', async () => {
+    const telemetry = jest.fn();
+    const model = {
+      generate: jest.fn(async () => ({
+        text: null,
+        functionCalls: [],
+        metadata: { finish_reason: 'MAX_TOKENS', thought_tokens: 1200, total_tokens: 1200 }
+      }))
+    };
+
+    await expect(runNativeTrotterAgent({
+      ...baseRequest, model, registry: registry(), telemetry
+    })).rejects.toMatchObject({
+      code: 'CHAT_AGENT_PROTOCOL_ERROR',
+      details: { turn: 1, finishReason: 'MAX_TOKENS' }
+    });
+    expect(telemetry.mock.calls.at(-1)[0]).toMatchObject({
+      event: 'request_complete', outcome: 'failure', turns: 1,
+      total_tokens: 1200, error_code: 'CHAT_AGENT_PROTOCOL_ERROR'
+    });
   });
 
   test('rejects repeated calls and keeps hard turn and call budgets', async () => {

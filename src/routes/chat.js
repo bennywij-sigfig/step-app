@@ -25,10 +25,18 @@ function createChatRouter({
   toolRegistry = null,
   agentMode = 'legacy',
   agentRunner = runTrotterAgent,
+  agentTelemetry = () => {},
   now = () => Date.now(),
   imageRequestLog = (...args) => console.info(...args)
 }) {
   const router = express.Router();
+  const emitAgentTelemetry = event => {
+    try {
+      agentTelemetry(event);
+    } catch (_) {
+      // Telemetry must never affect a chat request.
+    }
+  };
   const imageBodyParser = express.raw({
     type: ['image/jpeg', 'image/png', 'image/webp'],
     limit: IMAGE_BYTE_LIMIT
@@ -264,7 +272,14 @@ function createChatRouter({
 
     try {
       const history = validateHistory(req.body?.history);
+      const contextStartedAt = now();
       const serverContext = await service.getContext(req.session.userId);
+      emitAgentTelemetry({
+        reference: requestReference,
+        event: 'context_load_complete',
+        outcome: 'success',
+        duration_ms: Math.max(0, now() - contextStartedAt)
+      });
       const context = applyClientDateContext(serverContext, req.body);
 
       if (agentMode === 'tools') {
@@ -287,7 +302,9 @@ function createChatRouter({
               clientTime: context.clientTime,
               clientTimezone: context.clientTimezone
             } : {})
-          }
+          },
+          requestReference,
+          telemetry: emitAgentTelemetry
         });
         const falseWriteClaim = Boolean(agentResult.text) && voiceReplyClaimsWrite(agentResult.text);
         const result = agentResult.primary_result || (falseWriteClaim
@@ -297,7 +314,7 @@ function createChatRouter({
         if (result.kind === 'team_rename_preview') attachTeamRenamePlan(req, result);
         // Challenge timing is rendered from the tool result so model prose
         // cannot contradict the inclusive Singapore-open/Pacific-close window.
-        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview', 'overtake', 'overtake_comparison'].includes(result.kind)
+        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview', 'overtake', 'overtake_comparison', 'position_and_overtake'].includes(result.kind)
           ? null
           : agentResult.text;
         return res.json({

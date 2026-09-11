@@ -78,6 +78,19 @@ const declarations = [
     }
   },
   {
+    name: 'get_my_position_and_overtake',
+    description: 'Get the authenticated user’s current individual position and calculate the pace needed to overtake a named participant in one authoritative operation. Use for combined requests such as “where am I and what do I need to beat Hardik?”',
+    parameters: {
+      type: 'object',
+      properties: {
+        target_name: { type: 'string', minLength: 1, maxLength: 100 },
+        days: { type: 'integer', minimum: 1, maximum: 366 },
+        as_of_date: optionalDate
+      },
+      required: ['target_name']
+    }
+  },
+  {
     name: 'calculate_overtake_leader',
     description: 'Calculate the authenticated user’s pace needed to overtake the current individual leader, falling back to the provisional leader when nobody is ranked. Resolves the leader authoritatively; do not look up the leaderboard first.',
     parameters: {
@@ -183,6 +196,16 @@ function createChatToolRegistry({ service }) {
           ...rawArgs, as_of_date: rawArgs.as_of_date || currentDate
         });
         return service.executeIntent(userId, intent);
+      }
+      case 'get_my_position_and_overtake': {
+        assertArguments(rawArgs, ['target_name', 'days', 'as_of_date']);
+        const validated = validateChatIntent({
+          intent: 'calculate_overtake', tone: 'neutral', target_name: rawArgs.target_name,
+          days: rawArgs.days, as_of_date: rawArgs.as_of_date || currentDate
+        });
+        return service.getMyPositionAndOvertake(
+          userId, validated.target_name, validated.days, validated.as_of_date
+        );
       }
       case 'calculate_overtake_leader': {
         assertArguments(rawArgs, ['days', 'as_of_date']);

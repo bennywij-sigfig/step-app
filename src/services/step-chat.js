@@ -674,6 +674,15 @@ function createStepChatService({
     );
   }
 
+  async function getMyPositionAndOvertake(userId, targetName, requestedDays, asOfDate = null) {
+    const [position, overtake] = await Promise.all([
+      challengeOutlook(userId, 'individual', asOfDate),
+      calculateOvertake(userId, targetName, requestedDays, asOfDate)
+    ]);
+    if (overtake?.kind === 'clarification') return overtake;
+    return { kind: 'position_and_overtake', position, overtake };
+  }
+
   async function calculateOvertakeLeader(userId, requestedDays, asOfDate = null) {
     const leaderboard = await individualLeaderboard();
     const leader = leaderboard.ranked[0] || leaderboard.unranked[0];
@@ -741,6 +750,7 @@ function createStepChatService({
     commitTeamRename,
     executeIntent,
     getContext,
+    getMyPositionAndOvertake,
     getMyTeam,
     previewEntries,
     previewTeamRename

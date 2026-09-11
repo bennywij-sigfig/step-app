@@ -578,7 +578,8 @@ app.use('/api/chat', createChatRouter({
 // allowlisted read/proposal tools. No commit operation is exposed to the model.
 const chatV2Provider = createGeminiChatProvider({
   model: process.env.CHAT_V2_MODEL || process.env.GEMINI_MODEL,
-  toolSystemPromptBuilder: buildNativeToolSystemPrompt
+  toolSystemPromptBuilder: buildNativeToolSystemPrompt,
+  toolMaxOutputTokens: 1200
 });
 app.use('/api/chat-v2', createChatRouter({
   requireApiAuth,
@@ -593,7 +594,11 @@ app.use('/api/chat-v2', createChatRouter({
   service: stepChatService,
   toolRegistry: chatToolRegistry,
   agentMode: 'tools',
-  agentRunner: runNativeTrotterAgent
+  agentRunner: runNativeTrotterAgent,
+  agentTelemetry: event => console.info('Trotter v2 telemetry', JSON.stringify({
+    model: chatV2Provider.model,
+    ...event
+  }))
 }));
 
 const apiTokenService = createApiTokenService({ db: chatDb });
