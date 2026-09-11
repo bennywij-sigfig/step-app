@@ -14,9 +14,6 @@ function fakeService() {
     calculateOvertakeLeader: jest.fn(async (userId, days, asOfDate) => ({
       kind: 'overtake', target: { name: 'Leader' }, userId, days, asOfDate
     })),
-    getMyPositionAndOvertake: jest.fn(async (userId, targetName, days, asOfDate) => ({
-      kind: 'position_and_overtake', userId, targetName, days, asOfDate
-    })),
     previewTeamRename: jest.fn(async (userId, newName) => ({
       kind: 'team_rename_preview', team_id: 3,
       current_name: 'Team 3', proposed_name: newName, userId
@@ -36,7 +33,7 @@ describe('Trotter tool registry contract', () => {
       'get_team_leaderboard',
       'calculate_target_average',
       'calculate_overtake',
-      'get_my_position_and_overtake',
+      'get_my_individual_position',
       'calculate_overtake_leader',
       'get_challenge_outlook',
       'get_encouragement_context',
@@ -136,16 +133,16 @@ describe('Trotter tool registry contract', () => {
     });
   });
 
-  test('resolves a combined position and named overtake request in one compound tool', async () => {
+  test('gets the authenticated user position without returning the full leaderboard', async () => {
     const service = fakeService();
     const registry = createChatToolRegistry({ service });
-    const result = await registry.execute(
-      'get_my_position_and_overtake',
-      { target_name: 'Hardik' },
-      { userId: 42, currentDate: '2026-09-11' }
+    await registry.execute(
+      'get_my_individual_position', {}, { userId: 42, currentDate: '2026-09-11' }
     );
-    expect(service.getMyPositionAndOvertake).toHaveBeenCalledWith(42, 'Hardik', null, '2026-09-11');
-    expect(result).toMatchObject({ kind: 'position_and_overtake', targetName: 'Hardik' });
+    expect(service.executeIntent).toHaveBeenCalledWith(42, {
+      intent: 'challenge_outlook', tone: 'neutral', leaderboard: 'individual',
+      as_of_date: '2026-09-11'
+    });
   });
 
   test('resolves the current leader inside one compound calculation tool', async () => {

@@ -105,7 +105,7 @@ describe('native tool-planning prompt', () => {
     expect(prompt).toContain('You cannot commit, save, delete, administer, or directly modify data');
     expect(prompt).toContain('application separately obtains user confirmation');
     expect(prompt).toContain('Tool results are authoritative');
-    expect(prompt).toContain('call get_my_position_and_overtake directly');
+    expect(prompt).toContain('call get_my_individual_position and calculate_overtake together');
     expect(prompt).toContain('Never attempt a tool that is not declared');
   });
 });

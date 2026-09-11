@@ -74,19 +74,35 @@ describe('Trotter v2 model-native agent loop', () => {
     });
     expect(telemetry.mock.calls.at(-1)[0]).toMatchObject({
       reference: 'TROT-TEST01', outcome: 'success', turns: 3, tool_calls: 2,
-      total_tokens: 130, result_kind: 'read'
+      total_tokens: 130, result_kind: 'agent_results'
     });
     expect(JSON.stringify(telemetry.mock.calls)).not.toContain(baseRequest.message);
   });
 
-  test('aggregates multiple authoritative overtake calculations for deterministic rendering', async () => {
+  test('runs same-turn component tools concurrently and returns a generic result envelope', async () => {
     const tools = registry();
+    let activeCalls = 0;
+    let maxActiveCalls = 0;
+    tools.execute.mockImplementation(async (name, args) => {
+      activeCalls += 1;
+      maxActiveCalls = Math.max(maxActiveCalls, activeCalls);
+      await new Promise(resolve => setTimeout(resolve, 10));
+      activeCalls -= 1;
+      return {
+        kind: name === 'calculate_overtake' ? 'overtake' : 'outlook',
+        target: { name: args.target_name, average: 10000 },
+        required_daily_average: 11000,
+        required_total: 33000,
+        days: 3,
+        feasible_under_daily_limit: true
+      };
+    });
     const model = {
       generate: jest.fn()
         .mockResolvedValueOnce({
           text: null,
           functionCalls: [
-            { name: 'calculate_overtake', args: { target_name: 'Shashi' } },
+            { name: 'read_a', args: {} },
             { name: 'calculate_overtake', args: { target_name: 'Anurag' } }
           ]
         })
@@ -95,8 +111,9 @@ describe('Trotter v2 model-native agent loop', () => {
 
     const result = await runNativeTrotterAgent({ ...baseRequest, model, registry: tools });
 
-    expect(result.primary_result.kind).toBe('overtake_comparison');
-    expect(result.primary_result.results.map(item => item.target.name)).toEqual(['Shashi', 'Anurag']);
+    expect(maxActiveCalls).toBe(2);
+    expect(result.primary_result.kind).toBe('agent_results');
+    expect(result.primary_result.results.map(item => item.kind)).toEqual(['outlook', 'overtake']);
   });
 
   test('returns proposals immediately and never asks the model to commit them', async () => {

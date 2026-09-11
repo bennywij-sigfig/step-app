@@ -125,6 +125,48 @@
         return message;
     }
 
+    function createWorkingIndicator() {
+        const startedAt = performance.now();
+        const message = createMessage('assistant', '', false);
+        message.classList.add('chat-working');
+        message.setAttribute('role', 'status');
+        const body = message.firstElementChild;
+        const spinner = document.createElement('span');
+        spinner.className = 'chat-working-spinner';
+        spinner.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        const update = () => {
+            const seconds = Math.max(0, Math.floor((performance.now() - startedAt) / 1000));
+            label.textContent = seconds > 0 ? `Working… ${seconds}s` : 'Working…';
+        };
+        body.append(spinner, label);
+        update();
+        const timer = window.setInterval(update, 500);
+        let stopped = false;
+        return {
+            stop() {
+                if (stopped) return;
+                stopped = true;
+                window.clearInterval(timer);
+                message.remove();
+            }
+        };
+    }
+
+    function appendResponseDuration(firstNewMessageIndex, durationMs) {
+        if (!IS_CHAT_V2 || !Number.isFinite(durationMs) || durationMs < 0) return;
+        const transcript = document.getElementById('chatTranscript');
+        const newMessages = Array.from(transcript.children).slice(firstNewMessageIndex);
+        const message = newMessages.reverse().find(item =>
+            item.classList.contains('assistant') || item.classList.contains('error')
+        );
+        if (!message) return;
+        const timing = document.createElement('div');
+        timing.className = 'chat-response-duration';
+        timing.textContent = `Took ${(durationMs / 1000).toFixed(1)} seconds`;
+        message.appendChild(timing);
+    }
+
     function addList(container, items) {
         const list = document.createElement('ul');
         list.className = 'chat-result-list';
@@ -587,8 +629,56 @@
         }
     }
 
+    function verifiedAgentFacts(result) {
+        if (result.kind === 'outlook' && result.leaderboard === 'individual') {
+            return [
+                ...(result.rank ? [`Position: #${result.rank} of ${result.ranked_count} ranked participants`] : []),
+                ...(result.provisional_rank ? [`Position: provisional #${result.provisional_rank} of ${result.provisional_count}`] : []),
+                ...(!result.rank && !result.provisional_rank ? ['Position: not currently ranked'] : []),
+                `Current average: ${formatNumber(Math.round(result.average || 0))} steps/day`
+            ];
+        }
+        if (result.kind === 'overtake') {
+            return [
+                `Target: ${result.target.name} at ${formatNumber(Math.round(result.target.average))} steps/day`,
+                `Required pace: ${formatNumber(result.required_daily_average)} steps/day for ${result.days} day${result.days === 1 ? '' : 's'}`,
+                `Additional steps: ${formatNumber(result.required_total)}`,
+                `Within daily limit: ${result.feasible_under_daily_limit ? 'yes' : 'no'}`
+            ];
+        }
+        if (result.kind === 'challenge_info') {
+            return result.has_challenge
+                ? [`Challenge: ${result.challenge.name}`, `Days remaining: ${result.remaining_days}`]
+                : ['No active challenge'];
+        }
+        if (result.kind === 'my_team') return [`Current team: ${result.has_team ? result.name : 'none'}`];
+        if (result.kind === 'steps') {
+            return [
+                `Logged days: ${result.summary.days_logged}`,
+                `Current average: ${formatNumber(Math.round(result.summary.daily_average || 0))} steps/day`,
+                `Total steps: ${formatNumber(result.summary.total_steps)}`
+            ];
+        }
+        if (result.kind === 'target_average') {
+            return [
+                `Target average: ${formatNumber(result.target_average)} steps/day`,
+                `Required pace: ${formatNumber(result.required_daily_average)} steps/day for ${result.days} day${result.days === 1 ? '' : 's'}`
+            ];
+        }
+        if (result.kind === 'leaderboard') {
+            return [`Loaded ${result.leaderboard} standings: ${result.ranked.length} ranked, ${result.unranked.length} unranked`];
+        }
+        return [];
+    }
+
     function renderResult(payload) {
         const { result, tone = 'neutral', reply = null } = payload;
+        if (result.kind === 'agent_results') {
+            const message = createMessage('assistant', reply || 'Here are the results.');
+            const facts = result.results.flatMap(verifiedAgentFacts);
+            if (facts.length) appendVerifiedFacts(message, facts);
+            return message;
+        }
         if (result.kind === 'step_preview') return renderStepPreview(result, tone);
         if (result.kind === 'team_rename_preview') return renderTeamRenamePreview(result);
         if (result.kind === 'leaderboard') return renderLeaderboard(result, tone, reply);
@@ -618,29 +708,6 @@
                 `Required pace: ${formatNumber(result.required_daily_average)} steps/day for ${result.days} day${result.days === 1 ? '' : 's'}`,
                 `Additional steps: ${formatNumber(result.required_total)}`,
                 `Within daily limit: ${result.feasible_under_daily_limit ? 'yes' : 'no'}`
-            ]);
-            return;
-        }
-        if (result.kind === 'position_and_overtake') {
-            const position = result.position;
-            const overtake = result.overtake;
-            const positionText = position.rank
-                ? `You are #${position.rank} of ${position.ranked_count} ranked participants at ${formatNumber(Math.round(position.average || 0))} steps/day.`
-                : position.provisional_rank
-                    ? `You are provisionally #${position.provisional_rank} of ${position.provisional_count} at ${formatNumber(Math.round(position.average || 0))} steps/day; nobody is ranked yet.`
-                    : `You are not currently ranked; your average is ${formatNumber(Math.round(position.average || 0))} steps/day.`;
-            const paceText = `To finish above ${overtake.target.name}’s current average, you need ${formatNumber(overtake.required_daily_average)} steps/day for ${overtake.days} day${overtake.days === 1 ? '' : 's'} (${formatNumber(overtake.required_total)} additional steps).`;
-            const feasibility = overtake.feasible_under_daily_limit
-                ? ''
-                : ' That exceeds the app’s 70,000-step daily limit.';
-            const message = createMessage('assistant', `${toneLead(tone, 'overtake')} ${positionText} ${paceText}${feasibility}`);
-            appendVerifiedFacts(message, [
-                ...(position.rank ? [`Rank: ${position.rank} of ${position.ranked_count}`] : []),
-                ...(position.provisional_rank ? [`Provisional position: ${position.provisional_rank} of ${position.provisional_count}`] : []),
-                `Current average: ${formatNumber(Math.round(position.average || 0))} steps/day`,
-                `Target: ${overtake.target.name} at ${formatNumber(Math.round(overtake.target.average))} steps/day`,
-                `Required pace: ${formatNumber(overtake.required_daily_average)} steps/day for ${overtake.days} day${overtake.days === 1 ? '' : 's'}`,
-                `Additional steps: ${formatNumber(overtake.required_total)}`
             ]);
             return;
         }
@@ -1063,6 +1130,8 @@
             sendButton.textContent = '…';
             sendButton.setAttribute('aria-label', 'Trotter is thinking');
             sendButton.setAttribute('aria-busy', 'true');
+            const requestStartedAt = performance.now();
+            const working = IS_CHAT_V2 ? createWorkingIndicator() : null;
             try {
                 const payload = await postJson(API_BASE, {
                     message,
@@ -1070,10 +1139,20 @@
                     tone: toneSelect.value,
                     ...getClientDateContext()
                 });
+                working?.stop();
+                const firstNewMessageIndex = transcript.children.length;
                 renderResult(payload);
+                const durationMs = Number.isFinite(payload.agent?.duration_ms)
+                    ? payload.agent.duration_ms
+                    : performance.now() - requestStartedAt;
+                appendResponseDuration(firstNewMessageIndex, durationMs);
             } catch (error) {
+                working?.stop();
+                const firstNewMessageIndex = transcript.children.length;
                 createMessage('error', error.message);
+                appendResponseDuration(firstNewMessageIndex, performance.now() - requestStartedAt);
             } finally {
+                working?.stop();
                 sendButton.disabled = false;
                 sendButton.textContent = 'Send';
                 sendButton.removeAttribute('aria-label');

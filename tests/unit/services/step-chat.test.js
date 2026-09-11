@@ -374,19 +374,6 @@ describe('Step Chat deterministic write service', () => {
     });
     expect(result.required_daily_average).not.toBe(4752);
 
-    const combined = await overtakeService.getMyPositionAndOvertake(
-      1, 'Hardik Agarwal', 7, '2025-08-25'
-    );
-    expect(combined).toMatchObject({
-      kind: 'position_and_overtake',
-      position: { ranked: true, rank: 2, ranked_count: 2, average: 23464.5 },
-      overtake: {
-        kind: 'overtake',
-        challenger: { id: 1, is_authenticated_user: true },
-        target: { id: 2, name: 'Hardik.Agarwal' },
-        required_daily_average: 49408
-      }
-    });
   });
 
   test('a rolled-back chat transaction cannot roll back an unrelated write', async () => {

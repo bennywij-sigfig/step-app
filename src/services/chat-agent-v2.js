@@ -123,12 +123,10 @@ async function runNativeTrotterAgent({
             finishReason: metadata.finish_reason || null
           });
         }
-        const overtakeResults = toolResults
-          .map(item => item.result)
-          .filter(result => result?.kind === 'overtake');
-        const primaryResult = overtakeResults.length > 1
-          ? { kind: 'overtake_comparison', results: overtakeResults }
-          : toolResults.at(-1)?.result || null;
+        const authoritativeResults = toolResults.map(item => item.result);
+        const primaryResult = authoritativeResults.length > 1
+          ? { kind: 'agent_results', results: authoritativeResults }
+          : authoritativeResults[0] || null;
         return complete({
           text,
           tool_results: toolResults,
@@ -152,7 +150,6 @@ async function runNativeTrotterAgent({
         });
       }
 
-      const waveResults = [];
       for (const call of calls) {
         const fingerprint = callFingerprint(call);
         if (seenCalls.has(fingerprint)) {
@@ -172,7 +169,12 @@ async function runNativeTrotterAgent({
             });
           }
         }
+      }
 
+      // Every exposed tool is read-only or proposal-only, so independent calls
+      // requested in one model turn are safe to execute concurrently.
+      totalToolCalls += calls.length;
+      const waveResults = await Promise.all(calls.map(async call => {
         const toolStartedAt = now();
         let result;
         try {
@@ -188,17 +190,15 @@ async function runNativeTrotterAgent({
           });
           throw error;
         }
-        const observation = {
+        return {
           name: call.name,
           args: call.args,
           id: call.id,
           thoughtSignature: call.thoughtSignature,
           result
         };
-        waveResults.push(observation);
-        toolResults.push(observation);
-        totalToolCalls += 1;
-      }
+      }));
+      toolResults.push(...waveResults);
 
       const preview = waveResults.find(item => PREVIEW_TOOLS.has(item.name));
       if (preview) {

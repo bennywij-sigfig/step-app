@@ -388,20 +388,22 @@ describe('Step Chat routes', () => {
     });
   });
 
-  test('suppresses model prose for combined position and overtake results', async () => {
+  test('returns model composition with a verified multi-result envelope and duration', async () => {
     const authoritative = {
-      kind: 'position_and_overtake',
-      position: { ranked: true, rank: 4, ranked_count: 10, average: 9000 },
-      overtake: {
-        kind: 'overtake', target: { name: 'Hardik', average: 12000 },
-        days: 5, required_total: 75000, required_daily_average: 15000,
-        feasible_under_daily_limit: true
-      }
+      kind: 'agent_results',
+      results: [
+        { kind: 'outlook', leaderboard: 'individual', ranked: true, rank: 4, ranked_count: 10, average: 9000 },
+        {
+          kind: 'overtake', target: { name: 'Hardik', average: 12000 },
+          days: 5, required_total: 75000, required_daily_average: 15000,
+          feasible_under_daily_limit: true
+        }
+      ]
     };
     const { app } = buildApp({
       agentMode: 'tools',
       agentRunner: jest.fn(async () => ({
-        text: 'Invented position and arithmetic', tool_results: [],
+        text: 'You are fourth, and here is the pace to catch Hardik.', tool_results: [],
         primary_result: authoritative, requires_confirmation: false, rounds: 2
       })),
       toolRegistry: { declarations: [], execute: jest.fn() },
@@ -414,7 +416,8 @@ describe('Step Chat routes', () => {
       .send({ message: 'Where am I and how do I beat Hardik?' })
       .expect(200);
     expect(response.body.result).toEqual(authoritative);
-    expect(response.body.reply).toBeNull();
+    expect(response.body.reply).toBe('You are fourth, and here is the pace to catch Hardik.');
+    expect(response.body.agent.duration_ms).toEqual(expect.any(Number));
   });
 
   test('wires bounded tool-agent mode without changing the browser response shape', async () => {
@@ -654,7 +657,9 @@ describe('Step Chat routes', () => {
       .expect(200);
     expect(response.body.reply).toBeNull();
     expect(response.body.result).toMatchObject({ kind: 'step_preview', plan_id: expect.any(String) });
-    expect(response.body.agent).toEqual({ rounds: 1, tools: ['preview_step_entries'] });
+    expect(response.body.agent).toEqual({
+      rounds: 1, tools: ['preview_step_entries'], duration_ms: expect.any(Number)
+    });
   });
 
   test('suppresses direct tool-agent prose that falsely claims a write', async () => {

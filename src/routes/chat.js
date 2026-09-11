@@ -269,6 +269,7 @@ function createChatRouter({
       return res.status(400).json({ error: `Messages are limited to ${MESSAGE_LIMIT} characters` });
     }
     const requestReference = `TROT-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const requestStartedAt = now();
 
     try {
       const history = validateHistory(req.body?.history);
@@ -314,7 +315,7 @@ function createChatRouter({
         if (result.kind === 'team_rename_preview') attachTeamRenamePlan(req, result);
         // Challenge timing is rendered from the tool result so model prose
         // cannot contradict the inclusive Singapore-open/Pacific-close window.
-        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview', 'overtake', 'overtake_comparison', 'position_and_overtake'].includes(result.kind)
+        const reply = falseWriteClaim || ['challenge_info', 'my_team', 'team_rename_preview', 'overtake', 'overtake_comparison'].includes(result.kind)
           ? null
           : agentResult.text;
         return res.json({
@@ -324,7 +325,8 @@ function createChatRouter({
           reply,
           agent: {
             rounds: agentResult.rounds,
-            tools: agentResult.tool_results.map(item => item.name)
+            tools: agentResult.tool_results.map(item => item.name),
+            duration_ms: Math.max(0, now() - requestStartedAt)
           }
         });
       }

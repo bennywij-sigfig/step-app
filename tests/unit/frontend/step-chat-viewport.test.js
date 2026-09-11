@@ -50,12 +50,19 @@ describe('Trotter standalone mobile layout contract', () => {
     expect(js).not.toContain("sendButton.textContent = 'Send';\n                input.focus();");
   });
 
-  test('uses a compact accessible send-progress label that cannot clip', () => {
+  test('shows accessible conversation and composer progress while v2 is working', () => {
+    expect(js).toContain('function createWorkingIndicator()');
+    expect(js).toContain("message.setAttribute('role', 'status')");
+    expect(js).toContain("label.textContent = seconds > 0 ? `Working… ${seconds}s` : 'Working…'");
+    expect(js).toContain('function appendResponseDuration(firstNewMessageIndex, durationMs)');
+    expect(js).toContain('payload.agent?.duration_ms');
     expect(js).toContain("sendButton.textContent = '…'");
     expect(js).not.toContain("sendButton.textContent = 'Thinking…'");
     expect(js).toContain("sendButton.setAttribute('aria-label', 'Trotter is thinking')");
     expect(js).toContain("sendButton.setAttribute('aria-busy', 'true')");
     expect(js).toContain("sendButton.removeAttribute('aria-busy')");
+    expect(css).toContain('.chat-message.chat-working > div:first-child');
+    expect(css).toContain('.chat-response-duration');
   });
 
   test('makes batch date acknowledgement and add/replace consequences explicit', () => {
@@ -72,8 +79,8 @@ describe('Trotter standalone mobile layout contract', () => {
   });
 
   test('uses versioned chat assets and responsive desktop/mobile shells', () => {
-    expect(page).toContain('/step-chat.css?v=20260906-batch-safety-v1');
-    expect(page).toContain('/step-chat.js?v=20260911-native-agent-v2');
+    expect(page).toContain('/step-chat.css?v=20260911-working-state-v1');
+    expect(page).toContain('/step-chat.js?v=20260911-agent-results-v3');
     expect(css).toContain('width: min(920px, 100%);');
     expect(css).toContain('height: min(780px, calc(var(--chat-visible-height, 100dvh) - clamp(24px, 6vw, 56px)));');
     expect(css).toMatch(/@media \(max-width: 600px\)[\s\S]*?height: var\(--chat-visible-height, 100dvh\)/);
