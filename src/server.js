@@ -60,6 +60,18 @@ const { getClientDateContext, getStepDateWarning } = require('./utils/step-date-
 // Load environment variables
 require('dotenv').config();
 
+// Local-only clock override for safely exercising the post-challenge admin and
+// dashboard workflow against a disposable database copy. Production always
+// uses the real clock even if the variable is accidentally configured.
+function getChampionsWorkflowNow() {
+  const override = process.env.NODE_ENV !== 'production'
+    ? process.env.CHAMPIONS_PREVIEW_NOW
+    : null;
+  if (!override) return new Date();
+  const previewNow = new Date(override);
+  return Number.isNaN(previewNow.getTime()) ? new Date() : previewNow;
+}
+
 // Environment validation
 function validateEnvironment() {
   const requiredVars = {
@@ -1226,8 +1238,11 @@ app.get('/api/user', apiLimiter, requireApiAuth, (req, res) => {
         }
         res.json({
           ...user,
-          current_challenge: withChallengeTiming(challenge),
-          latest_champions: publication || null
+          current_challenge: withChallengeTiming(challenge, getChampionsWorkflowNow()),
+          latest_champions: publication || null,
+          champions_preview_now: process.env.NODE_ENV !== 'production' && process.env.CHAMPIONS_PREVIEW_NOW
+            ? getChampionsWorkflowNow().toISOString()
+            : null
         });
       });
     });
@@ -2718,7 +2733,7 @@ app.get('/api/admin/challenges', requireApiAdmin, (req, res) => {
       console.error('Error fetching challenges:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(rows.map(challenge => withChallengeTiming(challenge)));
+    res.json(rows.map(challenge => withChallengeTiming(challenge, getChampionsWorkflowNow())));
   });
 });
 
@@ -2767,7 +2782,7 @@ app.get('/api/admin/overview', adminApiLimiter, requireApiAdmin, async (req, res
       const eligibleUsers = Number(metrics.eligible_users) || 0;
       const totalSteps = Number(metrics.total_steps) || 0;
       challengeMetrics = {
-        ...withChallengeTiming(challenge),
+        ...withChallengeTiming(challenge, getChampionsWorkflowNow()),
         eligible_users: eligibleUsers,
         participants,
         total_steps: totalSteps,
@@ -3068,7 +3083,7 @@ app.post('/api/admin/challenges/:challengeId/publish-champions', adminApiLimiter
   try {
     const challenge = await dbGetAsync('SELECT * FROM challenges WHERE id = ?', [challengeId]);
     if (!challenge) return res.status(404).json({ error: 'Challenge not found' });
-    if (getChallengeStatus(challenge) !== 'ended') {
+    if (getChallengeStatus(challenge, getChampionsWorkflowNow()) !== 'ended') {
       return res.status(409).json({
         error: 'Champions can only be published after the challenge has ended. Retroactive entry may remain open as long as administrators choose.'
       });

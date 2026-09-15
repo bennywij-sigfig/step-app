@@ -12,7 +12,8 @@ const MARATHON_KM = 42.195;
 const CLUB_200K_MIN_STEPS = 200000;
 const ROUTE = Object.freeze({
   delhiToSingaporeKm: 4142.4938597351265,
-  singaporeToSanFranciscoKm: 13582.096535722669
+  singaporeToSanFranciscoKm: 13582.096535722669,
+  calgaryToSanFranciscoKm: 1615.1874920812566
 });
 
 function all(database, sql, params = []) {
@@ -166,7 +167,7 @@ function buildConsistencyHonors(rows, participants, totalDays) {
     );
 }
 
-function buildComparison(currentParticipants, baselineParticipants, currentTotals, baselineTotals) {
+function buildComparison(currentParticipants, baselineParticipants) {
   const baselineById = new Map(baselineParticipants.map(person => [String(person.id), person]));
   const improved = currentParticipants
     .filter(person => person.ranked && baselineById.get(String(person.id))?.ranked)
@@ -185,17 +186,39 @@ function buildComparison(currentParticipants, baselineParticipants, currentTotal
       right.average_step_change - left.average_step_change || compareAverage(left, right)
     );
 
+  // Collective cumulative daily average: all submitted steps divided by all
+  // reported person-days. Every report has equal weight, matching the team's
+  // cumulative-average denominator rather than comparing challenge totals.
+  const collectiveDailyAverage = participants => {
+    const totals = participants.reduce((result, person) => ({
+      steps: result.steps + person.total_steps,
+      reports: result.reports + person.days_reported
+    }), { steps: 0, reports: 0 });
+    return {
+      average: totals.reports > 0 ? totals.steps / totals.reports : 0,
+      reports: totals.reports
+    };
+  };
+  const current = collectiveDailyAverage(currentParticipants);
+  const baseline = collectiveDailyAverage(baselineParticipants);
+  const currentCumulativeDailyAverage = current.average;
+  const baselineCumulativeDailyAverage = baseline.average;
+
   return {
     baseline_season: FEATURED_CHALLENGE.season,
     most_improved: improved[0] || null,
     returning_ranked_participants: improved.length,
-    totals: {
-      steps_change: currentTotals.steps - baselineTotals.steps,
-      steps_change_percent: baselineTotals.steps > 0
-        ? ((currentTotals.steps / baselineTotals.steps) - 1) * 100
+    cumulative_daily_average: {
+      current: currentCumulativeDailyAverage,
+      baseline: baselineCumulativeDailyAverage,
+      change: currentCumulativeDailyAverage - baselineCumulativeDailyAverage,
+      change_percent: baselineCumulativeDailyAverage > 0
+        ? ((currentCumulativeDailyAverage / baselineCumulativeDailyAverage) - 1) * 100
         : null,
-      participants_change: currentTotals.participants - baselineTotals.participants,
-      reporting_rate_change_points: currentTotals.reporting_rate - baselineTotals.reporting_rate
+      participant_count: currentParticipants.length,
+      baseline_participant_count: baselineParticipants.length,
+      reported_person_days: current.reports,
+      baseline_reported_person_days: baseline.reports
     }
   };
 }
@@ -357,7 +380,23 @@ async function getChampions(database, season = FEATURED_CHALLENGE.season) {
   const totalSteps = rows.reduce((sum, row) => sum + (Number(row.count) || 0), 0);
   const totalDistanceKm = (totalSteps / STEPS_PER_MILE) * KM_PER_MILE;
   const firstLegProgressKm = Math.min(totalDistanceKm, ROUTE.delhiToSingaporeKm);
-  const secondLegProgressKm = Math.max(0, totalDistanceKm - ROUTE.delhiToSingaporeKm);
+  const secondLegProgressKm = Math.max(0, Math.min(
+    totalDistanceKm - ROUTE.delhiToSingaporeKm,
+    ROUTE.singaporeToSanFranciscoKm
+  ));
+  const thirdLegProgressKm = Math.max(0, Math.min(
+    totalDistanceKm - ROUTE.delhiToSingaporeKm - ROUTE.singaporeToSanFranciscoKm,
+    ROUTE.calgaryToSanFranciscoKm
+  ));
+  const calgaryToSanFranciscoProgressKm = Math.min(totalDistanceKm, ROUTE.calgaryToSanFranciscoKm);
+  const sanFranciscoToSingaporeProgressKm = Math.max(0, Math.min(
+    totalDistanceKm - ROUTE.calgaryToSanFranciscoKm,
+    ROUTE.singaporeToSanFranciscoKm
+  ));
+  const singaporeToDelhiProgressKm = Math.max(0, Math.min(
+    totalDistanceKm - ROUTE.calgaryToSanFranciscoKm - ROUTE.singaporeToSanFranciscoKm,
+    ROUTE.delhiToSingaporeKm
+  ));
   const biggestDay = [...daily].sort((a, b) => b.total_steps - a.total_steps || a.date.localeCompare(b.date))[0] || null;
   const averageCollectiveDay = totalDays > 0 ? totalSteps / totalDays : 0;
   const perfectReporters = participants.filter(row => row.days_reported === totalDays).length;
@@ -383,18 +422,7 @@ async function getChampions(database, season = FEATURED_CHALLENGE.season) {
       const baselineDays = challengeDays(baselineArchive.challenge_start_date, baselineArchive.challenge_end_date);
       const baselineThreshold = Number(baselineArchive.reporting_threshold ?? 100);
       const baselineParticipants = buildParticipants(baselineRows, baselineDays, baselineThreshold);
-      const baselineExpectedReports = baselineParticipants.length * baselineDays;
-      comparison = buildComparison(participants, baselineParticipants, {
-        steps: totalSteps,
-        participants: participants.length,
-        reporting_rate: expectedReports > 0 ? (rows.length * 100) / expectedReports : 0
-      }, {
-        steps: baselineRows.reduce((sum, row) => sum + (Number(row.count) || 0), 0),
-        participants: baselineParticipants.length,
-        reporting_rate: baselineExpectedReports > 0
-          ? (baselineRows.length * 100) / baselineExpectedReports
-          : 0
-      });
+      comparison = buildComparison(participants, baselineParticipants);
     }
   }
 
@@ -447,9 +475,21 @@ async function getChampions(database, season = FEATURED_CHALLENGE.season) {
       steps_per_mile_assumption: STEPS_PER_MILE,
       delhi_to_singapore_km: ROUTE.delhiToSingaporeKm,
       singapore_to_san_francisco_km: ROUTE.singaporeToSanFranciscoKm,
+      san_francisco_to_calgary_km: ROUTE.calgaryToSanFranciscoKm,
       first_leg_progress_km: firstLegProgressKm,
       second_leg_progress_km: secondLegProgressKm,
-      second_leg_progress_percent: (secondLegProgressKm * 100) / ROUTE.singaporeToSanFranciscoKm
+      second_leg_progress_percent: (secondLegProgressKm * 100) / ROUTE.singaporeToSanFranciscoKm,
+      third_leg_progress_km: thirdLegProgressKm,
+      third_leg_progress_percent: (thirdLegProgressKm * 100) / ROUTE.calgaryToSanFranciscoKm,
+      reverse_route: {
+        calgary_to_san_francisco_km: ROUTE.calgaryToSanFranciscoKm,
+        san_francisco_to_singapore_km: ROUTE.singaporeToSanFranciscoKm,
+        singapore_to_delhi_km: ROUTE.delhiToSingaporeKm,
+        calgary_to_san_francisco_progress_km: calgaryToSanFranciscoProgressKm,
+        san_francisco_to_singapore_progress_km: sanFranciscoToSingaporeProgressKm,
+        singapore_to_delhi_progress_km: singaporeToDelhiProgressKm,
+        total_route_km: ROUTE.calgaryToSanFranciscoKm + ROUTE.singaporeToSanFranciscoKm + ROUTE.delhiToSingaporeKm
+      }
     },
     supporting: {
       biggest_day: biggestDay,

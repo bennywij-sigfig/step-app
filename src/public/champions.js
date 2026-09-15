@@ -12,9 +12,10 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    const keepHyphenatedWordsTogether = value => String(value ?? '').replace(/-/g, '‑');
     const displayName = value => {
         const name = String(value || 'Unknown');
-        if (!/^[a-z]+(?:[._-][a-z]+)+$/.test(name)) return name;
+        if (!/^[a-z]+(?:[._-][a-z]+)+$/.test(name)) return keepHyphenatedWordsTogether(name);
         return name.split(/[._-]/).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
     };
     const date = value => new Date(`${value}T00:00:00Z`).toLocaleDateString(undefined, {
@@ -103,16 +104,21 @@
         }));
     }
 
-    function prepareJourneyAnimation(routePercent) {
+    function prepareJourneyAnimation(routePercent, reverseDistanceKm, reverseRoute) {
         const globe = byId('routeGraphic');
         const canvas = byId('journeyGlobeCanvas');
         const linearRoute = byId('routeLinear');
         const linearMarker = byId('routeLinearMarker');
+        const reverseLinearRoute = byId('routeReverseLinear');
+        const reverseLinearMarker = byId('routeReverseLinearMarker');
         const onwardFraction = routePercent / 100;
         let firstLegShare = 0.5;
         let linearWaypoints = null;
         let linearOnwardEndpoint = null;
+        let reverseLinearWaypoints = null;
+        let reverseLinearLegs = null;
         let lastProgress = 0;
+        let lastReverseProgress = 0;
         let started = false;
 
         function measureLinearWaypoints() {
@@ -135,7 +141,7 @@
         function paintLinearRoute(progress, measuredFirstLegShare = firstLegShare) {
             firstLegShare = measuredFirstLegShare;
             lastProgress = progress;
-            if (!linearWaypoints || linearWaypoints.length !== 3) measureLinearWaypoints();
+            if (!linearWaypoints || linearWaypoints.length !== 4) measureLinearWaypoints();
             const [delhi, singapore] = linearWaypoints;
             const finalPoint = linearOnwardEndpoint;
             const onFirstLeg = progress <= firstLegShare;
@@ -150,11 +156,69 @@
             linearRoute.style.setProperty('--route-progress', `${onwardProgress}%`);
         }
 
+        function measureReverseLinearWaypoints() {
+            const routeRect = reverseLinearRoute.getBoundingClientRect();
+            reverseLinearWaypoints = [...reverseLinearRoute.querySelectorAll('.city-dot')].map(dot => {
+                const rect = dot.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2 - routeRect.left,
+                    y: rect.top + rect.height / 2 - routeRect.top
+                };
+            });
+            reverseLinearLegs = [...reverseLinearRoute.querySelectorAll('.route-leg')].map(leg => {
+                const rect = leg.getBoundingClientRect();
+                const vertical = rect.height > rect.width;
+                return {
+                    start: {
+                        x: (vertical ? rect.left + rect.width / 2 : rect.left) - routeRect.left,
+                        y: (vertical ? rect.top : rect.top + rect.height / 2) - routeRect.top
+                    },
+                    end: {
+                        x: (vertical ? rect.left + rect.width / 2 : rect.right) - routeRect.left,
+                        y: (vertical ? rect.bottom : rect.top + rect.height / 2) - routeRect.top
+                    }
+                };
+            });
+        }
+
+        function paintReverseLinearRoute(progress) {
+            lastReverseProgress = progress;
+            if (!reverseLinearWaypoints || reverseLinearWaypoints.length !== 4) measureReverseLinearWaypoints();
+            const legDistances = [
+                reverseRoute.calgary_to_san_francisco_km,
+                reverseRoute.san_francisco_to_singapore_km,
+                reverseRoute.singapore_to_delhi_km
+            ];
+            let remaining = Math.min(reverseDistanceKm, reverseRoute.total_route_km) * progress;
+            let markerPoint = reverseLinearWaypoints[0];
+            ['reverseCalgarySfProgress', 'reverseSfSingaporeProgress', 'reverseSingaporeDelhiProgress'].forEach((id, index) => {
+                const fraction = Math.max(0, Math.min(1, remaining / legDistances[index]));
+                byId(id).style.setProperty('--leg-progress', `${fraction * 100}%`);
+                byId(['reverseSfDot', 'reverseSingaporeDot', 'reverseDelhiDot'][index]).classList.toggle('complete', fraction >= 1);
+                if (remaining > 0 && remaining <= legDistances[index]) {
+                    const leg = reverseLinearLegs[index];
+                    markerPoint = {
+                        x: leg.start.x + (leg.end.x - leg.start.x) * fraction,
+                        y: leg.start.y + (leg.end.y - leg.start.y) * fraction
+                    };
+                } else if (remaining === 0) {
+                    markerPoint = reverseLinearWaypoints[index];
+                }
+                remaining -= legDistances[index];
+            });
+            if (remaining > 0) {
+                markerPoint = reverseLinearWaypoints[3];
+            }
+            reverseLinearMarker.style.left = `${markerPoint.x}px`;
+            reverseLinearMarker.style.top = `${markerPoint.y}px`;
+        }
+
         const renderer = window.PantheonGlobe?.create({
             container: globe,
             canvas,
             landRings: window.PANTHEON_LAND_RINGS,
             onwardFraction,
+            reverseDistanceKm,
             onProgress: paintLinearRoute
         });
         if (renderer) firstLegShare = renderer.firstLegShare;
@@ -167,37 +231,61 @@
             }
         }
 
-        function play() {
+        function animateProgress(painter, delay = 0, duration = 4200) {
+            return new Promise(resolve => {
+                const startedAt = performance.now() + delay;
+                let lastPaintAt = 0;
+                const frame = now => {
+                    if (now < startedAt) {
+                        requestAnimationFrame(frame);
+                        return;
+                    }
+                    const progress = Math.min(1, (now - startedAt) / duration);
+                    // Thirty frames per second is ample for this small globe and
+                    // avoids repeatedly projecting 5,000+ coastline points on mobile.
+                    if (progress === 1 || now - lastPaintAt >= 32) {
+                        lastPaintAt = now;
+                        painter(progress);
+                    }
+                    if (progress < 1) requestAnimationFrame(frame);
+                    else resolve();
+                };
+                requestAnimationFrame(frame);
+            });
+        }
+
+        async function play() {
             if (started) return;
             started = true;
+            const caption = byId('routeCaption');
             if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 paint(1);
+                renderer?.setReverseProgress(1);
+                paintReverseLinearRoute(1);
                 return;
             }
-            const startedAt = performance.now() + 700;
-            const duration = 4200;
-            let lastPaintAt = 0;
-            const frame = now => {
-                if (now < startedAt) {
-                    requestAnimationFrame(frame);
-                    return;
-                }
-                const progress = Math.min(1, (now - startedAt) / duration);
-                // Thirty frames per second is ample for this small globe and
-                // avoids repeatedly projecting 5,000+ coastline points on mobile.
-                if (progress === 1 || now - lastPaintAt >= 32) {
-                    lastPaintAt = now;
-                    paint(progress);
-                }
-                if (progress < 1) requestAnimationFrame(frame);
-            };
-            requestAnimationFrame(frame);
+            caption.textContent = 'GOLD ROUTE · DEPARTING DELHI';
+            await animateProgress(paint, 700);
+            if (renderer) {
+                caption.textContent = 'TURNING THE GLOBE TOWARD CALGARY';
+                await renderer.focusCalgary(1400);
+            }
+            caption.textContent = 'BLUE ROUTE · DEPARTING CALGARY';
+            await animateProgress(progress => {
+                renderer?.setReverseProgress(progress);
+                paintReverseLinearRoute(progress);
+            }, 350, 4200);
+            caption.textContent = 'TWO ROUTES · ONE HEROIC DISTANCE';
         }
 
         paint(0);
+        paintReverseLinearRoute(0);
         window.addEventListener('resize', () => {
             linearWaypoints = null;
+            reverseLinearWaypoints = null;
+            reverseLinearLegs = null;
             paintLinearRoute(lastProgress);
+            paintReverseLinearRoute(lastReverseProgress);
         }, { passive: true });
         if ('IntersectionObserver' in window) {
             const observer = new IntersectionObserver(entries => {
@@ -209,6 +297,47 @@
         } else {
             play();
         }
+    }
+
+    function configureLinearRouteScale(element, distances) {
+        const total = distances.reduce((sum, distance) => sum + distance, 0);
+        distances.forEach((distance, index) => {
+            const ordinal = ['one', 'two', 'three'][index];
+            element.style.setProperty(`--leg-${ordinal}`, `${distance}fr`);
+            element.style.setProperty(`--leg-${ordinal}-mobile`, `${total > 0 ? distance * 300 / total : 0}px`);
+        });
+    }
+
+    function renderReverseJourney(reverse, totalDistanceKm) {
+        const firstPercent = Math.max(0, Math.min(100,
+            reverse.calgary_to_san_francisco_progress_km * 100 / reverse.calgary_to_san_francisco_km
+        ));
+        const secondPercent = Math.max(0, Math.min(100,
+            reverse.san_francisco_to_singapore_progress_km * 100 / reverse.san_francisco_to_singapore_km
+        ));
+        const thirdPercent = Math.max(0, Math.min(100,
+            reverse.singapore_to_delhi_progress_km * 100 / reverse.singapore_to_delhi_km
+        ));
+        const progress = [firstPercent, secondPercent, thirdPercent];
+        ['reverseCalgarySfProgress', 'reverseSfSingaporeProgress', 'reverseSingaporeDelhiProgress'].forEach((id, index) => {
+            byId(id).style.setProperty('--leg-progress', `${progress[index]}%`);
+        });
+        byId('reverseSfDot').classList.toggle('complete', firstPercent >= 100);
+        byId('reverseSingaporeDot').classList.toggle('complete', secondPercent >= 100);
+        byId('reverseDelhiDot').classList.toggle('complete', thirdPercent >= 100);
+
+        let narrative;
+        if (firstPercent < 100) {
+            narrative = `Or head south: ${number(firstPercent)}% of the way from Calgary to San Francisco.`;
+        } else if (secondPercent < 100) {
+            narrative = `Or head south and west: Calgary to San Francisco, then ${number(secondPercent, secondPercent < 10 ? 1 : 0)}% of the way to Singapore.`;
+        } else if (thirdPercent < 100) {
+            narrative = `Or take the long way east: Calgary to San Francisco to Singapore, then ${number(thirdPercent)}% of the way to Delhi.`;
+        } else {
+            narrative = `Or complete the full Calgary → San Francisco → Singapore → Delhi route${totalDistanceKm > reverse.total_route_km ? `, plus ${number(totalDistanceKm - reverse.total_route_km)} km beyond` : ''}.`;
+        }
+        byId('reverseJourneySummary').textContent = narrative;
+        return narrative;
     }
 
     function memberTiles(members) {
@@ -226,7 +355,7 @@
             <details class="team-podium-card" ${index === 0 ? 'open' : ''}>
                 <summary>
                     <span class="place-medal">${medal(team.rank)}</span>
-                    <span class="podium-name">${escapeHtml(team.name)}</span>
+                    <span class="podium-name">${escapeHtml(keepHyphenatedWordsTogether(team.name))}</span>
                     <span class="metric"><strong>${number(team.average_steps)}</strong>avg / member-day</span>
                     <span class="metric"><strong>${number(team.total_steps)}</strong>total steps</span>
                     <span class="metric"><strong>${number(team.reporting_rate, team.reporting_rate % 1 ? 1 : 0)}%</strong>reporting</span>
@@ -244,7 +373,7 @@
             <article class="individual-podium-card" style="--podium-height: ${podiumHeight}px">
                 <span class="place-medal">${medal(person.rank)} · ${ordinal(person.rank)}</span>
                 <h3>${escapeHtml(displayName(person.name))}</h3>
-                <p>${escapeHtml(person.team || 'Independent walker')}</p>
+                <p>${escapeHtml(keepHyphenatedWordsTogether(person.team || 'Independent walker'))}</p>
                 <p class="big-score">${number(person.average_steps)} steps / day</p>
                 <p>${number(person.total_steps)} total · ${person.days_reported} of ${challengeDays} days</p>
             </article>
@@ -264,16 +393,18 @@
         const share = club.share_of_challenge_steps ?? (
             data.totals.steps > 0 ? (clubTotal * 100 / data.totals.steps) : 0
         );
-        byId('club200KDecree').textContent = `${club.members.length} founding members combined for ${number(clubTotal)} steps—${number(share)}% of the entire challenge.`;
-        byId('club200KMembers').innerHTML = club.members.map((person, index) => `
+        byId('club200KDecree').textContent = club.members.length
+            ? `${club.members.length} members combined for ${number(clubTotal)} steps—${number(share)}% of the entire challenge.`
+            : `No one has qualified in this snapshot yet. Club 200K requires at least ${number(club.threshold_steps)} steps and every one of the ${data.challenge.days} challenge days reported.`;
+        byId('club200KMembers').innerHTML = club.members.length ? club.members.map((person, index) => `
             <article class="club-200k-member" data-member-number="${String(index + 1).padStart(2, '0')}">
                 <span class="club-200k-seal">200K · 100% VERIFIED</span>
                 <h3>${escapeHtml(displayName(person.name))}</h3>
-                <p>${escapeHtml(person.team || 'Independent walker')}</p>
+                <p>${escapeHtml(keepHyphenatedWordsTogether(person.team || 'Independent walker'))}</p>
                 <p class="club-total">${number(person.total_steps)} steps</p>
                 <p>${number(person.average_steps)} / day · ${person.days_reported}/${data.challenge.days} reports</p>
             </article>
-        `).join('');
+        `).join('') : '<p class="club-200k-empty">Late reports can still produce qualifiers before administrators publish or refresh the final snapshot.</p>';
     }
 
     function renderRaceOracle(data) {
@@ -292,18 +423,21 @@
         const xAt = progress => plot.left + (plot.right - plot.left) * progress / (race.dates.length - 1);
         const yAt = value => plot.bottom - (plot.bottom - plot.top) * value / state.maximum;
         const compact = value => value >= 1000000 ? `${number(value / 1000000, 1)}m` : value >= 1000 ? `${number(value / 1000)}k` : number(value);
-        const yAxisTicks = maximum => {
-            const target = maximum / 4;
+        const yAxisScale = rawMaximum => {
+            const paddedMaximum = Math.max(1, rawMaximum * 1.08);
+            const targetStep = paddedMaximum / 4;
             const candidates = [];
-            for (let scale = 1; scale <= 1000; scale *= 10) {
-                [5000, 10000, 25000].forEach(step => candidates.push(step * scale));
+            for (let exponent = -2; exponent <= 9; exponent += 1) {
+                const magnitude = 10 ** exponent;
+                [1, 2, 2.5, 5].forEach(factor => candidates.push(factor * magnitude));
             }
             const step = candidates.reduce((best, candidate) =>
-                Math.abs(candidate - target) < Math.abs(best - target) ? candidate : best
+                Math.abs(candidate - targetStep) < Math.abs(best - targetStep) ? candidate : best
             );
+            const maximum = Math.ceil(paddedMaximum / step) * step;
             const ticks = [];
-            for (let value = 0; value <= maximum; value += step) ticks.push(value);
-            return ticks;
+            for (let value = 0; value <= maximum + step / 100; value += step) ticks.push(value);
+            return { maximum, ticks };
         };
         const initials = value => {
             const words = displayName(value).trim().split(/\s+/).filter(Boolean);
@@ -357,10 +491,10 @@
             }).sort((left, right) => right.score - left.score || String(left.entry.name).localeCompare(String(right.entry.name)));
             state.series = ranked.slice(0, state.group === 'teams' ? 12 : 10);
             const rawMaximum = Math.max(1, ...state.series.flatMap(series => series.values));
-            const magnitude = 10 ** Math.floor(Math.log10(rawMaximum));
-            state.maximum = Math.ceil(rawMaximum / magnitude * 1.08) * magnitude;
+            const scale = yAxisScale(rawMaximum);
+            state.maximum = scale.maximum;
 
-            const grid = yAxisTicks(state.maximum).map(value => {
+            const grid = scale.ticks.map(value => {
                 const y = yAt(value);
                 return `<line x1="${plot.left}" y1="${y}" x2="${plot.right}" y2="${y}"/><text x="${plot.left - 13}" y="${y + 4}" text-anchor="end">${compact(value)}</text>`;
             }).join('');
@@ -603,7 +737,7 @@
         byId('teamChampion').innerHTML = `
             <div class="award-icon" aria-hidden="true">🏆</div>
             <p class="award-label">${data.season} TEAM CHAMPION</p>
-            <h3>${escapeHtml(team.name)}</h3>
+            <h3>${escapeHtml(keepHyphenatedWordsTogether(team.name))}</h3>
             <p class="champion-score">${number(team.average_steps)} steps per member-day</p>
             <p class="champion-detail">${number(team.total_steps)} total steps · ${team.member_count} teammates · ${number(team.reporting_rate)}% reporting</p>
         `;
@@ -626,11 +760,11 @@
 
         const improved = comparison.most_improved;
         const consistent = data.honors?.most_consistent;
-        const totals = comparison.totals;
+        const dailyAverage = comparison.cumulative_daily_average;
         const signed = (value, suffix = '') => `${value >= 0 ? '+' : '−'}${number(Math.abs(value))}${suffix}`;
         byId('seasonHonorsKicker').textContent = `NEW FOR ${data.season}`;
         byId('seasonHonorsTitle').textContent = `${data.season} honors and the view from ${comparison.baseline_season}`;
-        byId('seasonHonorsSummary').textContent = `Comparisons use ${comparison.returning_ranked_participants} returning participants who qualified for the ranked table in both seasons.`;
+        byId('seasonHonorsSummary').textContent = `Most Improved considers ${comparison.returning_ranked_participants} returning participants ranked in both seasons. The year-over-year pace divides all submitted steps by all reported person-days.`;
         byId('seasonHonorsGrid').innerHTML = `
             <article class="season-honor-card">
                 <span class="honor-mark">⚡ MOST IMPROVED VS. ${comparison.baseline_season}</span>
@@ -644,9 +778,9 @@
             </article>
             <article class="season-honor-card">
                 <span class="honor-mark">↗ ${data.season} VS. ${comparison.baseline_season}</span>
-                <h3>${signed(totals.steps_change_percent, '%')}</h3>
-                <strong>${signed(totals.steps_change)} collective steps</strong>
-                <p>${signed(totals.participants_change)} participants · ${signed(totals.reporting_rate_change_points, ' reporting points')}.</p>
+                <h3>${signed(dailyAverage.change_percent, '%')}</h3>
+                <strong>${signed(dailyAverage.change)} steps / reported day</strong>
+                <p>${number(dailyAverage.current)} collective cumulative daily average in ${data.season}, versus ${number(dailyAverage.baseline)} in ${comparison.baseline_season}. Each reported person-day counts equally.</p>
             </article>
         `;
         section.hidden = false;
@@ -690,7 +824,7 @@
         byId('teamStandings').innerHTML = data.team_standings.map(team => `
             <tr class="${team.rank && team.rank <= 3 ? 'podium-row' : ''}">
                 <td class="${team.rank ? '' : 'unranked-place'}">${team.rank ? `#${team.rank}` : 'Unranked'}</td>
-                <td><strong>${escapeHtml(team.name)}</strong></td>
+                <td><strong>${escapeHtml(keepHyphenatedWordsTogether(team.name))}</strong></td>
                 <td>${team.member_count}</td>
                 <td>${number(team.total_steps)}</td>
                 <td>${number(team.average_steps)}</td>
@@ -701,7 +835,7 @@
             <tr class="${person.rank && person.rank <= 3 ? 'podium-row' : ''}">
                 <td class="${person.rank ? '' : 'unranked-place'}">${person.rank ? `#${person.rank}` : 'Unranked'}</td>
                 <td><strong>${escapeHtml(displayName(person.name))}</strong></td>
-                <td>${escapeHtml(person.team || '—')}</td>
+                <td>${escapeHtml(keepHyphenatedWordsTogether(person.team || '—'))}</td>
                 <td>${number(person.total_steps)}</td>
                 <td>${number(person.average_steps)}</td>
                 <td>${person.days_reported} / ${data.challenge.days}</td>
@@ -745,15 +879,46 @@
         byId('totalStepsSummary').textContent = `${data.totals.participants} people. ${data.totals.teams} teams. ${data.challenge.days} days. One magnificently overworked step counter.`;
 
         const routePercent = Math.max(0, Math.min(100, data.journey.second_leg_progress_percent));
-        byId('routeGraphic').setAttribute('aria-label', `About ${number(data.journey.estimated_km)} kilometers: Delhi to Singapore, then ${number(routePercent)} percent of the way toward San Francisco. Drag the globe or use the left and right arrow keys to rotate it.`);
-        byId('journeySummary').textContent = `About ${number(data.journey.estimated_km)} km together—Delhi to Singapore, then nearly a quarter of the way to San Francisco.`;
+        const firstLegPercent = Math.max(0, Math.min(100,
+            data.journey.estimated_km * 100 / data.journey.delhi_to_singapore_km
+        ));
+        const thirdLegPercent = Math.max(0, Math.min(100, data.journey.third_leg_progress_percent));
+        const beyondCalgaryKm = Math.max(0,
+            data.journey.estimated_km - data.journey.delhi_to_singapore_km -
+            data.journey.singapore_to_san_francisco_km - data.journey.san_francisco_to_calgary_km
+        );
+        configureLinearRouteScale(byId('routeLinear'), [
+            data.journey.delhi_to_singapore_km,
+            data.journey.singapore_to_san_francisco_km,
+            data.journey.san_francisco_to_calgary_km
+        ]);
+        configureLinearRouteScale(byId('routeReverseLinear'), [
+            data.journey.reverse_route.calgary_to_san_francisco_km,
+            data.journey.reverse_route.san_francisco_to_singapore_km,
+            data.journey.reverse_route.singapore_to_delhi_km
+        ]);
+        byId('goldSfCalgaryProgress').style.setProperty('--leg-progress', `${thirdLegPercent}%`);
+        byId('goldCalgaryDot').classList.toggle('complete', thirdLegPercent >= 100);
+        let journeyNarrative;
+        if (firstLegPercent < 100) {
+            journeyNarrative = `About ${number(data.journey.estimated_km)} km together—${number(firstLegPercent)}% of the way from Delhi to Singapore.`;
+        } else if (routePercent < 100) {
+            journeyNarrative = `About ${number(data.journey.estimated_km)} km together—Delhi to Singapore, then ${number(routePercent, routePercent < 10 ? 1 : 0)}% of the way toward San Francisco.`;
+        } else if (thirdLegPercent < 100) {
+            journeyNarrative = `About ${number(data.journey.estimated_km)} km together—Delhi to Singapore to San Francisco, then ${number(thirdLegPercent, thirdLegPercent < 10 ? 1 : 0)}% of the way to Calgary.`;
+        } else {
+            journeyNarrative = `About ${number(data.journey.estimated_km)} km together—the full Delhi → Singapore → San Francisco → Calgary route${beyondCalgaryKm > 0 ? `, plus ${number(beyondCalgaryKm)} km beyond` : ''}.`;
+        }
+        byId('journeySummary').textContent = journeyNarrative;
+        const reverseNarrative = renderReverseJourney(data.journey.reverse_route, data.journey.estimated_km);
+        byId('routeGraphic').setAttribute('aria-label', `${journeyNarrative} ${reverseNarrative} Drag the globe or use the left and right arrow keys to rotate it.`);
         byId('distanceMethod').textContent = `We assume ${data.journey.steps_per_mile_assumption} steps per mile and use fixed great-circle distances between the cities.`;
 
         byId('championsLoading').hidden = true;
         byId('championsError').hidden = true;
         byId('championsExperience').hidden = false;
         restoreSectionAnchor();
-        prepareJourneyAnimation(routePercent);
+        prepareJourneyAnimation(routePercent, data.journey.estimated_km, data.journey.reverse_route);
     }
 
     async function loadChampions(season = selectedSeason) {

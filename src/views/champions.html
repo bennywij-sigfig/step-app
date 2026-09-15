@@ -179,8 +179,9 @@
             <section class="journey-section" id="journey" aria-labelledby="journeyTitle">
                 <div class="section-heading">
                     <p class="eyebrow">ONE VERY LONG WALK</p>
-                    <h2 id="journeyTitle">Delhi → Singapore → San Francisco</h2>
+                    <h2 id="journeyTitle">Two routes. One heroic distance.</h2>
                     <p id="journeySummary"></p>
+                    <p id="reverseJourneySummary"></p>
                 </div>
                 <div class="route-globe" role="img" id="routeGraphic" tabindex="0" aria-label="Estimated collective route progress. Drag the globe or use the left and right arrow keys to rotate it.">
                     <canvas id="journeyGlobeCanvas" aria-hidden="true"></canvas>
@@ -226,8 +227,10 @@
                                     <path d="M755 205 L772 218 L780 244 L769 269 L753 248 L746 223 Z"/>
                                 </g>
                             <path class="journey-track" d="M350 180 C365 225 390 260 450 310 C510 360 585 76 700 170"/>
+                            <path class="journey-track journey-track-reverse" d="M748 105 C730 130 715 153 700 170 C585 76 510 360 450 310 C390 260 365 225 350 180"/>
                             <path class="journey-progress" id="routeDelhiSingapore" d="M350 180 C365 225 390 260 450 310"/>
                             <path class="journey-progress" id="routeOnward" d="M450 310 C510 360 585 76 700 170"/>
+                            <g class="globe-city city-calgary" transform="translate(748 105)"><circle r="7"/><text x="-14" y="-16" text-anchor="end">CALGARY</text></g>
                             <g class="globe-city city-delhi" transform="translate(350 180)"><circle r="7"/><text x="14" y="-16">DELHI</text></g>
                             <g class="globe-city city-singapore" transform="translate(450 310)"><circle r="7"/><text x="16" y="22">SINGAPORE</text></g>
                             <g class="globe-city city-sf" transform="translate(700 170)"><circle r="7"/><text x="-15" y="-16" text-anchor="end">SAN FRANCISCO</text></g>
@@ -238,15 +241,29 @@
                             </g>
                         </g>
                     </svg>
-                    <p class="route-caption">THE FELLOWSHIP'S RECORDED PASSAGE</p>
+                    <p class="route-caption" id="routeCaption">GOLD: DELHI OUTBOUND · BLUE: CALGARY OUTBOUND</p>
                 </div>
-                <div class="route" id="routeLinear" aria-hidden="true">
+                <p class="route-direction-label">GOLD ROUTE · DELHI → SINGAPORE → SAN FRANCISCO → CALGARY</p>
+                <div class="route route-primary" id="routeLinear" aria-hidden="true">
                     <div class="route-city"><span class="city-dot complete"></span><strong>Delhi</strong></div>
                     <div class="route-leg complete"><span></span></div>
                     <div class="route-city"><span class="city-dot complete"></span><strong>Singapore</strong></div>
                     <div class="route-leg onward"><span id="routeProgress"></span></div>
                     <div class="route-city"><span class="city-dot"></span><strong>San Francisco</strong></div>
+                    <div class="route-leg gold-final"><span id="goldSfCalgaryProgress"></span></div>
+                    <div class="route-city"><span class="city-dot" id="goldCalgaryDot"></span><strong>Calgary</strong></div>
                     <i class="route-linear-shoe" id="routeLinearMarker">👟</i>
+                </div>
+                <p class="route-direction-label reverse">BLUE ROUTE · CALGARY → SAN FRANCISCO → SINGAPORE → DELHI</p>
+                <div class="route route-reverse" id="routeReverseLinear" aria-hidden="true">
+                    <div class="route-city"><span class="city-dot complete"></span><strong>Calgary</strong></div>
+                    <div class="route-leg"><span id="reverseCalgarySfProgress"></span></div>
+                    <div class="route-city"><span class="city-dot" id="reverseSfDot"></span><strong>San Francisco</strong></div>
+                    <div class="route-leg"><span id="reverseSfSingaporeProgress"></span></div>
+                    <div class="route-city"><span class="city-dot" id="reverseSingaporeDot"></span><strong>Singapore</strong></div>
+                    <div class="route-leg"><span id="reverseSingaporeDelhiProgress"></span></div>
+                    <div class="route-city"><span class="city-dot" id="reverseDelhiDot"></span><strong>Delhi</strong></div>
+                    <i class="route-linear-shoe reverse" id="routeReverseLinearMarker">👟</i>
                 </div>
                 <details class="method-note">
                     <summary>How far is that, approximately?</summary>

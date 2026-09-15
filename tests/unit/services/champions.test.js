@@ -118,6 +118,12 @@ describe('featured champions archive service', () => {
     });
     expect(result.honors.most_consistent.name).toBe('season.winner');
     expect(result.honors.comparison).toBeTruthy();
+    expect(result.journey.reverse_route).toMatchObject({
+      calgary_to_san_francisco_km: expect.any(Number),
+      san_francisco_to_singapore_km: expect.any(Number),
+      singapore_to_delhi_km: expect.any(Number),
+      total_route_km: expect.any(Number)
+    });
   });
 
   test('awards consistency to the lowest-variation perfect reporter', () => {
@@ -140,18 +146,39 @@ describe('featured champions archive service', () => {
       { id: 1, name: 'improved', ranked: true, average_steps: 100, total_steps: 100, days_reported: 1 },
       { id: 2, name: 'unranked', ranked: false, average_steps: 1, total_steps: 1, days_reported: 1 }
     ];
-    const comparison = buildComparison(
-      current, baseline,
-      { steps: 700, participants: 2, reporting_rate: 100 },
-      { steps: 101, participants: 2, reporting_rate: 75 }
-    );
+    const comparison = buildComparison(current, baseline);
     expect(comparison.most_improved).toMatchObject({
       name: 'improved',
       average_step_change: 100,
       average_step_change_percent: 100
     });
     expect(comparison.returning_ranked_participants).toBe(1);
-    expect(comparison.totals.reporting_rate_change_points).toBe(25);
+    expect(comparison.cumulative_daily_average).toMatchObject({
+      current: 350,
+      baseline: 50.5,
+      change: 299.5,
+      participant_count: 2,
+      baseline_participant_count: 2,
+      reported_person_days: 2,
+      baseline_reported_person_days: 2
+    });
+    expect(comparison.cumulative_daily_average.change_percent).toBeCloseTo(593.069, 3);
+  });
+
+  test('weights the collective cumulative daily average by reported person-days', () => {
+    const comparison = buildComparison([
+      { id: 1, name: 'two.days', ranked: true, total_steps: 200, days_reported: 2, average_steps: 100 },
+      { id: 2, name: 'one.day', ranked: true, total_steps: 300, days_reported: 1, average_steps: 300 }
+    ], [
+      { id: 1, name: 'two.days', ranked: true, total_steps: 150, days_reported: 2, average_steps: 75 },
+      { id: 2, name: 'one.day', ranked: true, total_steps: 150, days_reported: 1, average_steps: 150 }
+    ]);
+    expect(comparison.cumulative_daily_average).toMatchObject({
+      current: 500 / 3,
+      baseline: 100,
+      reported_person_days: 3,
+      baseline_reported_person_days: 3
+    });
   });
 
   test('Club 200K requires both 200,000 steps and every daily report', async () => {

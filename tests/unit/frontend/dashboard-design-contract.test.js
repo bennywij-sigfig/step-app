@@ -10,16 +10,18 @@ describe('dashboard design contract', () => {
   const theme = readSource('src/public/season-theme.css');
   const chat = readSource('src/public/step-chat.css');
 
-  test('prominently transitions from retroactive reporting to published champions', () => {
+  test('reserves the prominent season announcement for published champions', () => {
     expect(html).toContain('id="seasonAnnouncement"');
     expect(html).toContain('.season-announcement.is-published');
     expect(dashboard).toContain('function updateSeasonAnnouncement(challenge, publication)');
-    expect(dashboard).toContain("challenge?.status === 'ended'");
-    expect(dashboard).toContain('The walking is over. The reporting window is still open.');
-    expect(dashboard).toContain('id="retroactiveStepsAction"');
     expect(dashboard).toContain('The ${publication.season} champions have entered the Pantheon');
     expect(dashboard).toContain('href="/champions"');
+    expect(dashboard).toContain('Reserve this prominent space for the champions reveal itself.');
+    expect(dashboard).not.toContain('The walking is over. The reporting window is still open.');
+    expect(dashboard).not.toContain('id="retroactiveStepsAction"');
     expect(dashboard).toContain('currentUser.latest_champions');
+    expect(dashboard).toContain('currentUser.champions_preview_now');
+    expect(dashboard).toContain('previewNow ? new Date(previewNow) : new Date()');
   });
 
   test('uses a neutral system sans stack for the data-dense dashboard', () => {

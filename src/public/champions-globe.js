@@ -5,7 +5,8 @@
     const LOCATIONS = Object.freeze({
         delhi: [77.209, 28.614],
         singapore: [103.8198, 1.3521],
-        sanFrancisco: [-122.4194, 37.7749]
+        sanFrancisco: [-122.4194, 37.7749],
+        calgary: [-114.0719, 51.0447]
     });
 
     const toVector = ([longitude, latitude]) => {
@@ -29,7 +30,7 @@
     };
 
     function create(options) {
-        const { container, canvas, landRings, onwardFraction, onProgress } = options;
+        const { container, canvas, landRings, onwardFraction, reverseDistanceKm = 0, onProgress } = options;
         const context = canvas?.getContext?.('2d');
         if (!context || !Array.isArray(landRings)) {
             container.classList.add('no-canvas');
@@ -39,11 +40,19 @@
         const delhiVector = toVector(LOCATIONS.delhi);
         const singaporeVector = toVector(LOCATIONS.singapore);
         const sanFranciscoVector = toVector(LOCATIONS.sanFrancisco);
+        const calgaryVector = toVector(LOCATIONS.calgary);
         const firstDistance = angularDistance(delhiVector, singaporeVector);
         const secondDistance = angularDistance(singaporeVector, sanFranciscoVector);
         const traveledSecondDistance = secondDistance * onwardFraction;
         const totalDistance = firstDistance + traveledSecondDistance;
         const firstLegShare = totalDistance ? firstDistance / totalDistance : 1;
+        const reverseLegs = [
+            [calgaryVector, sanFranciscoVector],
+            [sanFranciscoVector, singaporeVector],
+            [singaporeVector, delhiVector]
+        ].map(([start, end]) => ({ start, end, distance: angularDistance(start, end) }));
+        const reverseRouteDistance = reverseLegs.reduce((sum, leg) => sum + leg.distance, 0);
+        const reverseTraveledDistance = Math.min(reverseRouteDistance, Math.max(0, reverseDistanceKm / 6371.0088));
         const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
         let width = 1;
         let height = 1;
@@ -51,6 +60,8 @@
         let centerX = 0;
         let centerY = 0;
         let routeProgress = 0;
+        let reverseRouteProgress = 0;
+        let routeFocus = 'primary';
         let manualLongitude = 0;
         let activePointerId = null;
         let dragStartX = 0;
@@ -77,7 +88,27 @@
             };
         }
 
+        function reverseRouteState(progress) {
+            let remaining = reverseTraveledDistance * progress;
+            const reached = [true, false, false, false];
+            for (let index = 0; index < reverseLegs.length; index += 1) {
+                const leg = reverseLegs[index];
+                if (remaining <= leg.distance) {
+                    return {
+                        point: greatCirclePoint(leg.start, leg.end, leg.distance ? remaining / leg.distance : 1),
+                        reached
+                    };
+                }
+                remaining -= leg.distance;
+                reached[index + 1] = true;
+            }
+            return { point: delhiVector, reached: [true, true, true, true] };
+        }
+
         function viewLongitude() {
+            if (routeFocus === 'reverse') {
+                return reverseRouteState(reverseRouteProgress).point[0] + manualLongitude;
+            }
             return 103 + routeState(routeProgress).onwardProgress * 34 + manualLongitude;
         }
 
@@ -166,9 +197,20 @@
             context.restore();
         }
 
+        function drawTraveledLegs(legs, traveledDistance, progress, color) {
+            let remaining = traveledDistance * progress;
+            for (const leg of legs) {
+                if (remaining <= 0) return;
+                const fraction = Math.min(1, remaining / leg.distance);
+                drawProjectedLine(routePoints(leg.start, leg.end, fraction), color, 3.2);
+                remaining -= leg.distance;
+            }
+        }
+
         function drawRoute() {
             drawProjectedLine(routePoints(delhiVector, singaporeVector), 'rgba(255, 247, 220, 0.2)', 2, true);
             drawProjectedLine(routePoints(singaporeVector, sanFranciscoVector), 'rgba(255, 247, 220, 0.2)', 2, true);
+            drawProjectedLine(routePoints(sanFranciscoVector, calgaryVector), 'rgba(247, 200, 93, 0.2)', 2, true);
 
             if (routeProgress <= firstLegShare) {
                 const fraction = firstLegShare ? routeProgress / firstLegShare : 1;
@@ -182,18 +224,23 @@
                     3.5
                 );
             }
+
+            reverseLegs.forEach(leg => {
+                drawProjectedLine(routePoints(leg.start, leg.end), 'rgba(112, 229, 255, 0.18)', 2, true);
+            });
+            drawTraveledLegs(reverseLegs, reverseTraveledDistance, reverseRouteProgress, '#70e5ff');
         }
 
-        function drawCity(name, coordinate, reached, align = 'left') {
+        function drawCity(name, coordinate, reached, align = 'left', reachedColor = '#f7c85d') {
             const point = project(coordinate);
             if (!point.visible) return;
             context.save();
             context.beginPath();
             context.arc(point.x, point.y, 5.5, 0, Math.PI * 2);
-            context.fillStyle = reached ? '#f7c85d' : '#090714';
-            context.strokeStyle = reached ? '#f7c85d' : '#81798b';
+            context.fillStyle = reached ? reachedColor : '#090714';
+            context.strokeStyle = reached ? reachedColor : '#81798b';
             context.lineWidth = 2.5;
-            context.shadowColor = reached ? 'rgba(247, 200, 93, .8)' : 'transparent';
+            context.shadowColor = reached ? reachedColor : 'transparent';
             context.shadowBlur = reached ? 13 : 0;
             context.fill();
             context.stroke();
@@ -210,16 +257,16 @@
             context.restore();
         }
 
-        function drawShoe(coordinate) {
+        function drawShoe(coordinate, glyph = '👟', color = '#f7c85d') {
             const point = project(coordinate);
             if (!point.visible) return;
             context.save();
             context.beginPath();
             context.arc(point.x, point.y, 18, 0, Math.PI * 2);
             context.fillStyle = 'rgba(9, 7, 20, .92)';
-            context.strokeStyle = '#f7c85d';
+            context.strokeStyle = color;
             context.lineWidth = 2;
-            context.shadowColor = 'rgba(247, 200, 93, .75)';
+            context.shadowColor = color;
             context.shadowBlur = 12;
             context.fill();
             context.stroke();
@@ -227,7 +274,7 @@
             context.font = '21px sans-serif';
             context.textAlign = 'center';
             context.textBaseline = 'middle';
-            context.fillText('👟', point.x, point.y + 1);
+            context.fillText(glyph, point.x, point.y + 1);
             context.restore();
         }
 
@@ -258,10 +305,14 @@
             drawRoute();
             context.restore();
             const state = routeState(routeProgress);
+            const reverseState = reverseRouteState(reverseRouteProgress);
+            drawCity('CALGARY', LOCATIONS.calgary, true, 'left', '#70e5ff');
             drawCity('DELHI', LOCATIONS.delhi, true, 'left');
-            drawCity('SINGAPORE', LOCATIONS.singapore, state.reachedSingapore, 'right');
-            drawCity('SAN FRANCISCO', LOCATIONS.sanFrancisco, routeProgress >= 1 && onwardFraction >= .999, 'right');
+            drawCity('SINGAPORE', LOCATIONS.singapore, state.reachedSingapore || reverseState.reached[2], 'right', state.reachedSingapore ? '#f7c85d' : '#70e5ff');
+            const primaryReachedSanFrancisco = routeProgress >= 1 && onwardFraction >= .999;
+            drawCity('SAN FRANCISCO', LOCATIONS.sanFrancisco, primaryReachedSanFrancisco || reverseState.reached[1], 'right', primaryReachedSanFrancisco ? '#f7c85d' : '#70e5ff');
             drawShoe(state.point);
+            drawShoe(reverseState.point, '👟', '#70e5ff');
             context.beginPath();
             context.arc(centerX, centerY, radius, 0, Math.PI * 2);
             context.strokeStyle = 'rgba(247, 200, 93, .35)';
@@ -287,6 +338,43 @@
             routeProgress = Math.max(0, Math.min(1, progress));
             draw();
             onProgress?.(routeProgress, firstLegShare);
+        }
+
+        function setReverseProgress(progress) {
+            reverseRouteProgress = Math.max(0, Math.min(1, progress));
+            draw();
+        }
+
+        function focusCalgary(duration = 1400) {
+            stopInertia();
+            const baseLongitude = viewLongitude() - manualLongitude;
+            const currentLongitude = baseLongitude + manualLongitude;
+            const delta = ((LOCATIONS.calgary[0] - currentLongitude + 540) % 360) - 180;
+            const origin = manualLongitude;
+            const target = origin + delta;
+            if (reduceMotion.matches || duration <= 0) {
+                manualLongitude = target;
+                draw();
+                return Promise.resolve();
+            }
+            const startedAt = performance.now();
+            return new Promise(resolve => {
+                const frame = now => {
+                    const elapsed = Math.min(1, (now - startedAt) / duration);
+                    const eased = .5 - Math.cos(Math.PI * elapsed) / 2;
+                    manualLongitude = origin + (target - origin) * eased;
+                    draw();
+                    if (elapsed < 1) {
+                        requestAnimationFrame(frame);
+                    } else {
+                        routeFocus = 'reverse';
+                        manualLongitude = 0;
+                        draw();
+                        resolve();
+                    }
+                };
+                requestAnimationFrame(frame);
+            });
         }
 
         function stopInertia() {
@@ -379,7 +467,7 @@
         container.classList.add('has-canvas');
         resize();
 
-        return { setProgress, firstLegShare };
+        return { setProgress, setReverseProgress, focusCalgary, firstLegShare };
     }
 
     window.PantheonGlobe = { create };

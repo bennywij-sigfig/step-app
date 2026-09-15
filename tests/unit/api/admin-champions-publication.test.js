@@ -6,8 +6,17 @@ const server = fs.readFileSync(path.join(root, 'src/server.js'), 'utf8');
 const database = fs.readFileSync(path.join(root, 'src/database.js'), 'utf8');
 const admin = fs.readFileSync(path.join(root, 'src/public/admin.js'), 'utf8');
 const html = fs.readFileSync(path.join(root, 'src/views/admin.html'), 'utf8');
+const packageJson = fs.readFileSync(path.join(root, 'package.json'), 'utf8');
 
 describe('manual champions publication contract', () => {
+  test('offers a production-safe localhost clock override for previewing the ended state', () => {
+    expect(packageJson).toContain('"preview:champions"');
+    expect(packageJson).toContain('CHAMPIONS_PREVIEW_NOW=2026-09-17T12:00:00Z');
+    expect(server).toContain("process.env.NODE_ENV !== 'production'");
+    expect(server).toContain('getChampionsWorkflowNow()');
+    expect(server).toContain('champions_preview_now:');
+  });
+
   test('stores a season publication as a pointer to an immutable challenge archive', () => {
     expect(database).toContain('CREATE TABLE IF NOT EXISTS champions_publications');
     expect(database).toContain('season INTEGER PRIMARY KEY');
@@ -18,7 +27,7 @@ describe('manual champions publication contract', () => {
   test('publishes only through an authenticated, CSRF-protected admin action', () => {
     expect(server).toContain("app.post('/api/admin/challenges/:challengeId/publish-champions'");
     expect(server).toContain('requireApiAdmin, validateCSRFToken');
-    expect(server).toContain("getChallengeStatus(challenge) !== 'ended'");
+    expect(server).toContain("getChallengeStatus(challenge, getChampionsWorkflowNow()) !== 'ended'");
     expect(server).toContain('INSERT INTO champions_publications');
     expect(server).toContain('ON CONFLICT(season) DO UPDATE SET');
     expect(server).toContain('championsCache.set(season, champions)');

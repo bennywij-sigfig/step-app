@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Update challenge and season-transition displays.
-                updateChallengeInfo(currentUser.current_challenge);
+                updateChallengeInfo(currentUser.current_challenge, currentUser.champions_preview_now);
                 updateSeasonAnnouncement(currentUser.current_challenge, currentUser.latest_champions);
                 
                 // Setup admin navigation if user is admin
@@ -182,35 +182,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            if (challenge?.status === 'ended') {
-                const season = String(challenge.end_date || '').slice(0, 4);
-                announcement.className = 'season-announcement is-ended';
-                announcement.innerHTML = `
-                    <p class="season-announcement-kicker">THE ${escapeHtml(season)} CHALLENGE IS COMPLETE</p>
-                    <h2>The walking is over. The reporting window is still open.</h2>
-                    <p>Missed a day? Enter steps retroactively for any date from ${formatDate(challenge.start_date)} through ${formatDate(challenge.end_date)} before administrators publish the final champions.</p>
-                    <button type="button" class="season-announcement-action" id="retroactiveStepsAction">Enter missed steps</button>
-                `;
-                document.getElementById('retroactiveStepsAction').addEventListener('click', () => {
-                    document.getElementById('myStepsBtn')?.click();
-                    document.getElementById('stepEntryTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    window.setTimeout(() => document.getElementById('date')?.focus(), 350);
-                });
-                return;
-            }
-
+            // Before publication, the compact challenge panel beside the step
+            // form already explains that retroactive entry remains available.
+            // Reserve this prominent space for the champions reveal itself.
             announcement.className = 'season-announcement hidden';
         }
 
         // Update challenge information display
-        function updateChallengeInfo(challenge) {
+        function updateChallengeInfo(challenge, previewNow = null) {
             const challengeInfo = document.getElementById('challengeInfo');
             const form = document.getElementById('stepsForm');
             const submitBtn = document.getElementById('submitStepsBtn');
             const dateInput = document.getElementById('date');
             
             if (challenge) {
-                const now = new Date();
+                const now = previewNow ? new Date(previewNow) : new Date();
                 const startDate = new Date(challenge.window_start_utc || `${challenge.start_date}T00:00:00+08:00`);
                 const endDate = new Date(challenge.window_end_utc || `${challenge.end_date}T23:59:59-07:00`);
                 const isWithinPeriod = now >= startDate && now <= endDate;
