@@ -133,6 +133,73 @@ function buildTeams(participants, totalDays, threshold) {
   return [...ranked, ...unranked];
 }
 
+function buildConsistencyHonors(rows, participants, totalDays) {
+  const stepsByUser = new Map();
+  rows.forEach(row => {
+    const key = String(row.user_id);
+    const values = stepsByUser.get(key) || [];
+    values.push(Number(row.count) || 0);
+    stepsByUser.set(key, values);
+  });
+
+  return participants
+    .filter(person => person.days_reported === totalDays)
+    .map(person => {
+      const values = stepsByUser.get(String(person.id)) || [];
+      const mean = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+      const variance = values.length
+        ? values.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / values.length
+        : 0;
+      const coefficientOfVariation = mean > 0 ? Math.sqrt(variance) / mean : Infinity;
+      return {
+        ...person,
+        consistency_score: Number.isFinite(coefficientOfVariation)
+          ? 100 / (1 + coefficientOfVariation)
+          : 0,
+        coefficient_of_variation: Number.isFinite(coefficientOfVariation)
+          ? coefficientOfVariation
+          : null
+      };
+    })
+    .sort((left, right) =>
+      right.consistency_score - left.consistency_score || compareAverage(left, right)
+    );
+}
+
+function buildComparison(currentParticipants, baselineParticipants, currentTotals, baselineTotals) {
+  const baselineById = new Map(baselineParticipants.map(person => [String(person.id), person]));
+  const improved = currentParticipants
+    .filter(person => person.ranked && baselineById.get(String(person.id))?.ranked)
+    .map(person => {
+      const baseline = baselineById.get(String(person.id));
+      return {
+        ...person,
+        baseline_average_steps: baseline.average_steps,
+        average_step_change: person.average_steps - baseline.average_steps,
+        average_step_change_percent: baseline.average_steps > 0
+          ? ((person.average_steps / baseline.average_steps) - 1) * 100
+          : null
+      };
+    })
+    .sort((left, right) =>
+      right.average_step_change - left.average_step_change || compareAverage(left, right)
+    );
+
+  return {
+    baseline_season: FEATURED_CHALLENGE.season,
+    most_improved: improved[0] || null,
+    returning_ranked_participants: improved.length,
+    totals: {
+      steps_change: currentTotals.steps - baselineTotals.steps,
+      steps_change_percent: baselineTotals.steps > 0
+        ? ((currentTotals.steps / baselineTotals.steps) - 1) * 100
+        : null,
+      participants_change: currentTotals.participants - baselineTotals.participants,
+      reporting_rate_change_points: currentTotals.reporting_rate - baselineTotals.reporting_rate
+    }
+  };
+}
+
 function buildDailyStats(rows) {
   const byDate = new Map();
   for (const row of rows) {
@@ -299,6 +366,37 @@ async function getChampions(database, season = FEATURED_CHALLENGE.season) {
     participant.days_reported === totalDays && participant.total_steps >= CLUB_200K_MIN_STEPS
   );
   const club200KTotalSteps = club200KMembers.reduce((sum, participant) => sum + participant.total_steps, 0);
+  const consistencyHonors = buildConsistencyHonors(rows, participants, totalDays);
+  let comparison = null;
+  if (season > FEATURED_CHALLENGE.season) {
+    const baselineArchive = await findChampionsArchive(database, FEATURED_CHALLENGE.season);
+    if (baselineArchive) {
+      const baselineArchiveRows = await all(database, `
+        SELECT user_id, user_name, user_team, date, count
+        FROM challenge_archive_steps
+        WHERE archive_id = ?
+        ORDER BY date, user_id
+      `, [baselineArchive.id]);
+      const baselineRows = baselineArchiveRows.filter(row =>
+        !EXCLUDED_PARTICIPANT_NAMES.has(String(row.user_name).toLowerCase())
+      );
+      const baselineDays = challengeDays(baselineArchive.challenge_start_date, baselineArchive.challenge_end_date);
+      const baselineThreshold = Number(baselineArchive.reporting_threshold ?? 100);
+      const baselineParticipants = buildParticipants(baselineRows, baselineDays, baselineThreshold);
+      const baselineExpectedReports = baselineParticipants.length * baselineDays;
+      comparison = buildComparison(participants, baselineParticipants, {
+        steps: totalSteps,
+        participants: participants.length,
+        reporting_rate: expectedReports > 0 ? (rows.length * 100) / expectedReports : 0
+      }, {
+        steps: baselineRows.reduce((sum, row) => sum + (Number(row.count) || 0), 0),
+        participants: baselineParticipants.length,
+        reporting_rate: baselineExpectedReports > 0
+          ? (baselineRows.length * 100) / baselineExpectedReports
+          : 0
+      });
+    }
+  }
 
   return {
     season,
@@ -312,6 +410,16 @@ async function getChampions(database, season = FEATURED_CHALLENGE.season) {
     podiums: {
       individuals: participants.filter(row => row.ranked && row.rank <= 3),
       teams: teams.filter(row => row.ranked && row.rank <= 3)
+    },
+    honors: {
+      most_consistent: consistencyHonors[0] || null,
+      comparison
+    },
+    next_challenge: {
+      season: season + 1,
+      start_date: `${season + 1}-09-01`,
+      end_date: `${season + 1}-09-15`,
+      provisional: true
     },
     clubs: {
       two_hundred_k: {
@@ -374,6 +482,8 @@ module.exports = {
   buildParticipants,
   buildTeams,
   buildRaceTimeline,
+  buildConsistencyHonors,
+  buildComparison,
   FEATURED_CHALLENGE,
   CLUB_200K_MIN_STEPS
 };

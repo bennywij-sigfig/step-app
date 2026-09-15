@@ -1,4 +1,12 @@
-const { getChampions, getFeaturedChampions, challengeDays, buildParticipants, buildRaceTimeline } = require('../../../src/services/champions');
+const {
+  getChampions,
+  getFeaturedChampions,
+  challengeDays,
+  buildParticipants,
+  buildRaceTimeline,
+  buildConsistencyHonors,
+  buildComparison
+} = require('../../../src/services/champions');
 
 function archiveRow(userId, name, team, day, count) {
   return {
@@ -102,6 +110,48 @@ describe('featured champions archive service', () => {
     expect(result.season).toBe(2026);
     expect(result.podiums.individuals[0].name).toBe('season.winner');
     expect(result.podiums.teams[0].name).toBe('Future Soles');
+    expect(result.next_challenge).toEqual({
+      season: 2027,
+      start_date: '2027-09-01',
+      end_date: '2027-09-15',
+      provisional: true
+    });
+    expect(result.honors.most_consistent.name).toBe('season.winner');
+    expect(result.honors.comparison).toBeTruthy();
+  });
+
+  test('awards consistency to the lowest-variation perfect reporter', () => {
+    const rows = [
+      archiveRow(1, 'steady', 'A', 1, 100), archiveRow(1, 'steady', 'A', 2, 100),
+      archiveRow(2, 'swingy', 'A', 1, 10), archiveRow(2, 'swingy', 'A', 2, 190)
+    ];
+    const participants = buildParticipants(rows, 2, 100);
+    const honors = buildConsistencyHonors(rows, participants, 2);
+    expect(honors[0]).toMatchObject({ name: 'steady', consistency_score: 100 });
+    expect(honors[1].consistency_score).toBeLessThan(100);
+  });
+
+  test('compares improvement only among participants ranked in both seasons', () => {
+    const current = [
+      { id: 1, name: 'improved', ranked: true, average_steps: 200, total_steps: 200, days_reported: 1 },
+      { id: 2, name: 'unranked', ranked: true, average_steps: 500, total_steps: 500, days_reported: 1 }
+    ];
+    const baseline = [
+      { id: 1, name: 'improved', ranked: true, average_steps: 100, total_steps: 100, days_reported: 1 },
+      { id: 2, name: 'unranked', ranked: false, average_steps: 1, total_steps: 1, days_reported: 1 }
+    ];
+    const comparison = buildComparison(
+      current, baseline,
+      { steps: 700, participants: 2, reporting_rate: 100 },
+      { steps: 101, participants: 2, reporting_rate: 75 }
+    );
+    expect(comparison.most_improved).toMatchObject({
+      name: 'improved',
+      average_step_change: 100,
+      average_step_change_percent: 100
+    });
+    expect(comparison.returning_ranked_participants).toBe(1);
+    expect(comparison.totals.reporting_rate_change_points).toBe(25);
   });
 
   test('Club 200K requires both 200,000 steps and every daily report', async () => {

@@ -44,6 +44,7 @@
             <a href="#champions">Champions</a>
             <a href="#team-podium">Team podium</a>
             <a href="#individual-podium">Individual podium</a>
+            <a href="#season-honors">Season honors</a>
             <a href="#race">The race</a>
             <a href="#analytics">Analytics</a>
             <a href="#club-200k">Club 200K</a>
@@ -51,8 +52,8 @@
             <a href="#journey">The journey</a>
             <a href="#notable-stats">Notable stats</a>
             <a href="#final-results">Final results</a>
-            <a href="#honors-2026" data-2026-preview>2026 honors</a>
-            <a href="#countdown-2026" data-2026-preview>Countdown</a>
+            <a href="#honors-2026" id="nextSeasonNav">Next season</a>
+            <a href="#countdown-2026" id="countdownNav">Countdown</a>
         </nav>
 
         <div id="championsLoading" class="loading-oracle" role="status">
@@ -91,6 +92,15 @@
                     <h2 id="individualPodiumTitle">Individual podium</h2>
                 </div>
                 <div id="individualPodium" class="individual-podium"></div>
+            </section>
+
+            <section class="season-honors" id="season-honors" aria-labelledby="seasonHonorsTitle" hidden>
+                <div class="section-heading">
+                    <p class="eyebrow" id="seasonHonorsKicker">THE NEW TABLETS</p>
+                    <h2 id="seasonHonorsTitle">2026 honors and the view from 2025</h2>
+                    <p id="seasonHonorsSummary"></p>
+                </div>
+                <div class="season-honors-grid" id="seasonHonorsGrid"></div>
             </section>
 
             <span id="race" class="section-anchor-target" aria-hidden="true"></span>
@@ -274,20 +284,20 @@
                 </details>
             </section>
 
-            <section class="next-year" id="honors-2026" aria-labelledby="nextYearTitle" data-2026-preview>
-                <p class="eyebrow">THE ORACLE FORETELLS</p>
+            <section class="next-year" id="honors-2026" aria-labelledby="nextYearTitle">
+                <p class="eyebrow">THE ORACLE FORETELLS · PROVISIONAL</p>
                 <h2 id="nextYearTitle">More honors await in 2026</h2>
-                <div class="future-awards">
+                <div class="future-awards" id="futureAwards">
                     <span>200K Club · Class of 2026</span>
                     <span>⚡ Most Improved</span>
                     <span>⚖ Most Consistent</span>
                     <span>↗ 2026 vs. 2025</span>
                 </div>
-                <p>The velvet rope opens again in 2026: reach 200,000 steps with 100% reporting to claim a place. The other tablets awaken after the challenge closes.</p>
+                <p id="nextYearDecree">Provisional dates only. The velvet rope opens again in 2026: reach 200,000 steps with 100% reporting to claim a place.</p>
             </section>
 
-            <span id="countdown-2026" class="section-anchor-target" aria-hidden="true" data-2026-preview></span>
-            <section class="challenge-countdown" id="challengeCountdown" aria-labelledby="countdownTitle" data-2026-preview>
+            <span id="countdown-2026" class="section-anchor-target" aria-hidden="true"></span>
+            <section class="challenge-countdown" id="challengeCountdown" aria-labelledby="countdownTitle">
                 <div class="countdown-sigil" aria-hidden="true"><span>ⅩⅤ</span></div>
                 <p class="eyebrow" id="countdownKicker">THE LAST MILE APPROACHES</p>
                 <h2 id="countdownTitle">Until the final footfall is tallied</h2>
@@ -298,7 +308,7 @@
                     <div class="countdown-measure"><strong id="countdownMinutes">00</strong><span>minutes</span></div>
                     <div class="countdown-measure"><strong id="countdownSeconds">00</strong><span>seconds</span></div>
                 </div>
-                <p class="countdown-boundary">THE GATES CLOSE AT MIDNIGHT PACIFIC · SEPTEMBER 16, 2026<br><span>the boundary immediately following September 15</span></p>
+                <p class="countdown-boundary" id="countdownBoundary">PROVISIONAL DATES · SEPTEMBER 1–15, 2026<br><span>subject to administrator confirmation</span></p>
             </section>
         </div>
     </main>

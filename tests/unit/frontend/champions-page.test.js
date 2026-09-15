@@ -95,7 +95,7 @@ describe('Champions Pantheon frontend', () => {
 
   test('provides stable direct links to every archive section', () => {
     const anchors = [
-      'pantheon', 'champions', 'team-podium', 'individual-podium', 'race', 'analytics',
+      'pantheon', 'champions', 'team-podium', 'individual-podium', 'season-honors', 'race', 'analytics',
       'club-200k', 'grand-total', 'journey', 'notable-stats', 'final-results',
       'honors-2026', 'countdown-2026'
     ];
@@ -159,11 +159,20 @@ describe('Champions Pantheon frontend', () => {
     expect(script).toContain('let selectedSeason');
     expect(script).toContain('data.season');
     expect(script).toContain('The challenge may be over, but results remain private');
-    expect(script).toContain("document.querySelectorAll('[data-2026-preview]')");
     expect(script).toContain('`/champions/analytics?season=${data.season}`');
+    expect(page).toContain('href="/champions?season=2025"');
   });
 
-  test('ends with an ornate Pacific-time countdown to the 2026 challenge close', () => {
+  test('turns the promised 2026 awards into comparative honors', () => {
+    expect(page).toContain('id="seasonHonorsGrid"');
+    expect(script).toContain('function renderSeasonHonors(data)');
+    expect(script).toContain('MOST IMPROVED VS. ${comparison.baseline_season}');
+    expect(script).toContain('MOST CONSISTENT');
+    expect(script).toContain('${data.season} VS. ${comparison.baseline_season}');
+    expect(styles).toContain('.season-honors-grid');
+  });
+
+  test('uses clearly provisional next-season dates and adapts the countdown to 2027', () => {
     for (const id of [
       'challengeCountdown', 'countdownTitle', 'countdownTimer',
       'countdownDays', 'countdownHours', 'countdownMinutes', 'countdownSeconds'
@@ -171,14 +180,16 @@ describe('Champions Pantheon frontend', () => {
       expect(page).toContain(`id="${id}"`);
     }
     expect(page.indexOf('id="challengeCountdown"')).toBeGreaterThan(page.indexOf('class="next-year"'));
-    expect(page).toContain('Until the final footfall is tallied');
-    expect(page).toContain('THE GATES CLOSE AT MIDNIGHT PACIFIC');
-    expect(script).toContain("byId('countdownTitle').textContent = 'Final reporting is in the administrators’ hands'");
+    expect(page).toContain('PROVISIONAL DATES · SEPTEMBER 1–15, 2026');
+    expect(page).toContain('subject to administrator confirmation');
+    expect(script).toContain('function renderNextChallenge(data)');
+    expect(script).toContain('September 1–15, ${next.season}');
+    expect(script).toContain("nextChallenge.start_date}T00:00:00+08:00");
+    expect(script).toContain("nextChallenge.provisional ? 'provisional '");
+    expect(script).toContain('planning dates only · subject to administrator confirmation');
     expect(script).toContain('Retroactive reporting may remain open past the challenge dates');
-    expect(script).toContain("Date.parse('2026-09-16T00:00:00-07:00')");
-    expect(script).toContain('CHALLENGE_2026_CLOSE - Date.now()');
     expect(script).toContain("window.setInterval(() => {");
-    expect(script).toContain("classList.add('is-complete')");
+    expect(script).toContain("classList.toggle('is-complete', phase === 'ended')");
     expect(styles).toContain('.challenge-countdown');
     expect(styles).toContain('@keyframes countdown-orbit');
   });

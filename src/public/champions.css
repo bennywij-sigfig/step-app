@@ -526,6 +526,16 @@ td { color: var(--muted); }
 td strong, tr.podium-row td { color: var(--ivory); }
 .unranked-place { color: #827b8b; }
 
+.season-honors { padding: 80px 0; }
+.season-honors-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.season-honor-card { min-height: 245px; padding: 26px; border: 1px solid rgba(247,200,93,.24); border-radius: 20px; background: radial-gradient(circle at 90% 0, rgba(247,200,93,.13), transparent 44%), rgba(255,255,255,.025); }
+.season-honor-card:nth-child(2) { border-color: rgba(181,213,239,.26); background: radial-gradient(circle at 90% 0, rgba(181,213,239,.14), transparent 44%), rgba(255,255,255,.025); }
+.season-honor-card:nth-child(3) { border-color: rgba(124,87,196,.34); background: radial-gradient(circle at 90% 0, rgba(124,87,196,.2), transparent 44%), rgba(255,255,255,.025); }
+.season-honor-card h3 { margin: 18px 0 10px; font: 500 clamp(27px, 4vw, 42px)/1 Georgia, serif; }
+.season-honor-card strong { display: block; margin: 0 0 8px; color: var(--ivory); font-size: 20px; }
+.season-honor-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+.season-honor-card .honor-mark { color: var(--gold); font-size: 11px; font-weight: 850; letter-spacing: .16em; text-transform: uppercase; }
+
 .next-year { padding: clamp(32px, 7vw, 70px); border: 1px dashed rgba(247,200,93,.35); border-radius: 24px; text-align: center; background: radial-gradient(circle at 50% 0, rgba(124,87,196,.16), transparent 60%); }
 .future-awards { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 28px 0; }
 .future-awards span { padding: 10px 14px; color: #a49cab; border: 1px solid rgba(255,255,255,.1); border-radius: 999px; background: rgba(255,255,255,.025); font-size: 12px; }
@@ -623,7 +633,7 @@ td strong, tr.podium-row td { color: var(--ivory); }
     .pantheon-header { min-height: 60px; }
     .hero { gap: 24px; padding-top: 45px; padding-bottom: 80px; }
     h1 { font-size: clamp(58px, 22vw, 95px); }
-    .champion-grid, .individual-podium { grid-template-columns: 1fr; }
+    .champion-grid, .individual-podium, .season-honors-grid { grid-template-columns: 1fr; }
     .champion-card { min-height: 330px; }
     .individual-podium-card { min-height: 0; }
     .club-200k { padding: 45px 17px 24px; }

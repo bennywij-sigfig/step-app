@@ -33,12 +33,17 @@
     };
     const requestedSeason = Number(new URLSearchParams(window.location.search).get('season'));
     let selectedSeason = requestedSeason === 2026 ? 2026 : 2025;
-    // September 15 remains a full challenge day. In 2026 Pacific daylight
-    // time is UTC-07:00, so this instant is midnight beginning September 16.
-    const CHALLENGE_2026_CLOSE = Date.parse('2026-09-16T00:00:00-07:00');
+    let challengeCountdownTimer = null;
 
-    function updateChallengeCountdown() {
-        const remaining = Math.max(0, CHALLENGE_2026_CLOSE - Date.now());
+    function updateChallengeCountdown(nextChallenge) {
+        const start = Date.parse(`${nextChallenge.start_date}T00:00:00+08:00`);
+        const dayAfterEnd = new Date(`${nextChallenge.end_date}T00:00:00Z`);
+        dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1);
+        const end = Date.parse(`${dayAfterEnd.toISOString().slice(0, 10)}T00:00:00-07:00`);
+        const now = Date.now();
+        const phase = now < start ? 'upcoming' : now < end ? 'active' : 'ended';
+        const target = phase === 'upcoming' ? start : end;
+        const remaining = Math.max(0, target - now);
         const totalSeconds = Math.floor(remaining / 1000);
         const values = {
             countdownDays: Math.floor(totalSeconds / 86400),
@@ -51,23 +56,34 @@
         });
         byId('countdownTimer').setAttribute(
             'aria-label',
-            `${values.countdownDays} days, ${values.countdownHours} hours, ${values.countdownMinutes} minutes, and ${values.countdownSeconds} seconds remaining in the 2026 step challenge`
+            `${values.countdownDays} days, ${values.countdownHours} hours, ${values.countdownMinutes} minutes, and ${values.countdownSeconds} seconds until the ${nextChallenge.season} challenge ${phase === 'upcoming' ? 'provisional start' : 'close'}`
         );
 
-        if (remaining === 0) {
-            byId('challengeCountdown').classList.add('is-complete');
+        const provisional = nextChallenge.provisional ? 'PROVISIONAL · ' : '';
+        const range = `${date(nextChallenge.start_date)}–${new Date(`${nextChallenge.end_date}T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}`;
+        byId('countdownBoundary').innerHTML = `${provisional}${range.toUpperCase()}<br><span>${nextChallenge.provisional ? 'planning dates only · subject to administrator confirmation' : 'confirmed challenge dates'}</span>`;
+        byId('challengeCountdown').classList.toggle('is-complete', phase === 'ended');
+        if (phase === 'upcoming') {
+            byId('countdownKicker').textContent = nextChallenge.provisional ? 'THE ORACLE PENCILS IN A DATE' : 'THE NEXT MARCH APPROACHES';
+            byId('countdownTitle').textContent = `Until the ${nextChallenge.provisional ? 'provisional ' : ''}${nextChallenge.season} challenge start`;
+            byId('countdownDecree').textContent = `${range} is a provisional planning window, not a confirmed challenge announcement. Administrators may change it.`;
+        } else if (phase === 'active') {
+            byId('countdownKicker').textContent = 'THE LAST MILE APPROACHES';
+            byId('countdownTitle').textContent = 'Until the final footfall is tallied';
+            byId('countdownDecree').textContent = `The ${nextChallenge.season} challenge is underway. Its displayed dates remain ${nextChallenge.provisional ? 'provisional until administrators confirm them' : 'confirmed'}.`;
+        } else {
             byId('countdownKicker').textContent = 'THE CHALLENGE WINDOW HAS CLOSED';
             byId('countdownTitle').textContent = 'Final reporting is in the administrators’ hands';
-            byId('countdownDecree').textContent = 'Retroactive reporting may remain open past the challenge dates. The 2026 tablets awaken only after administrators close that deadline and publish the final snapshot.';
-            return false;
+            byId('countdownDecree').textContent = `Retroactive reporting may remain open past the challenge dates. The ${nextChallenge.season} tablets awaken only after administrators close that deadline and publish the final snapshot.`;
         }
-        return true;
+        return phase !== 'ended';
     }
 
-    function startChallengeCountdown() {
-        if (!updateChallengeCountdown()) return;
-        const timer = window.setInterval(() => {
-            if (!updateChallengeCountdown()) window.clearInterval(timer);
+    function startChallengeCountdown(nextChallenge) {
+        if (challengeCountdownTimer) window.clearInterval(challengeCountdownTimer);
+        if (!updateChallengeCountdown(nextChallenge)) return;
+        challengeCountdownTimer = window.setInterval(() => {
+            if (!updateChallengeCountdown(nextChallenge)) window.clearInterval(challengeCountdownTimer);
         }, 1000);
     }
 
@@ -600,6 +616,57 @@
         `;
     }
 
+    function renderSeasonHonors(data) {
+        const section = byId('season-honors');
+        const comparison = data.honors?.comparison;
+        if (!comparison) {
+            section.hidden = true;
+            return;
+        }
+
+        const improved = comparison.most_improved;
+        const consistent = data.honors?.most_consistent;
+        const totals = comparison.totals;
+        const signed = (value, suffix = '') => `${value >= 0 ? '+' : '−'}${number(Math.abs(value))}${suffix}`;
+        byId('seasonHonorsKicker').textContent = `NEW FOR ${data.season}`;
+        byId('seasonHonorsTitle').textContent = `${data.season} honors and the view from ${comparison.baseline_season}`;
+        byId('seasonHonorsSummary').textContent = `Comparisons use ${comparison.returning_ranked_participants} returning participants who qualified for the ranked table in both seasons.`;
+        byId('seasonHonorsGrid').innerHTML = `
+            <article class="season-honor-card">
+                <span class="honor-mark">⚡ MOST IMPROVED VS. ${comparison.baseline_season}</span>
+                <h3>${improved ? escapeHtml(displayName(improved.name)) : 'No eligible comparison'}</h3>
+                ${improved ? `<strong>${signed(improved.average_step_change)} steps / day</strong><p>From ${number(improved.baseline_average_steps)} to ${number(improved.average_steps)} average steps per reported day.</p>` : '<p>A participant must qualify for the ranked table in both seasons.</p>'}
+            </article>
+            <article class="season-honor-card">
+                <span class="honor-mark">⚖ MOST CONSISTENT</span>
+                <h3>${consistent ? escapeHtml(displayName(consistent.name)) : 'Awaiting a complete reporter'}</h3>
+                ${consistent ? `<strong>${number(consistent.consistency_score, 1)} consistency score</strong><p>Lowest day-to-day variation among people who reported every challenge day.</p>` : '<p>This honor requires every challenge day to be reported.</p>'}
+            </article>
+            <article class="season-honor-card">
+                <span class="honor-mark">↗ ${data.season} VS. ${comparison.baseline_season}</span>
+                <h3>${signed(totals.steps_change_percent, '%')}</h3>
+                <strong>${signed(totals.steps_change)} collective steps</strong>
+                <p>${signed(totals.participants_change)} participants · ${signed(totals.reporting_rate_change_points, ' reporting points')}.</p>
+            </article>
+        `;
+        section.hidden = false;
+    }
+
+    function renderNextChallenge(data) {
+        const next = data.next_challenge;
+        byId('nextYearTitle').textContent = `More honors await in ${next.season}`;
+        byId('nextSeasonNav').textContent = `${next.season} preview`;
+        byId('countdownNav').textContent = `${next.season} countdown`;
+        byId('futureAwards').innerHTML = `
+            <span>200K Club · Class of ${next.season}</span>
+            <span>⚡ Most Improved vs. ${data.season}</span>
+            <span>⚖ Most Consistent</span>
+            <span>↗ ${next.season} vs. ${data.season}</span>
+        `;
+        byId('nextYearDecree').textContent = `Provisional planning dates: September 1–15, ${next.season}. These dates are not confirmed and may change when administrators create the ${next.season} challenge.`;
+        startChallengeCountdown(next);
+    }
+
     function renderSupportingStats(data) {
         const biggest = data.supporting.biggest_day;
         const plaques = [
@@ -661,9 +728,6 @@
         byId('raceDayTotal').textContent = `OF ${data.challenge.days}`;
         byId('analyticsLink').href = `/champions/analytics?season=${data.season}`;
         byId('championsFooterChallenge').textContent = `${data.challenge.name} · ${new Date(`${data.challenge.start_date}T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', timeZone: 'UTC' })}–${new Date(`${data.challenge.end_date}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}`;
-        document.querySelectorAll('[data-2026-preview]').forEach(element => {
-            element.hidden = data.season >= 2026;
-        });
         const seasonPath = `/champions?season=${data.season}`;
         history.replaceState(null, '', `${seasonPath}${window.location.hash}`);
 
@@ -672,6 +736,8 @@
         renderIndividualPodium(data.podiums.individuals, data.challenge.days);
         renderRaceOracle(data);
         renderClub200K(data);
+        renderSeasonHonors(data);
+        renderNextChallenge(data);
         renderSupportingStats(data);
         renderStandings(data);
 
@@ -724,6 +790,5 @@
     }
 
     byId('retryChampions').addEventListener('click', () => loadChampions(selectedSeason));
-    startChallengeCountdown();
     loadChampions(selectedSeason);
 })();
