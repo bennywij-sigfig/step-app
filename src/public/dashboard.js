@@ -135,8 +135,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     welcomeMsg.textContent = `Welcome, ${username}!`;
                 }
                 
-                // Update challenge info display
+                // Update challenge and season-transition displays.
                 updateChallengeInfo(currentUser.current_challenge);
+                updateSeasonAnnouncement(currentUser.current_challenge, currentUser.latest_champions);
                 
                 // Setup admin navigation if user is admin
                 if (currentUser.is_admin) {
@@ -159,6 +160,46 @@ document.addEventListener('DOMContentLoaded', function() {
             }).formatToParts(new Date());
             const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
             return `${values.year}-${values.month}-${values.day}`;
+        }
+
+        function updateSeasonAnnouncement(challenge, publication) {
+            const announcement = document.getElementById('seasonAnnouncement');
+            const championsCta = document.getElementById('championsCta');
+            if (!announcement) return;
+
+            const publishedCurrentChallenge = publication && (
+                !challenge || Number(publication.challenge_id) === Number(challenge.id)
+            );
+            if (publishedCurrentChallenge) {
+                announcement.className = 'season-announcement is-published';
+                announcement.innerHTML = `
+                    <p class="season-announcement-kicker">THE FINAL RESULTS ARE IN</p>
+                    <h2>The ${publication.season} champions have entered the Pantheon</h2>
+                    <p>Podiums, final standings, the race timeline, and a frankly excessive amount of step analytics are ready.</p>
+                    <a class="season-announcement-action" href="/champions">🏆 Meet the ${publication.season} champions</a>
+                `;
+                if (championsCta) championsCta.textContent = `🏆 See the ${publication.season} Champions`;
+                return;
+            }
+
+            if (challenge?.status === 'ended') {
+                const season = String(challenge.end_date || '').slice(0, 4);
+                announcement.className = 'season-announcement is-ended';
+                announcement.innerHTML = `
+                    <p class="season-announcement-kicker">THE ${escapeHtml(season)} CHALLENGE IS COMPLETE</p>
+                    <h2>The walking is over. The reporting window is still open.</h2>
+                    <p>Missed a day? Enter steps retroactively for any date from ${formatDate(challenge.start_date)} through ${formatDate(challenge.end_date)} before administrators publish the final champions.</p>
+                    <button type="button" class="season-announcement-action" id="retroactiveStepsAction">Enter missed steps</button>
+                `;
+                document.getElementById('retroactiveStepsAction').addEventListener('click', () => {
+                    document.getElementById('myStepsBtn')?.click();
+                    document.getElementById('stepEntryTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    window.setTimeout(() => document.getElementById('date')?.focus(), 350);
+                });
+                return;
+            }
+
+            announcement.className = 'season-announcement hidden';
         }
 
         // Update challenge information display

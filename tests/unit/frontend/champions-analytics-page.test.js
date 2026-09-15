@@ -16,7 +16,7 @@ describe('Excessive Step Analytics lab', () => {
     expect(page).toContain('src="/champions-analytics.js"');
     expect(page).toContain('href="/champions"');
     expect(page).not.toMatch(/return to champions/i);
-    expect(script).toContain("fetch('/api/champions'");
+    expect(script).toContain('fetch(`/api/champions?season=${season}`');
   });
 
   test('renders the heatmap tapestry for teams and all participants', () => {

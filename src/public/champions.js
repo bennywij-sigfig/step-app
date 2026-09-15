@@ -22,6 +22,17 @@
     });
     const ordinal = rank => ({ 1: 'Champion', 2: 'Runner-up', 3: 'Third place' }[rank] || `#${rank}`);
     const medal = rank => ({ 1: 'Ⅰ', 2: 'Ⅱ', 3: 'Ⅲ' }[rank] || rank);
+    const romanYear = year => {
+        const numerals = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+        let remaining = year;
+        return numerals.map(([value, glyph]) => {
+            const count = Math.floor(remaining / value);
+            remaining %= value;
+            return glyph.repeat(count);
+        }).join('');
+    };
+    const requestedSeason = Number(new URLSearchParams(window.location.search).get('season'));
+    let selectedSeason = requestedSeason === 2026 ? 2026 : 2025;
     // September 15 remains a full challenge day. In 2026 Pacific daylight
     // time is UTC-07:00, so this instant is midnight beginning September 16.
     const CHALLENGE_2026_CLOSE = Date.parse('2026-09-16T00:00:00-07:00');
@@ -45,9 +56,9 @@
 
         if (remaining === 0) {
             byId('challengeCountdown').classList.add('is-complete');
-            byId('countdownKicker').textContent = 'THE HOUR IS WRITTEN';
-            byId('countdownTitle').textContent = 'Every step has been counted';
-            byId('countdownDecree').textContent = 'The 2026 challenge has crossed into legend. Let the counting cease and the tablets awaken.';
+            byId('countdownKicker').textContent = 'THE CHALLENGE WINDOW HAS CLOSED';
+            byId('countdownTitle').textContent = 'Final reporting is in the administrators’ hands';
+            byId('countdownDecree').textContent = 'Retroactive reporting may remain open past the challenge dates. The 2026 tablets awaken only after administrators close that deadline and publish the final snapshot.';
             return false;
         }
         return true;
@@ -209,7 +220,7 @@
         `).join('');
     }
 
-    function renderIndividualPodium(individuals) {
+    function renderIndividualPodium(individuals, challengeDays) {
         const highestTotal = Math.max(...individuals.map(person => person.total_steps), 1);
         byId('individualPodium').innerHTML = individuals.map(person => {
             const podiumHeight = Math.max(190, Math.round(330 * person.total_steps / highestTotal));
@@ -219,7 +230,7 @@
                 <h3>${escapeHtml(displayName(person.name))}</h3>
                 <p>${escapeHtml(person.team || 'Independent walker')}</p>
                 <p class="big-score">${number(person.average_steps)} steps / day</p>
-                <p>${number(person.total_steps)} total · ${person.days_reported} of 15 days</p>
+                <p>${number(person.total_steps)} total · ${person.days_reported} of ${challengeDays} days</p>
             </article>
         `;
         }).join('');
@@ -354,7 +365,7 @@
                 <title id="raceChartTitle">${state.metric === 'cumulative' ? 'Cumulative steps' : state.metric === 'cumulativeAverage' ? 'Cumulative daily average' : 'Daily average steps'} by ${state.group === 'teams' ? 'team' : 'person'}</title>
                 <desc id="raceChartDescription">Ten leading trajectories across the fifteen calendar days of the challenge.</desc>
                 <defs><clipPath id="raceReveal"><rect id="raceRevealRect" x="${plot.left - 8}" y="0" width="8" height="455"/></clipPath></defs>
-                <g class="race-grid">${grid}</g><g class="race-x-axis">${xLabels}<text x="523" y="493" text-anchor="middle">AUGUST · MMXXV</text></g>
+                <g class="race-grid">${grid}</g><g class="race-x-axis">${xLabels}<text x="523" y="493" text-anchor="middle">${new Date(`${race.dates[0]}T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }).toUpperCase()}</text></g>
                 <g clip-path="url(#raceReveal)">${paths}</g>
                 <line id="raceNeedle" class="race-needle" x1="${plot.left}" y1="${plot.top}" x2="${plot.left}" y2="${plot.bottom}"/>
                 <g id="raceDots">${endpoints}</g>`;
@@ -575,14 +586,14 @@
         const person = data.podiums.individuals[0];
         byId('teamChampion').innerHTML = `
             <div class="award-icon" aria-hidden="true">🏆</div>
-            <p class="award-label">2025 TEAM CHAMPION</p>
+            <p class="award-label">${data.season} TEAM CHAMPION</p>
             <h3>${escapeHtml(team.name)}</h3>
             <p class="champion-score">${number(team.average_steps)} steps per member-day</p>
             <p class="champion-detail">${number(team.total_steps)} total steps · ${team.member_count} teammates · ${number(team.reporting_rate)}% reporting</p>
         `;
         byId('individualChampion').innerHTML = `
             <div class="award-icon" aria-hidden="true">🦶</div>
-            <p class="award-label">2025 INDIVIDUAL CHAMPION</p>
+            <p class="award-label">${data.season} INDIVIDUAL CHAMPION</p>
             <h3>${escapeHtml(displayName(person.name))}</h3>
             <p class="champion-score">${number(person.average_steps)} steps per day</p>
             <p class="champion-detail">${number(person.total_steps)} total steps · all ${person.days_reported} days reported</p>
@@ -635,9 +646,30 @@
         if (!data.podiums.teams.length || !data.podiums.individuals.length) {
             throw new Error('The archive has no ranked champions');
         }
+        selectedSeason = data.season;
+        document.querySelectorAll('[data-season]').forEach(button => {
+            const active = Number(button.dataset.season) === data.season;
+            button.classList.toggle('active', active);
+            button.classList.toggle('future', !active);
+            button.setAttribute('aria-current', String(active));
+        });
+        byId('seasonPill').textContent = `EST. ${romanYear(data.season)}`;
+        byId('crownedSeason').textContent = `CROWNED IN ${data.season}`;
+        byId('clubSeason').textContent = `EST. ${data.season}`;
+        byId('club200KMembers').setAttribute('aria-label', `${data.season} Club 200K members`);
+        byId('raceOracleTitle').textContent = `${data.challenge.days} days. One glorious stampede.`;
+        byId('raceDayTotal').textContent = `OF ${data.challenge.days}`;
+        byId('analyticsLink').href = `/champions/analytics?season=${data.season}`;
+        byId('championsFooterChallenge').textContent = `${data.challenge.name} · ${new Date(`${data.challenge.start_date}T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', day: 'numeric', timeZone: 'UTC' })}–${new Date(`${data.challenge.end_date}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}`;
+        document.querySelectorAll('[data-2026-preview]').forEach(element => {
+            element.hidden = data.season >= 2026;
+        });
+        const seasonPath = `/champions?season=${data.season}`;
+        history.replaceState(null, '', `${seasonPath}${window.location.hash}`);
+
         renderChampionCards(data);
         renderTeamPodium(data.podiums.teams);
-        renderIndividualPodium(data.podiums.individuals);
+        renderIndividualPodium(data.podiums.individuals, data.challenge.days);
         renderRaceOracle(data);
         renderClub200K(data);
         renderSupportingStats(data);
@@ -658,26 +690,40 @@
         prepareJourneyAnimation(routePercent);
     }
 
-    async function loadChampions() {
+    async function loadChampions(season = selectedSeason) {
+        selectedSeason = season;
+        byId('championsLoading').textContent = `☙ Consulting the ${season} sacred archive… ❧`;
         byId('championsLoading').hidden = false;
+        byId('championsExperience').hidden = true;
         byId('championsError').hidden = true;
         try {
-            const response = await fetch('/api/champions', { headers: { Accept: 'application/json' } });
+            const response = await fetch(`/api/champions?season=${season}`, { headers: { Accept: 'application/json' } });
             if (response.status === 401) {
                 window.location.href = '/';
                 return;
             }
-            if (!response.ok) throw new Error(`Champions request failed: ${response.status}`);
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                const error = new Error(body.error || `Champions request failed: ${response.status}`);
+                error.status = response.status;
+                throw error;
+            }
             render(await response.json());
         } catch (error) {
             console.error('Unable to open the Pantheon:', error);
             byId('championsLoading').hidden = true;
             byId('championsExperience').hidden = true;
             byId('championsError').hidden = false;
+            const heading = byId('championsError').querySelector('h2');
+            const detail = byId('championsError').querySelector('p');
+            heading.textContent = error.status === 404 ? `${season} awaits the administrators’ decree.` : 'The archive doors are stuck.';
+            detail.textContent = error.status === 404
+                ? 'The challenge may be over, but results remain private until the retroactive submission deadline passes and an administrator publishes them.'
+                : 'Return from the underworld shortly and try again.';
         }
     }
 
-    byId('retryChampions').addEventListener('click', loadChampions);
+    byId('retryChampions').addEventListener('click', () => loadChampions(selectedSeason));
     startChallengeCountdown();
-    loadChampions();
+    loadChampions(selectedSeason);
 })();

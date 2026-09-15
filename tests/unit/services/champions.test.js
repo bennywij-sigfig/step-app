@@ -1,4 +1,4 @@
-const { getFeaturedChampions, challengeDays, buildParticipants, buildRaceTimeline } = require('../../../src/services/champions');
+const { getChampions, getFeaturedChampions, challengeDays, buildParticipants, buildRaceTimeline } = require('../../../src/services/champions');
 
 function archiveRow(userId, name, team, day, count) {
   return {
@@ -91,6 +91,17 @@ describe('featured champions archive service', () => {
       excluded_test_records: 1,
       roster_source: 'archive_step_team_snapshot'
     });
+  });
+
+  test('can render an explicitly selected published season from the same archive format', async () => {
+    const rows = [];
+    for (let day = 1; day <= 15; day += 1) {
+      rows.push(archiveRow(1, 'season.winner', 'Future Soles', day, 20000));
+    }
+    const result = await getChampions(fakeDatabase(rows), 2026);
+    expect(result.season).toBe(2026);
+    expect(result.podiums.individuals[0].name).toBe('season.winner');
+    expect(result.podiums.teams[0].name).toBe('Future Soles');
   });
 
   test('Club 200K requires both 200,000 steps and every daily report', async () => {

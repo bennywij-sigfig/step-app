@@ -2,6 +2,9 @@
     'use strict';
 
     const byId = id => document.getElementById(id);
+    const requestedSeason = Number(new URLSearchParams(window.location.search).get('season'));
+    const season = requestedSeason === 2026 ? 2026 : 2025;
+    byId('pantheonBackLink').href = season === 2025 ? '/champions' : `/champions?season=${season}`;
     const palette = ['#70e5ff', '#c8ff62', '#ff735c', '#b78aff', '#ffd166', '#65e3a5', '#ff8fcb', '#7ca8ff', '#f2a65a', '#a8dadc', '#e98d8d', '#d8b4fe'];
     const escapeHtml = value => String(value ?? '')
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -252,7 +255,7 @@
                 <title>${escapeHtml(name)} · finished #${finalRank}</title>
                 <polyline class="bump-line" pathLength="1" points="${points}"/>
                 <polyline class="bump-hit" points="${points}"/>
-                <circle cx="${x(14)}" cy="${y(finalRank)}" r="5" fill="${color}"/>
+                <circle cx="${x(data.race.dates.length - 1)}" cy="${y(finalRank)}" r="5" fill="${color}"/>
                 <text class="bump-end-label" x="${plot.right + 13}" y="${y(finalRank) + 4}">${escapeHtml(name)}</text>
             </g>`;
         }).join('');
@@ -260,7 +263,7 @@
             <title id="bumpSvgTitle">${group === 'teams' ? 'Team' : 'Individual'} cumulative daily-average rank changes</title>
             <desc id="bumpSvgDesc">Lines cross when competitors overtake one another in cumulative daily average steps.</desc>
             <g class="bump-grid">${dayGrid}${rankLabels}</g>${series}
-            <text class="axis-label" x="470" y="613" text-anchor="middle">AUGUST 2025 · CHALLENGE DAY</text>`;
+            <text class="axis-label" x="470" y="613" text-anchor="middle">${new Date(`${data.race.dates[0]}T00:00:00Z`).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }).toUpperCase()} · CHALLENGE DAY</text>`;
         byId('bumpLegend').innerHTML = selected.map((entry, index) => `<span style="--series-color:${palette[index % palette.length]}">${escapeHtml(displayName(entry.name))}</span>`).join('');
         queueSvgReveal(byId('rankBumpChart'));
     }
@@ -381,7 +384,7 @@
         byId('analyticsLoading').hidden = false;
         byId('analyticsError').hidden = true;
         try {
-            const response = await fetch('/api/champions', { headers: { Accept: 'application/json' } });
+            const response = await fetch(`/api/champions?season=${season}`, { headers: { Accept: 'application/json' } });
             if (response.status === 401) {
                 window.location.href = '/';
                 return;

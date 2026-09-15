@@ -12,7 +12,7 @@
 
     <header class="pantheon-header">
         <a href="/dashboard" class="back-link" aria-label="Back to dashboard">← Dashboard</a>
-        <div class="season-pill">EST. MMXXV</div>
+        <div class="season-pill" id="seasonPill">EST. MMXXV</div>
     </header>
 
     <main id="championsContent">
@@ -22,8 +22,8 @@
                 <h1 id="pantheonTitle">The Pantheon</h1>
                 <p class="hero-decree">A hall of glory for heroic calves, unreasonable daily averages, and those who reported every last step.</p>
                 <div class="year-switcher" aria-label="Championship year">
-                    <button type="button" class="year active" aria-current="true">2025</button>
-                    <span class="year future" aria-disabled="true">2026 · awaiting destiny</span>
+                    <a href="/champions?season=2025" class="year active" data-season="2025" aria-current="true">2025</a>
+                    <a href="/champions?season=2026" class="year future" data-season="2026" aria-current="false">2026</a>
                 </div>
             </div>
             <div class="wireframe-stage" id="wireframeStage">
@@ -51,8 +51,8 @@
             <a href="#journey">The journey</a>
             <a href="#notable-stats">Notable stats</a>
             <a href="#final-results">Final results</a>
-            <a href="#honors-2026">2026 honors</a>
-            <a href="#countdown-2026">Countdown</a>
+            <a href="#honors-2026" data-2026-preview>2026 honors</a>
+            <a href="#countdown-2026" data-2026-preview>Countdown</a>
         </nav>
 
         <div id="championsLoading" class="loading-oracle" role="status">
@@ -67,7 +67,7 @@
         <div id="championsExperience" hidden>
             <section class="awards-section" id="champions" aria-labelledby="awardsTitle">
                 <div class="section-heading">
-                    <p class="eyebrow">CROWNED IN 2025</p>
+                    <p class="eyebrow" id="crownedSeason">CROWNED IN 2025</p>
                     <h2 id="awardsTitle">The highest step of the podium</h2>
                 </div>
                 <div class="champion-grid">
@@ -102,7 +102,7 @@
                         <p>Rewind the calendar and watch the standings materialize one heroic day at a time.</p>
                     </div>
                     <div class="race-day-sigil" aria-live="polite">
-                        <span>DAY</span><strong id="raceDayNumber">01</strong><i>OF 15</i>
+                        <span>DAY</span><strong id="raceDayNumber">01</strong><i id="raceDayTotal">OF 15</i>
                     </div>
                 </div>
 
@@ -140,7 +140,7 @@
                     <h2 id="analyticsPortalTitle">The Department of Excessive Step Analytics</h2>
                     <p>Heatmaps. Rank entanglements. A suspiciously scientific constellation of consistency and intensity.</p>
                 </div>
-                <a href="/champions/analytics">Open the forbidden spreadsheets <span aria-hidden="true">→</span></a>
+                <a href="/champions/analytics" id="analyticsLink">Open the forbidden spreadsheets <span aria-hidden="true">→</span></a>
             </section>
 
             <section class="club-200k" id="club-200k" aria-labelledby="club200KTitle">
@@ -148,7 +148,7 @@
                     <div class="club-200k-mark" aria-hidden="true">
                         <span>CLUB</span>
                         <strong>200K</strong>
-                        <i>EST. 2025</i>
+                        <i id="clubSeason">EST. 2025</i>
                     </div>
                     <div class="club-200k-copy">
                         <p class="eyebrow">BEYOND THE VELVET ROPE</p>
@@ -274,7 +274,7 @@
                 </details>
             </section>
 
-            <section class="next-year" id="honors-2026" aria-labelledby="nextYearTitle">
+            <section class="next-year" id="honors-2026" aria-labelledby="nextYearTitle" data-2026-preview>
                 <p class="eyebrow">THE ORACLE FORETELLS</p>
                 <h2 id="nextYearTitle">More honors await in 2026</h2>
                 <div class="future-awards">
@@ -286,12 +286,12 @@
                 <p>The velvet rope opens again in 2026: reach 200,000 steps with 100% reporting to claim a place. The other tablets awaken after the challenge closes.</p>
             </section>
 
-            <span id="countdown-2026" class="section-anchor-target" aria-hidden="true"></span>
-            <section class="challenge-countdown" id="challengeCountdown" aria-labelledby="countdownTitle">
+            <span id="countdown-2026" class="section-anchor-target" aria-hidden="true" data-2026-preview></span>
+            <section class="challenge-countdown" id="challengeCountdown" aria-labelledby="countdownTitle" data-2026-preview>
                 <div class="countdown-sigil" aria-hidden="true"><span>ⅩⅤ</span></div>
                 <p class="eyebrow" id="countdownKicker">THE LAST MILE APPROACHES</p>
                 <h2 id="countdownTitle">Until the final footfall is tallied</h2>
-                <p class="countdown-decree" id="countdownDecree">When this celestial mechanism reaches zero, the 2026 challenge passes from mortal effort into immutable legend.</p>
+                <p class="countdown-decree" id="countdownDecree">When this celestial mechanism reaches zero, the challenge period ends—but administrators may keep retroactive reporting open before publishing the final results.</p>
                 <div class="countdown-grid" id="countdownTimer" role="timer" aria-live="off" aria-atomic="true" aria-label="Time remaining in the 2026 step challenge">
                     <div class="countdown-measure"><strong id="countdownDays">00</strong><span>days</span></div>
                     <div class="countdown-measure"><strong id="countdownHours">00</strong><span>hours</span></div>
@@ -304,8 +304,8 @@
     </main>
 
     <footer class="pantheon-footer">
-        <span>SigFig Step Challenge 2025 · August 1–15</span>
-        <span>Final results from the verified challenge archive</span>
+        <span id="championsFooterChallenge">SigFig Step Challenge 2025 · August 1–15</span>
+        <span>Final results from the administrator-published challenge archive</span>
     </footer>
 
     <script src="/champions-wireframe.js"></script>

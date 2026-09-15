@@ -10,6 +10,18 @@ describe('dashboard design contract', () => {
   const theme = readSource('src/public/season-theme.css');
   const chat = readSource('src/public/step-chat.css');
 
+  test('prominently transitions from retroactive reporting to published champions', () => {
+    expect(html).toContain('id="seasonAnnouncement"');
+    expect(html).toContain('.season-announcement.is-published');
+    expect(dashboard).toContain('function updateSeasonAnnouncement(challenge, publication)');
+    expect(dashboard).toContain("challenge?.status === 'ended'");
+    expect(dashboard).toContain('The walking is over. The reporting window is still open.');
+    expect(dashboard).toContain('id="retroactiveStepsAction"');
+    expect(dashboard).toContain('The ${publication.season} champions have entered the Pantheon');
+    expect(dashboard).toContain('href="/champions"');
+    expect(dashboard).toContain('currentUser.latest_champions');
+  });
+
   test('uses a neutral system sans stack for the data-dense dashboard', () => {
     const dashboardFontRule = theme.match(/body\.dashboard-page\s*\{[\s\S]*?\}/)?.[0] || '';
     expect(dashboardFontRule).toContain('-apple-system');

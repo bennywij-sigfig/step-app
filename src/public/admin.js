@@ -1271,6 +1271,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 ${challenge.teams_prepared_at
                                                     ? '<br><small style="color: #28a745;">Teams prepared</small>'
                                                     : !challenge.is_active ? '<br><small style="color: #666;">Save to activate with current teams</small>' : ''}
+                                                ${challenge.champions_published_at
+                                                    ? `<br><small style="color: #7b4ab4; font-weight: 600;">${challenge.champions_season} champions published</small>`
+                                                    : challenge.status === 'ended' ? '<br><small style="color: #856404;">Champions awaiting admin publication</small>' : ''}
                                             </label>
                                         </td>
                                         <td>
@@ -1281,6 +1284,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 <button class="archive-challenge-btn" data-challenge-id="${challenge.id}" data-challenge-name="${escapeHtml(challenge.name)}" 
                                                         style="background: #ff8c00; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-weight: 500;">
                                                     Archive
+                                                </button>
+                                            ` : ''}
+                                            ${challenge.status === 'ended' ? `
+                                                <button class="publish-champions-btn" data-challenge-id="${challenge.id}" data-challenge-name="${escapeHtml(challenge.name)}" data-season="${String(challenge.end_date).slice(0, 4)}" data-published="${challenge.champions_published_at ? 'true' : 'false'}"
+                                                        style="background: #7b4ab4; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; margin-left: 5px; font-weight: 600;">
+                                                    ${challenge.champions_published_at ? 'Refresh' : 'Publish'} ${String(challenge.end_date).slice(0, 4)} Champions
                                                 </button>
                                             ` : ''}
                                             ${!challenge.is_active && !challenge.teams_prepared_at ? `
@@ -1606,6 +1615,39 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        async function publishChampions(challengeId, challengeName, season, alreadyPublished) {
+            const action = alreadyPublished ? 'refresh' : 'publish';
+            const confirmed = confirm(
+                `${action === 'refresh' ? 'Refresh' : 'Publish'} the ${season} champions from "${challengeName}"?\n\n` +
+                `This takes a permanent snapshot of the steps currently submitted and makes it the public ${season} Pantheon results.\n\n` +
+                `Nothing happens automatically at the challenge end date. Wait until the retroactive submission deadline has passed. ` +
+                `${alreadyPublished ? 'Refreshing replaces the currently displayed snapshot.' : 'Later corrections will not appear unless an administrator refreshes the publication.'}`
+            );
+            if (!confirmed) return;
+
+            const messageDiv = document.getElementById('challengesMessage');
+            messageDiv.innerHTML = `<div class="message info">Publishing the ${season} champions snapshot...</div>`;
+            try {
+                const response = await authenticatedFetch(`/api/admin/challenges/${challengeId}/publish-champions`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    messageDiv.innerHTML = `<div class="message error">${escapeHtml(data.error || 'Unable to publish champions')}</div>`;
+                    return;
+                }
+                messageDiv.innerHTML = `<div class="message success">
+                    <strong>${data.season} champions published!</strong><br>
+                    ${data.totalParticipants} participants and ${data.stepsArchived} daily reports are now in the Pantheon.
+                    <a href="/champions?season=${data.season}" target="_blank" rel="noopener">Open the ${data.season} page</a>
+                </div>`;
+                loadChallenges();
+            } catch (error) {
+                console.error('Champions publication error:', error);
+                messageDiv.innerHTML = '<div class="message error">Network error. The champions snapshot was not published.</div>';
+            }
+        }
+
         // Archive challenge
         async function archiveChallenge(challengeId, challengeName) {
             if (!confirm(`Are you sure you want to archive the challenge "${challengeName}"?\n\nThis will:\n• Create a permanent snapshot of all challenge data\n• Preserve user step records and team information\n• Make the data available for download\n• The challenge will REMAIN ACTIVE (users can continue logging steps)\n• This action cannot be undone\n\nNote: To end the challenge, use the "Deactivate" option after archiving.\n\nDo you want to proceed?`)) {
@@ -1848,6 +1890,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const challengeId = e.target.dataset.challengeId;
                 const challengeName = e.target.dataset.challengeName;
                 archiveChallenge(parseInt(challengeId), challengeName);
+            }
+
+            if (e.target.classList.contains('publish-champions-btn')) {
+                publishChampions(
+                    parseInt(e.target.dataset.challengeId),
+                    e.target.dataset.challengeName,
+                    e.target.dataset.season,
+                    e.target.dataset.published === 'true'
+                );
             }
             
             // Download archive buttons

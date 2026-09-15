@@ -490,6 +490,20 @@ if (!shouldDelayInit) {
     FOREIGN KEY (user_id) REFERENCES users (id)
   )`);
 
+  // An explicit publication points each Pantheon season at one immutable
+  // archive. Administrators can replace that pointer with a fresh snapshot if
+  // late corrections arrive, but challenge completion never auto-publishes.
+  db.run(`CREATE TABLE IF NOT EXISTS champions_publications (
+    season INTEGER PRIMARY KEY CHECK (season >= 2025 AND season <= 9999),
+    challenge_id INTEGER NOT NULL,
+    archive_id INTEGER NOT NULL UNIQUE,
+    published_by_user_id INTEGER NOT NULL,
+    published_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (challenge_id) REFERENCES challenges (id),
+    FOREIGN KEY (archive_id) REFERENCES challenge_archives (id),
+    FOREIGN KEY (published_by_user_id) REFERENCES users (id)
+  )`);
+
   // Complete roster snapshots survive team resets between challenges. Unlike
   // step archives, these include players with no entries and empty teams.
   db.run(`CREATE TABLE IF NOT EXISTS challenge_team_names (
@@ -523,6 +537,7 @@ if (!shouldDelayInit) {
   // Archive indexes for performance
   db.run(`CREATE INDEX IF NOT EXISTS idx_archive_steps_archive_id ON challenge_archive_steps(archive_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_archive_steps_user_date ON challenge_archive_steps(archive_id, user_id, date)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_champions_publications_challenge ON champions_publications(challenge_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_challenge_team_names_challenge ON challenge_team_names(challenge_id)`);
   db.run(`CREATE INDEX IF NOT EXISTS idx_challenge_team_memberships_challenge ON challenge_team_memberships(challenge_id)`);
 

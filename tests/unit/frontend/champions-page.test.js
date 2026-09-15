@@ -35,7 +35,7 @@ describe('Champions Pantheon frontend', () => {
     expect(page).toContain('2026 vs. 2025');
     expect(page).toContain('200K Club · Class of 2026');
     expect(page).toContain('reach 200,000 steps with 100% reporting');
-    expect(script).toContain("fetch('/api/champions'");
+    expect(script).toContain('fetch(`/api/champions?season=${season}`');
     expect(script).toContain('function renderClub200K(data)');
     expect(script).toContain('team.members');
     expect(script).toContain('--podium-height');
@@ -153,6 +153,16 @@ describe('Champions Pantheon frontend', () => {
     expect(script).not.toContain('This playful estimate uses');
   });
 
+  test('switches to administrator-published 2026 results without replacing the 2025 archive', () => {
+    expect(page).toContain('data-season="2025"');
+    expect(page).toContain('data-season="2026"');
+    expect(script).toContain('let selectedSeason');
+    expect(script).toContain('data.season');
+    expect(script).toContain('The challenge may be over, but results remain private');
+    expect(script).toContain("document.querySelectorAll('[data-2026-preview]')");
+    expect(script).toContain('`/champions/analytics?season=${data.season}`');
+  });
+
   test('ends with an ornate Pacific-time countdown to the 2026 challenge close', () => {
     for (const id of [
       'challengeCountdown', 'countdownTitle', 'countdownTimer',
@@ -163,7 +173,8 @@ describe('Champions Pantheon frontend', () => {
     expect(page.indexOf('id="challengeCountdown"')).toBeGreaterThan(page.indexOf('class="next-year"'));
     expect(page).toContain('Until the final footfall is tallied');
     expect(page).toContain('THE GATES CLOSE AT MIDNIGHT PACIFIC');
-    expect(script).toContain("byId('countdownTitle').textContent = 'Every step has been counted'");
+    expect(script).toContain("byId('countdownTitle').textContent = 'Final reporting is in the administrators’ hands'");
+    expect(script).toContain('Retroactive reporting may remain open past the challenge dates');
     expect(script).toContain("Date.parse('2026-09-16T00:00:00-07:00')");
     expect(script).toContain('CHALLENGE_2026_CLOSE - Date.now()');
     expect(script).toContain("window.setInterval(() => {");

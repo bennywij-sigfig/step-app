@@ -10,7 +10,7 @@ const { createSessionLifetimeMiddleware } = require('./middleware/sessionLifetim
 const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 let db = require('./database');
-let champions2025Cache = null;
+const championsCache = new Map();
 const { isDevelopment, devLog } = require('./utils/dev');
 const {
   requireAuth,
@@ -36,7 +36,7 @@ const { buildNativeToolSystemPrompt, createGeminiChatProvider } = require('./ser
 const { runNativeTrotterAgent } = require('./services/chat-agent-v2');
 const { createStepChatService } = require('./services/step-chat');
 const { createChatToolRegistry } = require('./services/chat-tools');
-const { getFeaturedChampions } = require('./services/champions');
+const { getChampions } = require('./services/champions');
 const { createChatRouter } = require('./routes/chat');
 const { createRestApiRouter } = require('./routes/rest-api');
 const { createApiTokenAdminRouter } = require('./routes/api-token-admin');
@@ -50,6 +50,7 @@ const { normalizeTeamName, teamNameKey, TeamNameValidationError } = require('./u
 const {
   getCurrentChallengeDay,
   getTotalChallengeDays,
+  getChallengeStatus,
   withChallengeTiming,
   getLatestSupportedLocalDate,
   isDateInChallengePeriod
@@ -1149,9 +1150,23 @@ app.get('/openapi.json', apiLimiter, requireApiAuth, (req, res) => {
   res.json(openApiDocument);
 });
 
-// Past champions (protected)
+// Past champions (protected). The seasonless URL is the permanent "latest
+// Pantheon" link; once an administrator publishes a newer season it redirects
+// there. Explicit season links remain stable forever.
 app.get('/champions', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'champions.html'));
+  if (req.query.season !== undefined) {
+    return res.sendFile(path.join(__dirname, 'views', 'champions.html'));
+  }
+  db.get('SELECT season FROM champions_publications ORDER BY season DESC LIMIT 1', (error, publication) => {
+    if (error) {
+      console.error('Error resolving the latest champions season:', error);
+      return res.sendFile(path.join(__dirname, 'views', 'champions.html'));
+    }
+    if (publication?.season > 2025) {
+      return res.redirect(`/champions?season=${publication.season}`);
+    }
+    res.sendFile(path.join(__dirname, 'views', 'champions.html'));
+  });
 });
 
 app.get('/champions/analytics', requireAuth, (req, res) => {
@@ -1159,17 +1174,22 @@ app.get('/champions/analytics', requireAuth, (req, res) => {
 });
 
 app.get('/api/champions', apiLimiter, requireApiAuth, async (req, res) => {
+  const season = req.query.season === undefined ? 2025 : Number(req.query.season);
+  if (!Number.isInteger(season) || season < 2025 || season > 9999) {
+    return res.status(400).json({ error: 'Valid champions season required' });
+  }
+
   try {
-    if (!champions2025Cache) {
-      champions2025Cache = await getFeaturedChampions(db);
+    if (!championsCache.has(season)) {
+      championsCache.set(season, await getChampions(db, season));
     }
-    res.set('Cache-Control', 'private, max-age=3600');
-    res.json(champions2025Cache);
+    res.set('Cache-Control', 'private, max-age=0, must-revalidate');
+    res.json(championsCache.get(season));
   } catch (error) {
     if (error.code === 'CHAMPIONS_ARCHIVE_NOT_FOUND') {
-      return res.status(404).json({ error: error.message });
+      return res.status(404).json({ error: error.message, season, published: false });
     }
-    console.error('Error loading the 2025 champions archive:', error);
+    console.error(`Error loading the ${season} champions archive:`, error);
     res.status(500).json({ error: 'Failed to load champions' });
   }
 });
@@ -1187,18 +1207,28 @@ app.get('/api/user', apiLimiter, requireApiAuth, (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Get current active challenge
+    // Get current active challenge and the newest administrator-published
+    // Pantheon season so the dashboard can transition immediately after publish.
     db.get(`SELECT * FROM challenges WHERE is_active = 1`, (challengeErr, challenge) => {
       if (challengeErr) {
         console.error('Error fetching active challenge:', challengeErr);
-        // Return user info without challenge info if there's an error
         return res.json(user);
       }
-      
-      // Include challenge info with user data
-      res.json({
-        ...user,
-        current_challenge: withChallengeTiming(challenge)
+      db.get(`
+        SELECT cp.season, cp.challenge_id, cp.published_at, c.name AS challenge_name
+        FROM champions_publications cp
+        JOIN challenges c ON c.id = cp.challenge_id
+        ORDER BY cp.season DESC
+        LIMIT 1
+      `, (publicationErr, publication) => {
+        if (publicationErr) {
+          console.error('Error fetching latest champions publication:', publicationErr);
+        }
+        res.json({
+          ...user,
+          current_challenge: withChallengeTiming(challenge),
+          latest_champions: publication || null
+        });
       });
     });
   });
@@ -2678,12 +2708,17 @@ app.get('/api/teams/:teamName/members', apiLimiter, requireApiAuth, async (req, 
 
 // Get all challenges (admin only)
 app.get('/api/admin/challenges', requireApiAdmin, (req, res) => {
-  db.all(`SELECT * FROM challenges ORDER BY created_at DESC`, (err, rows) => {
+  db.all(`
+    SELECT c.*, cp.season AS champions_season, cp.published_at AS champions_published_at
+    FROM challenges c
+    LEFT JOIN champions_publications cp ON cp.challenge_id = c.id
+    ORDER BY c.created_at DESC
+  `, (err, rows) => {
     if (err) {
       console.error('Error fetching challenges:', err);
       return res.status(500).json({ error: 'Database error' });
     }
-    res.json(rows);
+    res.json(rows.map(challenge => withChallengeTiming(challenge)));
   });
 });
 
@@ -3016,6 +3051,111 @@ app.delete('/api/admin/challenges/:challengeId', requireApiAdmin, validateCSRFTo
       res.json({ message: 'Challenge deleted successfully' });
     }
   );
+});
+
+// Publish an ended challenge to the Pantheon. This is deliberately separate
+// from challenge end dates: administrators decide when retroactive entry has
+// closed. Re-publishing creates a new immutable snapshot and moves the season's
+// publication pointer to it.
+app.post('/api/admin/challenges/:challengeId/publish-champions', adminApiLimiter, requireApiAdmin, validateCSRFToken, async (req, res) => {
+  const challengeId = Number(req.params.challengeId);
+  const adminUserId = Number(req.session.userId);
+  if (!Number.isInteger(challengeId) || challengeId < 1) {
+    return res.status(400).json({ error: 'Valid challenge ID required' });
+  }
+
+  let transactionDb;
+  try {
+    const challenge = await dbGetAsync('SELECT * FROM challenges WHERE id = ?', [challengeId]);
+    if (!challenge) return res.status(404).json({ error: 'Challenge not found' });
+    if (getChallengeStatus(challenge) !== 'ended') {
+      return res.status(409).json({
+        error: 'Champions can only be published after the challenge has ended. Retroactive entry may remain open as long as administrators choose.'
+      });
+    }
+
+    const season = Number(String(challenge.end_date).slice(0, 4));
+    const stepCount = await dbGetAsync('SELECT COUNT(*) AS count FROM steps WHERE challenge_id = ?', [challengeId]);
+    if (!stepCount.count) {
+      return res.status(409).json({ error: 'Cannot publish champions without step entries' });
+    }
+
+    transactionDb = new sqlite3.Database(db.filename);
+    transactionDb.configure('busyTimeout', 30000);
+    await dbRunAsync('BEGIN IMMEDIATE', [], transactionDb);
+
+    const participants = await dbGetAsync(
+      'SELECT COUNT(DISTINCT user_id) AS count FROM steps WHERE challenge_id = ?',
+      [challengeId],
+      transactionDb
+    );
+    const archiveResult = await dbRunAsync(`
+      INSERT INTO challenge_archives (
+        challenge_id, challenge_name, challenge_start_date, challenge_end_date,
+        reporting_threshold, created_by_user_id, total_participants
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      challengeId, challenge.name, challenge.start_date, challenge.end_date,
+      challenge.reporting_threshold, adminUserId, participants.count
+    ], transactionDb);
+
+    const archivedSteps = await dbRunAsync(`
+      INSERT INTO challenge_archive_steps (
+        archive_id, user_id, user_name, user_team, user_email, date, count, original_updated_at
+      )
+      SELECT ?, s.user_id, u.name, COALESCE(ctm.team_name, t.name), u.email, s.date, s.count, NULL
+      FROM steps s
+      JOIN users u ON u.id = s.user_id
+      LEFT JOIN teams t ON t.id = u.team_id
+      LEFT JOIN challenge_team_memberships ctm
+        ON ctm.challenge_id = s.challenge_id AND ctm.user_id = s.user_id
+      WHERE s.challenge_id = ?
+    `, [archiveResult.lastID, challengeId], transactionDb);
+
+    await dbRunAsync(`
+      INSERT INTO champions_publications
+        (season, challenge_id, archive_id, published_by_user_id, published_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(season) DO UPDATE SET
+        challenge_id = excluded.challenge_id,
+        archive_id = excluded.archive_id,
+        published_by_user_id = excluded.published_by_user_id,
+        published_at = CURRENT_TIMESTAMP
+    `, [season, challengeId, archiveResult.lastID, adminUserId], transactionDb);
+
+    const champions = await getChampions(transactionDb, season);
+    if (!champions.podiums.individuals.length || !champions.podiums.teams.length) {
+      const error = new Error('At least one ranked individual and team are required to publish champions');
+      error.code = 'CHAMPIONS_PODIUM_EMPTY';
+      throw error;
+    }
+
+    await dbRunAsync('COMMIT', [], transactionDb);
+    transactionDb.close();
+    transactionDb = null;
+    championsCache.set(season, champions);
+
+    console.log(`✅ Published ${season} champions from challenge "${challenge.name}" (archive ${archiveResult.lastID})`);
+    res.json({
+      success: true,
+      season,
+      archiveId: archiveResult.lastID,
+      stepsArchived: archivedSteps.changes,
+      totalParticipants: participants.count,
+      publishedAt: champions.provenance.published_at,
+      message: `${season} champions published to the Pantheon`
+    });
+  } catch (error) {
+    if (transactionDb) {
+      try { await dbRunAsync('ROLLBACK', [], transactionDb); } catch (_) {}
+      transactionDb.close();
+    }
+    if (error.code === 'CHAMPIONS_PODIUM_EMPTY') {
+      return res.status(409).json({ error: error.message });
+    }
+    console.error('Error publishing champions:', error);
+    res.status(500).json({ error: 'Failed to publish champions' });
+  }
 });
 
 // Archive challenge (admin only) 

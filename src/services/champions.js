@@ -2,9 +2,9 @@ const FEATURED_CHALLENGE = Object.freeze({
   season: 2025,
   name: 'SigFig Step Challenge 2025',
   startDate: '2025-08-01',
-  endDate: '2025-08-15',
-  excludedParticipantNames: new Set(['benny+test'])
+  endDate: '2025-08-15'
 });
+const EXCLUDED_PARTICIPANT_NAMES = new Set(['benny+test']);
 
 const STEPS_PER_MILE = 2000;
 const KM_PER_MILE = 1.609344;
@@ -232,19 +232,40 @@ function buildRaceTimeline(rows, startDate, endDate) {
   return { dates, people: personSeries, teams: teamSeries };
 }
 
-async function getFeaturedChampions(database) {
-  const archive = await get(database, `
-    SELECT *
-    FROM challenge_archives
-    WHERE challenge_name = ?
-      AND challenge_start_date = ?
-      AND challenge_end_date = ?
-    ORDER BY archive_timestamp DESC, id DESC
-    LIMIT 1
-  `, [FEATURED_CHALLENGE.name, FEATURED_CHALLENGE.startDate, FEATURED_CHALLENGE.endDate]);
+async function findChampionsArchive(database, season) {
+  if (season === FEATURED_CHALLENGE.season) {
+    // Keep the original 2025 Pantheon available without requiring a data
+    // migration on the production database.
+    return get(database, `
+      SELECT ca.*, NULL AS published_at
+      FROM challenge_archives ca
+      WHERE ca.challenge_name = ?
+        AND ca.challenge_start_date = ?
+        AND ca.challenge_end_date = ?
+      ORDER BY ca.archive_timestamp DESC, ca.id DESC
+      LIMIT 1
+    `, [FEATURED_CHALLENGE.name, FEATURED_CHALLENGE.startDate, FEATURED_CHALLENGE.endDate]);
+  }
 
+  return get(database, `
+    SELECT ca.*, cp.published_at
+    FROM champions_publications cp
+    JOIN challenge_archives ca ON ca.id = cp.archive_id
+    WHERE cp.season = ?
+    LIMIT 1
+  `, [season]);
+}
+
+async function getChampions(database, season = FEATURED_CHALLENGE.season) {
+  if (!Number.isInteger(season) || season < 2025 || season > 9999) {
+    const error = new Error('Invalid champions season');
+    error.code = 'INVALID_CHAMPIONS_SEASON';
+    throw error;
+  }
+
+  const archive = await findChampionsArchive(database, season);
   if (!archive) {
-    const error = new Error('The 2025 champions archive is not available');
+    const error = new Error(`The ${season} champions have not been published`);
     error.code = 'CHAMPIONS_ARCHIVE_NOT_FOUND';
     throw error;
   }
@@ -256,7 +277,7 @@ async function getFeaturedChampions(database) {
     ORDER BY date, user_id
   `, [archive.id]);
   const rows = archiveRows.filter(row =>
-    !FEATURED_CHALLENGE.excludedParticipantNames.has(String(row.user_name).toLowerCase())
+    !EXCLUDED_PARTICIPANT_NAMES.has(String(row.user_name).toLowerCase())
   );
   const totalDays = challengeDays(archive.challenge_start_date, archive.challenge_end_date);
   const threshold = archive.reporting_threshold === null || archive.reporting_threshold === undefined
@@ -280,7 +301,7 @@ async function getFeaturedChampions(database) {
   const club200KTotalSteps = club200KMembers.reduce((sum, participant) => sum + participant.total_steps, 0);
 
   return {
-    season: FEATURED_CHALLENGE.season,
+    season,
     challenge: {
       name: archive.challenge_name,
       start_date: archive.challenge_start_date,
@@ -335,13 +356,19 @@ async function getFeaturedChampions(database) {
     provenance: {
       archive_id: archive.id,
       archive_timestamp: archive.archive_timestamp,
+      published_at: archive.published_at || null,
       excluded_test_records: archiveRows.length - rows.length,
       roster_source: 'archive_step_team_snapshot'
     }
   };
 }
 
+function getFeaturedChampions(database) {
+  return getChampions(database, FEATURED_CHALLENGE.season);
+}
+
 module.exports = {
+  getChampions,
   getFeaturedChampions,
   challengeDays,
   buildParticipants,
