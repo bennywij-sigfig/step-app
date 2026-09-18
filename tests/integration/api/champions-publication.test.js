@@ -28,18 +28,21 @@ describe('manual champions publication', () => {
     agent = request.agent(app);
 
     await run(db, `INSERT INTO teams (id, name) VALUES (1, 'Future Soles')`);
-    await run(db, `INSERT INTO users (id, email, name, team_id, is_admin) VALUES
-      (1, 'admin@example.com', 'Admin Walker', 1, 1),
-      (2, 'winner@example.com', 'Winner Walker', 1, 0)`);
+    await run(db, `INSERT INTO users (id, email, name, team_id, is_admin, archived_at) VALUES
+      (1, 'admin@example.com', 'Admin Walker', 1, 1, NULL),
+      (2, 'winner@example.com', 'Winner Walker', 1, 0, NULL),
+      (3, 'old-winner@example.com', 'Winner Walker', 1, 0, '2026-01-03 00:00:00')`);
     await run(db, `INSERT INTO challenges (id, name, start_date, end_date, is_active, reporting_threshold)
       VALUES (1, 'SigFig Step Challenge 2026', '2026-01-01', '2026-01-02', 1, 100)`);
     await run(db, `INSERT INTO challenge_team_memberships
-      (challenge_id, user_id, user_name, user_email, team_name) VALUES
-      (1, 1, 'Admin Walker', 'admin@example.com', 'Challenge Soles'),
-      (1, 2, 'Winner Walker', 'winner@example.com', 'Challenge Soles')`);
+      (challenge_id, user_id, user_name, user_email, team_name, user_archived_at) VALUES
+      (1, 1, 'Admin Walker', 'admin@example.com', 'Challenge Soles', NULL),
+      (1, 2, 'Winner Walker', 'winner@example.com', 'Challenge Soles', NULL),
+      (1, 3, 'Winner Walker', 'old-winner@example.com', 'Challenge Soles', '2026-01-03 00:00:00')`);
     await run(db, `INSERT INTO steps (user_id, date, count, challenge_id) VALUES
       (1, '2026-01-01', 10000, 1), (1, '2026-01-02', 11000, 1),
-      (2, '2026-01-01', 20000, 1), (2, '2026-01-02', 22000, 1)`);
+      (2, '2026-01-01', 20000, 1), (2, '2026-01-02', 22000, 1),
+      (3, '2026-01-01', 50000, 1)`);
 
     const magic = await agent.post('/dev/get-magic-link').send({ email: 'admin@example.com' }).expect(200);
     const token = new URL(magic.body.magicLink).searchParams.get('token');
@@ -84,6 +87,13 @@ describe('manual champions publication', () => {
     });
     expect(champions.body.podiums.individuals[0].name).toBe('Winner Walker');
     expect(champions.body.podiums.teams[0].name).toBe('Challenge Soles');
+    expect(champions.body.podiums.teams[0].member_count).toBe(2);
+    expect(champions.body.participant_standings.map(person => person.id)).toEqual([2, 1]);
+    expect(await get(db, `
+      SELECT COUNT(*) AS count
+      FROM challenge_archive_steps
+      WHERE archive_id = ? AND user_id = 3
+    `, [publication.body.archiveId])).toEqual({ count: 0 });
 
     const dashboardState = await agent.get('/api/user').expect(200);
     expect(dashboardState.body.latest_champions).toMatchObject({

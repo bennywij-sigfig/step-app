@@ -3099,11 +3099,12 @@ app.post('/api/admin/challenges/:challengeId/publish-champions', adminApiLimiter
     transactionDb.configure('busyTimeout', 30000);
     await dbRunAsync('BEGIN IMMEDIATE', [], transactionDb);
 
-    const participants = await dbGetAsync(
-      'SELECT COUNT(DISTINCT user_id) AS count FROM steps WHERE challenge_id = ?',
-      [challengeId],
-      transactionDb
-    );
+    const participants = await dbGetAsync(`
+      SELECT COUNT(DISTINCT s.user_id) AS count
+      FROM steps s
+      JOIN users u ON u.id = s.user_id
+      WHERE s.challenge_id = ? AND u.archived_at IS NULL
+    `, [challengeId], transactionDb);
     const archiveResult = await dbRunAsync(`
       INSERT INTO challenge_archives (
         challenge_id, challenge_name, challenge_start_date, challenge_end_date,
@@ -3124,7 +3125,7 @@ app.post('/api/admin/challenges/:challengeId/publish-champions', adminApiLimiter
       LEFT JOIN teams t ON t.id = u.team_id
       LEFT JOIN challenge_team_memberships ctm
         ON ctm.challenge_id = s.challenge_id AND ctm.user_id = s.user_id
-      WHERE s.challenge_id = ?
+      WHERE s.challenge_id = ? AND u.archived_at IS NULL
     `, [archiveResult.lastID, challengeId], transactionDb);
 
     await dbRunAsync(`
@@ -3195,9 +3196,10 @@ app.post('/api/admin/challenges/:challengeId/archive', requireApiAdmin, validate
     
     // Count participants for this challenge (multiple archives per challenge are allowed)
     db.get(`
-        SELECT COUNT(DISTINCT user_id) as participant_count 
-        FROM steps 
-        WHERE challenge_id = ?
+        SELECT COUNT(DISTINCT s.user_id) as participant_count
+        FROM steps s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.challenge_id = ? AND u.archived_at IS NULL
       `, [challengeId], (countErr, participantResult) => {
         if (countErr) {
           console.error('Error counting participants:', countErr);
@@ -3229,7 +3231,7 @@ app.post('/api/admin/challenges/:challengeId/archive', requireApiAdmin, validate
             FROM steps s
             JOIN users u ON s.user_id = u.id
             LEFT JOIN teams t ON t.id = u.team_id
-            WHERE s.challenge_id = ?
+            WHERE s.challenge_id = ? AND u.archived_at IS NULL
             ORDER BY s.user_id, s.date
           `, [challengeId], (stepsFetchErr, stepsData) => {
             if (stepsFetchErr) {
